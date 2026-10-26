@@ -10,6 +10,7 @@ The frontend files are in the repository root so GitHub Pages can serve `index.h
 - `style.css` — responsive dark-purple and gold theme
 - `app.js` — browser-side application logic
 - `buoc-academix/supabase/schema.sql` — initial database schema and row-level security setup
+- `supabase/migrations/20261027_exam_attempts.sql` — database migration for initial attempts, authorized retakes, and remedial attempts
 - `buoc-academix/supabase/functions/generate-quiz/index.ts` — server-side quiz generation function
 
 The earlier `buoc-academix/` directory may contain duplicate starter files. The root files are the intended GitHub Pages entry point.
@@ -24,7 +25,7 @@ The earlier `buoc-academix/` directory may contain duplicate starter files. The 
 ## Supabase setup
 
 1. Create a Supabase project and keep its database password in a password manager.
-2. In the SQL Editor, review and run `buoc-academix/supabase/schema.sql`.
+2. In the SQL Editor, review and run `supabase/schema.sql` (or your canonical schema file if already applied).\n3. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
 3. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
 4. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
 5. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
