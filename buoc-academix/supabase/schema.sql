@@ -178,7 +178,7 @@ create or replace function public.get_exam_questions(p_exam_id uuid)
 returns table(id uuid, question_position int, question_type text, prompt text, options jsonb, points numeric)
 language sql stable security invoker
 set search_path = public
-as $
+as $$
   select q.id,q.position,q.question_type,q.prompt,q.options,q.points
   from public.questions q join public.exams e on e.id=q.exam_id
   join public.exam_assignments a on a.exam_id=e.id
