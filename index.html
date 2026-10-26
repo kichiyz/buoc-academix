@@ -8,7 +8,7 @@
   <title>BUOC AcademiX</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261026b">
+  <link rel="stylesheet" href="style.css?v=20261026c">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -94,6 +94,14 @@
             <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">⚙</span><span class="dev-tag dev-tag-pending">PLANNED</span></div><h3>Platform Configuration</h3><p>Future controls for feature flags, service health, deployment information, and audit activity. Secrets remain in provider dashboards.</p><button class="btn btn-quiet" data-action="planned" data-feature="Platform Configuration">Review implementation scope</button></article>
           </div>
           <div class="dev-bottom-grid"><section class="dev-info-panel"><p class="eyebrow">SECURITY BOUNDARY</p><h3>Developer UI ≠ infrastructure owner</h3><p>AcademiX admin access does not expose Supabase service keys, GitHub credentials, or environment secrets. Sensitive operations must be enforced by trusted server-side functions and database policies.</p></section><section class="dev-info-panel"><p class="eyebrow">NEXT MILESTONE</p><h3>Complete diagnostics first</h3><p>The site has reported table-permission errors for exams and grades. Resolve grants and RLS policies before enabling destructive account tools.</p><button class="text-link" data-go="account">Review developer account →</button></section></div>
+          <section class="dev-admin-panel">
+            <div class="dev-section-title"><div><p class="eyebrow">PRIVILEGED OPERATIONS</p><h2>Identity &amp; access management</h2><p class="muted">Search accounts, change roles, verify access, suspend/reactivate, or delete an account.</p></div><button id="refresh-admin-users" class="btn btn-quiet" type="button">↻ Refresh users</button></div>
+            <div class="admin-search-row"><label for="admin-user-search">Search by name or email</label><div><input id="admin-user-search" type="search" placeholder="Search accounts…" maxlength="120"><button id="search-admin-users" class="btn btn-primary" type="button">Search</button></div></div>
+            <div class="notice">These controls require the deployed <code>admin-control</code> Edge Function and server secrets. Account actions are audited. You cannot suspend or delete your own developer account.</div>
+            <div id="admin-users-status" class="empty-state">Load user accounts to begin.</div><div id="admin-users-list" class="admin-users-list"></div>
+            <div class="dev-section-title"><div><p class="eyebrow">RECENT OPERATIONS</p><h2>Administrative audit log</h2></div></div>
+            <div id="admin-audit-list" class="admin-audit-list"><div class="empty-state">Audit records appear after the admin function is deployed.</div></div>
+          </section>
         </section>
 
         <section class="page-view" id="view-exams">
@@ -114,7 +122,7 @@
               <label>Difficulty<select id="quiz-difficulty"><option>easy</option><option selected>medium</option><option>hard</option></select></label>
             </div>
             <label>Study material<textarea id="quiz-material" required minlength="80" rows="9" maxlength="50000" placeholder="Paste your notes or learning objectives here. For documents/images, extract the text first or add a Storage upload workflow."></textarea></label>
-            <div class="notice">AI output is a draft. Review every question, option, answer, and explanation before publishing.</div>
+            <div class="notice" id="draft-mode-note">AI output is a draft. Review every question, option, answer, and explanation before publishing.</div>
             <button class="btn btn-primary" type="submit" id="generate-button">✦ Generate draft</button>
           </form>
           <div id="draft-panel" class="panel hidden"><div class="section-heading"><div><h2>Review generated questions</h2><p class="muted">Correct answers are visible to the teacher only.</p></div></div><div id="draft-questions"></div><div class="publish-row"><label>Duration (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label><button id="publish-quiz" class="btn btn-primary">Publish exam</button></div></div>
@@ -141,6 +149,6 @@
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20261026b"></script>
+  <script src="app.js?v=20261026c"></script>
 </body>
 </html>
