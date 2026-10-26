@@ -70,7 +70,8 @@ test("startup has no uncaught page errors", async ({ page }) => {
 test("core page containers and asset cache versions exist", async ({ page }) => {
   await page.goto("/");
   const ids = await page.locator("[id]").evaluateAll((nodes) => nodes.map((node) => node.id));
-  expect(ids).toContain("app-shell");
+  expect(ids).toContain("auth-view");
+  expect(ids).toContain("dashboard-view");
   expect(ids).toContain("admin-users-list");
 
   const appScript = await page.locator('script[src*="app.js"]').getAttribute("src");
