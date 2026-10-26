@@ -45,6 +45,9 @@
   function initials(name) { return (name || "A").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase(); }
   function renderProfile() {
     const p = state.profile, u = state.user;
+    document.body.classList.toggle("role-admin", p.role === "admin");
+    document.body.classList.toggle("role-teacher", p.role === "teacher");
+    document.body.classList.toggle("role-student", p.role === "student");
     $("#profile-name").textContent = p.full_name || u.email;
     $("#profile-role").textContent = p.role;
     $("#role-label").textContent = `${p.role.toUpperCase()} WORKSPACE`;
