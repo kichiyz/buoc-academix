@@ -29,7 +29,7 @@
   function switchView(view) {
     const role = state.profile?.role;
     if (view === "developer" && role !== "admin") return toast("Developer access is required.", "error");
-    if (view === "teacher-home" && !["teacher", "admin"].includes(role)) return toast("Teacher access is required.", "error");
+    if (view === "teacher-home" && role !== "teacher") return toast("Teacher access is required.", "error");
     if (view === "student-home" && role !== "student") return toast("Student access is required.", "error");
     if (view === "generator" && !["teacher", "admin"].includes(role)) return toast("Teacher access is required.", "error");
     state.view = view;
@@ -55,7 +55,7 @@
     $("#account-role").textContent = p.role;
     $("#verification-status").textContent = p.verified_at ? "Verified" : "Pending verification";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
-    $$(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
+    $(".teacher-only").forEach(el => el.classList.toggle("hidden", p.role !== "teacher"));
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
