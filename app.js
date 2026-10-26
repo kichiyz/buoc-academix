@@ -115,8 +115,18 @@
         if (state.profile.role === "student") {
           card.querySelector("button").addEventListener("click", () => startExam(exam));
         } else {
-          card.querySelector("button").textContent = "Authorize retake / remedial";
-          card.querySelector("button").addEventListener("click", () => authorizeAttempt(exam));
+          const actions = document.createElement("div");
+          actions.className = "exam-card-actions";
+          const assign = document.createElement("button");
+          assign.className = "btn btn-primary";
+          assign.textContent = "Manage assigned students";
+          assign.addEventListener("click", () => manageAssignments(exam));
+          const attempts = document.createElement("button");
+          attempts.className = "btn btn-quiet";
+          attempts.textContent = "Authorize retake / remedial";
+          attempts.addEventListener("click", () => authorizeAttempt(exam));
+          actions.append(assign, attempts);
+          card.querySelector("button").replaceWith(actions);
         }
         target.append(card);
       }
@@ -205,6 +215,62 @@
         toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attempt_number}.`, "success");
       }
     } catch (e) { toast(e.message || "Could not start exam.", "error"); }
+  }
+
+  async function manageAssignments(exam) {
+    if (!["teacher", "admin"].includes(state.profile?.role)) {
+      return toast("Teacher access is required to manage assignments.", "error");
+    }
+    try {
+      const [{ data: students, error: studentsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+        state.supabase.from("profiles").select("id,full_name,bu_id,verified_at").eq("role", "student").not("verified_at", "is", null).order("full_name"),
+        state.supabase.from("exam_assignments").select("student_id").eq("exam_id", exam.id)
+      ]);
+      if (studentsError) throw studentsError;
+      if (assignmentsError) throw assignmentsError;
+      if (!students?.length) return toast("No institutionally verified student accounts are available to assign.", "error");
+
+      const assignedIds = new Set((assignments || []).map(row => row.student_id));
+      const choices = students.map((student, index) =>
+        `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}${assignedIds.has(student.id) ? " — CURRENTLY ASSIGNED" : ""}`
+      ).join("\\n");
+      const selection = prompt(
+        `Manage students for "${exam.title}". Enter comma-separated student numbers to be assigned. Existing assignments are marked. Type NONE to remove all assignments; Cancel leaves them unchanged.\\n\\n${choices}`,
+        students.map((student, index) => assignedIds.has(student.id) ? String(index + 1) : "").filter(Boolean).join(", ")
+      );
+      if (selection === null) return;
+      const normalized = selection.trim().toUpperCase();
+      let selectedIds = new Set();
+      if (normalized !== "" && normalized !== "NONE") {
+        const indices = normalized.split(",").map(part => Number(part.trim()));
+        if (indices.some(index => !Number.isInteger(index) || index < 1 || index > students.length)) {
+          return toast("Use valid student numbers separated by commas, or type NONE.", "error");
+        }
+        selectedIds = new Set(indices.map(index => students[index - 1].id));
+      } else if (normalized === "") {
+        return toast("No selection entered; assignments were not changed.", "error");
+      }
+
+      const toAdd = students.filter(student => selectedIds.has(student.id) && !assignedIds.has(student.id));
+      const toRemove = [...assignedIds].filter(id => !selectedIds.has(id));
+      if (!toAdd.length && !toRemove.length) return toast("Assignments are already up to date.", "success");
+
+      if (toAdd.length) {
+        const { error } = await state.supabase.from("exam_assignments").insert(
+          toAdd.map(student => ({ exam_id: exam.id, student_id: student.id }))
+        );
+        if (error) throw error;
+      }
+      for (const studentId of toRemove) {
+        const { error } = await state.supabase.from("exam_assignments").delete()
+          .eq("exam_id", exam.id).eq("student_id", studentId);
+        if (error) throw error;
+      }
+      toast(`Assignments updated: ${selectedIds.size} student(s) assigned.`, "success");
+      await loadExams();
+    } catch (e) {
+      toast(e.message || "Could not update exam assignments. Check the exam_assignments RLS policies.", "error");
+    }
   }
 
   async function authorizeAttempt(exam) {
