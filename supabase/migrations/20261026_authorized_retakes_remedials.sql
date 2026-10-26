@@ -121,6 +121,29 @@ begin
 end;
 $function$;
 
+-- The original safe question RPC used SECURITY INVOKER, but student RLS intentionally
+-- denies direct question-table reads. SECURITY DEFINER plus explicit eligibility checks
+-- allows only assigned, verified students to read the safe question fields.
+create or replace function public.get_exam_questions(p_exam_id uuid)
+returns table(id uuid, position int, question_type text, prompt text, options jsonb, points numeric)
+language plpgsql stable security definer
+set search_path = public, pg_temp
+as $function$
+begin
+  if auth.uid() is null then raise exception 'Authentication required.' using errcode='28000'; end if;
+  if not public.is_verified() then raise exception 'Institutional verification is required.' using errcode='42501'; end if;
+  if not exists (
+    select 1 from public.exams e join public.exam_assignments a on a.exam_id=e.id
+    where e.id=p_exam_id and e.status='published' and a.student_id=auth.uid()
+  ) then raise exception 'You are not assigned to this assessment.' using errcode='42501'; end if;
+  return query
+    select q.id,q.position,q.question_type,q.prompt,q.options,q.points
+    from public.questions q where q.exam_id=p_exam_id order by q.position;
+end;
+$function$;
+revoke all on function public.get_exam_questions(uuid) from public, anon;
+grant execute on function public.get_exam_questions(uuid) to authenticated;
+
 revoke all on function public.authorize_exam_attempt(uuid,uuid,text,text) from public, anon;
 grant execute on function public.authorize_exam_attempt(uuid,uuid,text,text) to authenticated;
 revoke all on function public.start_exam_attempt(uuid) from public, anon;
