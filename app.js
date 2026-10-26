@@ -260,10 +260,13 @@
     try {
       const result = await adminControl("list_users", { query: $("#admin-user-search")?.value.trim() || "" });
       if (loadSequence !== adminUsersLoadSequence) return;
-      state.adminUsers = result.users || [];
-      // Multiple auth/session callbacks can trigger overlapping loads. Replace rendered results
-      // after each response so concurrent requests never append duplicate account cards.
-      list.replaceChildren();
+      // Normalize the API response by stable account ID before any DOM rendering.
+      const uniqueUsers = new Map();
+      for (const user of (Array.isArray(result.users) ? result.users : [])) {
+        if (user?.id && !uniqueUsers.has(user.id)) uniqueUsers.set(user.id, user);
+      }
+      state.adminUsers = [...uniqueUsers.values()];
+      const fragment = document.createDocumentFragment();
       status.textContent = state.adminUsers.length ? `${state.adminUsers.length} account(s) found` : "No accounts matched your search.";
       state.adminUsers.forEach(user => {
         const card = document.createElement("article"); card.className = "admin-user-card";
@@ -279,8 +282,10 @@
         const verify = document.createElement("button"); verify.className="btn btn-quiet"; verify.textContent=user.verified_at?"Revoke verification":"Verify"; verify.addEventListener("click",async()=>{ try { await adminControl("set_verified",{user_id:user.id,verified:!user.verified_at}); toast("Verification status updated.","success"); await loadAdminUsers(); } catch(e){toast(e.message,"error");} });
         const suspend = document.createElement("button"); suspend.className="btn btn-quiet"; suspend.textContent=user.suspended?"Reactivate":"Suspend"; suspend.disabled=user.id===state.user.id; suspend.addEventListener("click",async()=>{ const action=user.suspended?"reactivate":"suspend"; if(!confirm(`${action==="suspend"?"Suspend":"Reactivate"} ${user.email}?`))return; try { await adminControl(action,{user_id:user.id}); toast(action==="suspend"?"Account suspended.":"Account reactivated.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
         const del = document.createElement("button"); del.className="btn btn-danger"; del.textContent="Delete"; del.disabled=user.id===state.user.id; del.addEventListener("click",async()=>{ if(prompt(`Permanently delete ${user.email}? Type DELETE to confirm.`)!=="DELETE")return; try { await adminControl("delete_user",{user_id:user.id}); toast("Account deleted.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
-        controls.append(role,save,verify,suspend,del); card.append(identity,controls); list.append(card);
+        controls.append(role,save,verify,suspend,del); card.append(identity,controls); fragment.append(card);
       });
+      if (loadSequence !== adminUsersLoadSequence) return;
+      list.replaceChildren(fragment);
       const audit = await adminControl("list_audit");
       if (loadSequence !== adminUsersLoadSequence) return;
       const auditList=$("#admin-audit-list"); auditList.replaceChildren();
@@ -291,6 +296,9 @@
 
   async function signOut() { await state.supabase.auth.signOut(); state.user = state.profile = null; showOnly("#auth-view"); }
   async function init() {
+    // Protect against accidental duplicate script execution or repeated DOM-ready handlers.
+    if (window.__academixInitStarted) return;
+    window.__academixInitStarted = true;
     if (!configured || !window.supabase) {
       showOnly("#auth-view"); toast("Setup required: add your Supabase project URL and publishable/anon key in app.js.", "error"); return;
     }
