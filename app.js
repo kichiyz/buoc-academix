@@ -233,9 +233,9 @@
       const assignedIds = new Set((assignments || []).map(row => row.student_id));
       const choices = students.map((student, index) =>
         `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}${assignedIds.has(student.id) ? " — CURRENTLY ASSIGNED" : ""}`
-      ).join("\\n");
+      ).join("\n");
       const selection = prompt(
-        `Manage students for "${exam.title}". Enter comma-separated student numbers to be assigned. Existing assignments are marked. Type NONE to remove all assignments; Cancel leaves them unchanged.\\n\\n${choices}`,
+        `Manage students for "${exam.title}". Enter comma-separated student numbers to be assigned. Existing assignments are marked. Type NONE to remove all assignments; Cancel leaves them unchanged.\n\n${choices}`,
         students.map((student, index) => assignedIds.has(student.id) ? String(index + 1) : "").filter(Boolean).join(", ")
       );
       if (selection === null) return;
