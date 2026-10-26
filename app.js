@@ -58,6 +58,12 @@
     $("#account-name").textContent = p.full_name || "AcademiX user";
     $("#account-email").textContent = u.email;
     $("#account-role").textContent = p.role;
+    const emailVerified = Boolean(u.email_confirmed_at || u.confirmed_at);
+    const emailStatus = $("#email-verification-status");
+    if (emailStatus) {
+      emailStatus.textContent = emailVerified ? "Email confirmed" : "Email not confirmed";
+      emailStatus.className = `badge ${emailVerified ? "badge-success" : "badge-warning"}`;
+    }
     $("#verification-status").textContent = p.verified_at ? "Institutionally approved" : "Pending admin approval";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
     $$(".teacher-only.nav-item").forEach(el => { if (p.role === "admin") el.remove(); else el.classList.toggle("hidden", p.role !== "teacher"); });
