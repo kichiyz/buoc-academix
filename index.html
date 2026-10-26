@@ -50,10 +50,17 @@
         <a class="brand-row" href="#" aria-label="BUOC AcademiX home"><div class="brand-mark small">A<span>+</span></div><div><b>BUOC AcademiX</b><small>ASSESSMENT PORTAL</small></div></a>
         <div class="sidebar-label">WORKSPACE</div>
         <nav id="main-nav">
+          <button class="nav-item student-only hidden" data-view="student-home"><span>⌂</span> Learning Home</button>
+          <button class="nav-item teacher-only hidden" data-view="teacher-home"><span>▦</span> Teaching Hub</button>
           <button class="nav-item developer-only hidden" data-view="developer"><span>⌘</span> Developer Center</button>
-          <button class="nav-item active" id="exam-nav-label" data-view="exams"><span>▤</span> My Exams</button>
-          <button class="nav-item teacher-only hidden" data-view="generator"><span>✦</span> Generate Quiz</button>
-          <button class="nav-item" data-view="grades"><span>▥</span> Grades</button>
+          <button class="nav-item student-only hidden" id="exam-nav-label" data-view="exams"><span>▤</span> My Exams</button>
+          <button class="nav-item teacher-only hidden" data-view="exams"><span>▤</span> Exam Library</button>
+          <button class="nav-item developer-only hidden" data-view="exams"><span>▤</span> Exam Library</button>
+          <button class="nav-item teacher-only hidden" data-view="generator"><span>✦</span> Quiz Studio</button>
+          <button class="nav-item developer-only hidden" data-view="generator"><span>✦</span> Exam Sandbox</button>
+          <button class="nav-item student-only hidden" data-view="grades"><span>▥</span> My Grades</button>
+          <button class="nav-item teacher-only hidden" data-view="grades"><span>▥</span> Results</button>
+          <button class="nav-item developer-only hidden" data-view="grades"><span>▥</span> Results</button>
           <button class="nav-item" data-view="account"><span>◉</span> Account</button>
         </nav>
         <div class="sidebar-bottom"><div class="online-dot"></div><span>Connected to AcademiX</span><button id="signout" class="signout">↗ Sign out</button></div>
@@ -64,16 +71,29 @@
           <div class="profile-chip"><div class="avatar" id="avatar">A</div><div><b id="profile-name">Account</b><small id="profile-role">Student</small></div></div>
         </header>
 
-        <section class="page-view hidden" id="view-developer">
-          <div class="welcome-banner"><div><p class="eyebrow">DEVELOPER CONTROL CENTER</p><h2>Welcome to your platform workspace.</h2><p class="muted">Manage your assessment workflow, inspect account status, and test platform features from one place.</p></div><div class="banner-icon">⌘</div></div>
-          <div class="section-heading"><div><h2>Developer tools</h2><p class="muted">Available tools in this deployment</p></div></div>
-          <div class="exam-grid">
-            <article class="exam-card"><span class="badge">Available</span><h3>Exam & Quiz Lab</h3><p class="muted">Generate and review quiz drafts using your authorized study material.</p><button class="btn btn-primary" data-go="generator">Open Quiz Studio →</button></article>
-            <article class="exam-card"><span class="badge">Available</span><h3>Exam Library</h3><p class="muted">Inspect assessments visible to your current role and database policies.</p><button class="btn btn-quiet" data-go="exams">Open Exam Library →</button></article>
-            <article class="exam-card"><span class="badge">Available</span><h3>Grades & Results</h3><p class="muted">Review the results currently accessible to your account.</p><button class="btn btn-quiet" data-go="grades">Open Grades →</button></article>
-            <article class="exam-card"><span class="badge">Account</span><h3>Developer Account</h3><p class="muted">Review your account role and institutional verification status.</p><button class="btn btn-quiet" data-go="account">Open Account →</button></article>
+        <section class="page-view hidden role-home student-home" id="view-student-home">
+          <div class="role-hero student-hero"><div><p class="eyebrow">STUDENT LEARNING SPACE</p><h2>Your next step starts here.</h2><p>See assigned assessments, track your results, and keep your learning moving.</p><div class="hero-actions"><button class="btn btn-primary" data-go="exams">View my assessments →</button><button class="btn btn-quiet" data-go="grades">Check my grades</button></div></div><div class="hero-emblem">✦</div></div>
+          <div class="metric-grid"><article class="metric-card"><span class="metric-icon">▤</span><small>ASSESSMENTS</small><strong>My exam list</strong><p>Open assigned assessments when available.</p><button class="text-link" data-go="exams">Browse exams →</button></article><article class="metric-card"><span class="metric-icon">▥</span><small>PROGRESS</small><strong>My results</strong><p>Review submitted and graded work.</p><button class="text-link" data-go="grades">View grades →</button></article><article class="metric-card"><span class="metric-icon">◉</span><small>ACCOUNT</small><strong>Verification status</strong><p>Check your profile and access status.</p><button class="text-link" data-go="account">Account details →</button></article></div>
+          <div class="section-heading"><div><h2>Student checklist</h2><p class="muted">A few things to remember before an assessment.</p></div></div><div class="checklist-panel"><div><span>01</span><p><b>Check your access</b><small>Only assigned and published assessments appear in your exam list.</small></p></div><div><span>02</span><p><b>Prepare your workspace</b><small>Use a stable connection and read the instructions before starting.</small></p></div><div><span>03</span><p><b>Review your results</b><small>Grades appear after your work has been processed.</small></p></div></div>
+        </section>
+        <section class="page-view hidden role-home teacher-home" id="view-teacher-home">
+          <div class="role-hero teacher-hero"><div><p class="eyebrow">TEACHER WORKSPACE</p><h2>Build better assessments.</h2><p>Prepare question sets, review generated drafts, and manage assessments available to your teaching account.</p><div class="hero-actions"><button class="btn btn-primary" data-go="generator">Create a quiz draft →</button><button class="btn btn-quiet" data-go="exams">Open exam library</button></div></div><div class="hero-emblem">▦</div></div>
+          <div class="metric-grid"><article class="metric-card"><span class="metric-icon">✦</span><small>ASSESSMENT AUTHORING</small><strong>Quiz Studio</strong><p>Generate a draft from authorized study material, then review it.</p><button class="text-link" data-go="generator">Open Quiz Studio →</button></article><article class="metric-card"><span class="metric-icon">▤</span><small>ASSESSMENT LIBRARY</small><strong>Manage your workflow</strong><p>See assessments visible to your current database permissions.</p><button class="text-link" data-go="exams">Open library →</button></article><article class="metric-card"><span class="metric-icon">▥</span><small>RESULTS</small><strong>Review grades</strong><p>Inspect available grading results and export tools.</p><button class="text-link" data-go="grades">View results →</button></article></div>
+          <div class="notice">Publishing, assigning students, reviewing submissions, and grading need complete database workflows. This hub links to current available features; unfinished tools are not shown as active.</div>
+        </section>
+        <section class="page-view hidden developer-console" id="view-developer">
+          <div class="dev-masthead"><div><p class="eyebrow">BUOC ACADEMIX / PLATFORM OPERATIONS</p><h2>Developer Control Center</h2><p>Privileged workspace for platform development, testing, and operational oversight.</p></div><div class="dev-seal"><span>AX</span><small>ROOT<br>WORKSPACE</small></div></div>
+          <div class="dev-status-strip"><div><span class="status-pulse"></span><div><small>SESSION ROLE</small><b>Administrator</b></div></div><div><span class="status-pulse"></span><div><small>PROFILE</small><b>Loaded</b></div></div><div><span class="status-warning"></span><div><small>PLATFORM STATUS</small><b>Needs diagnostics</b></div></div></div>
+          <div class="dev-section-title"><div><p class="eyebrow">CONTROL SURFACE</p><h2>Platform tools</h2></div><span class="dev-readout">DEVELOPER MODE / 01</span></div>
+          <div class="dev-tool-grid">
+            <article class="dev-tool dev-tool-primary"><div class="dev-tool-top"><span class="dev-tool-icon">⌘</span><span class="dev-tag">LIVE UI</span></div><h3>Exam & Quiz Lab</h3><p>Open the quiz generator to build and inspect assessment drafts. A fully isolated test mode is a separate implementation task.</p><button class="btn btn-primary" data-go="generator">Open Quiz Studio →</button></article>
+            <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">▤</span><span class="dev-tag">DATABASE</span></div><h3>Exam Registry</h3><p>Inspect exams exposed by current row-level security policies.</p><button class="btn btn-quiet" data-go="exams">Open registry →</button></article>
+            <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">♙</span><span class="dev-tag dev-tag-pending">PLANNED</span></div><h3>Identity & Access</h3><p>Account search, role changes, suspension, reactivation, and controlled deletion with server-side authorization and audit records.</p><button class="btn btn-quiet" data-action="planned" data-feature="Identity & Access">Review implementation scope</button></article>
+            <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">⌁</span><span class="dev-tag dev-tag-pending">PLANNED</span></div><h3>Test Environment</h3><p>Sandbox exams and sample attempts kept separate from real student records and grades.</p><button class="btn btn-quiet" data-action="planned" data-feature="Isolated Test Environment">Review implementation scope</button></article>
+            <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">▥</span><span class="dev-tag">CURRENT VIEW</span></div><h3>Results Inspector</h3><p>Open results visible under current database policies. Database access errors remain visible for diagnosis.</p><button class="btn btn-quiet" data-go="grades">Open results →</button></article>
+            <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">⚙</span><span class="dev-tag dev-tag-pending">PLANNED</span></div><h3>Platform Configuration</h3><p>Future controls for feature flags, service health, deployment information, and audit activity. Secrets remain in provider dashboards.</p><button class="btn btn-quiet" data-action="planned" data-feature="Platform Configuration">Review implementation scope</button></article>
           </div>
-          <div class="notice">Account suspension/deletion, isolated test exams, audit logs, and infrastructure controls are not implemented yet. This page does not claim those controls are active.</div>
+          <div class="dev-bottom-grid"><section class="dev-info-panel"><p class="eyebrow">SECURITY BOUNDARY</p><h3>Developer UI ≠ infrastructure owner</h3><p>AcademiX admin access does not expose Supabase service keys, GitHub credentials, or environment secrets. Sensitive operations must be enforced by trusted server-side functions and database policies.</p></section><section class="dev-info-panel"><p class="eyebrow">NEXT MILESTONE</p><h3>Complete diagnostics first</h3><p>The site has reported table-permission errors for exams and grades. Resolve grants and RLS policies before enabling destructive account tools.</p><button class="text-link" data-go="account">Review developer account →</button></section></div>
         </section>
 
         <section class="page-view" id="view-exams">
