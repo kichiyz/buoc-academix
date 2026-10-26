@@ -55,7 +55,7 @@
     $("#account-role").textContent = p.role;
     $("#verification-status").textContent = p.verified_at ? "Verified" : "Pending verification";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
-    $(".teacher-only").forEach(el => el.classList.toggle("hidden", p.role !== "teacher"));
+    $$(".teacher-only").forEach(el => el.classList.toggle("hidden", p.role !== "teacher"));
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
