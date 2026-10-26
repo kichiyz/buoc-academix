@@ -226,3 +226,20 @@ for each row execute procedure public.handle_new_user();
 -- writes submissions + grades atomically, and returns only the resulting score.
 -- Never expose service_role credentials in browser code. Assign teachers/admins and
 -- verified_at through a trusted admin workflow, not client-side metadata.
+
+-- Server-written audit trail for privileged developer operations.
+create table if not exists public.admin_audit_logs (
+ id bigint generated always as identity primary key,
+ actor_id uuid references auth.users(id) on delete set null,
+ target_user_id uuid,
+ action text not null check (char_length(action) between 1 and 80),
+ target_email text,
+ details jsonb not null default '{}'::jsonb,
+ created_at timestamptz not null default now()
+);
+create index if not exists admin_audit_logs_created_at_idx on public.admin_audit_logs(created_at desc);
+alter table public.admin_audit_logs enable row level security;
+grant select on public.admin_audit_logs to authenticated;
+drop policy if exists "admins read audit logs" on public.admin_audit_logs;
+create policy "admins read audit logs" on public.admin_audit_logs for select to authenticated using (public.current_role() = 'admin');
+revoke insert, update, delete on public.admin_audit_logs from anon, authenticated;
