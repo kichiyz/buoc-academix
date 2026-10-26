@@ -55,9 +55,9 @@
     $("#account-role").textContent = p.role;
     $("#verification-status").textContent = p.verified_at ? "Verified" : "Pending verification";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
-    $(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
-    $(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
-    $(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
+    $$(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
+    $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
+    $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
   }
   async function loadProfile() {
@@ -251,8 +251,8 @@
       toast(error ? error.message : "If the account exists, a password reset email will be sent.", error ? "error" : "success");
     });
     $$(".nav-item").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
-    $("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
-    $("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
+    $$("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
+    $$("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
     $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#generator-form").addEventListener("submit", generateQuiz);
