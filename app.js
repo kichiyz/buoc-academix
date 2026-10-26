@@ -91,7 +91,7 @@
       } else {
         const name = $("#auth-name").value.trim(), buId = $("#auth-bu-id").value.trim();
         if (!name) return toast("Enter your full name.", "error");
-        const emailRedirectTo = new URL(location.pathname || "/", location.origin).href;
+        const emailRedirectTo = "https://kichiyz.github.io/buoc-academix/";
         const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId } } });
         if (error) throw error;
         toast("Account created. Check your email if confirmation is enabled. Your role and verification must be approved by an administrator.", "success");
