@@ -261,9 +261,16 @@
       const result = await adminControl("list_users", { query: $("#admin-user-search")?.value.trim() || "" });
       if (loadSequence !== adminUsersLoadSequence) return;
       // Normalize the API response by stable account ID before any DOM rendering.
+      // Auth user IDs are the primary identity; normalized email is a secondary
+      // guard against repeated directory rows for the same account.
       const uniqueUsers = new Map();
+      const seenEmails = new Set();
       for (const user of (Array.isArray(result.users) ? result.users : [])) {
-        if (user?.id && !uniqueUsers.has(user.id)) uniqueUsers.set(user.id, user);
+        if (!user?.id) continue;
+        const emailKey = String(user.email || "").trim().toLowerCase();
+        if (uniqueUsers.has(user.id) || (emailKey && seenEmails.has(emailKey))) continue;
+        uniqueUsers.set(user.id, user);
+        if (emailKey) seenEmails.add(emailKey);
       }
       state.adminUsers = [...uniqueUsers.values()];
       const fragment = document.createDocumentFragment();
