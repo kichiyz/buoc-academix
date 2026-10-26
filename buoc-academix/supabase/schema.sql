@@ -117,6 +117,12 @@ on public.exams for all to authenticated
 using (teacher_id=auth.uid() and public.current_role() in ('teacher','admin'))
 with check (teacher_id=auth.uid() and public.current_role() in ('teacher','admin'));
 
+-- Administrators need read-only access to all exams for the developer registry/results UI.
+grant select on public.exams to authenticated;
+create policy "admins read all exams"
+on public.exams for select to authenticated
+using (public.current_role() = 'admin');
+
 create policy "students see published assigned exams"
 on public.exams for select to authenticated
 using (status='published' and public.is_verified() and exists(
