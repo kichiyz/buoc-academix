@@ -474,6 +474,7 @@
     $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#refresh-admin-users")?.addEventListener("click", loadAdminUsers);
+    $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#generator-form").addEventListener("submit", generateQuiz);
     $("#publish-quiz").addEventListener("click", publishQuiz);
