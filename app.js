@@ -251,12 +251,15 @@
     if (data?.error) throw new Error(data.error);
     return data;
   }
+  let adminUsersLoadSequence = 0;
   async function loadAdminUsers() {
+    const loadSequence = ++adminUsersLoadSequence;
     const status = $("#admin-users-status"), list = $("#admin-users-list");
     if (!status || !list) return;
     status.textContent = "Loading accounts…"; list.innerHTML = "";
     try {
       const result = await adminControl("list_users", { query: $("#admin-user-search")?.value.trim() || "" });
+      if (loadSequence !== adminUsersLoadSequence) return;
       state.adminUsers = result.users || [];
       // Multiple auth/session callbacks can trigger overlapping loads. Replace rendered results
       // after each response so concurrent requests never append duplicate account cards.
@@ -278,10 +281,12 @@
         const del = document.createElement("button"); del.className="btn btn-danger"; del.textContent="Delete"; del.disabled=user.id===state.user.id; del.addEventListener("click",async()=>{ if(prompt(`Permanently delete ${user.email}? Type DELETE to confirm.`)!=="DELETE")return; try { await adminControl("delete_user",{user_id:user.id}); toast("Account deleted.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
         controls.append(role,save,verify,suspend,del); card.append(identity,controls); list.append(card);
       });
-      const audit = await adminControl("list_audit"); const auditList=$("#admin-audit-list"); auditList.replaceChildren();
+      const audit = await adminControl("list_audit");
+      if (loadSequence !== adminUsersLoadSequence) return;
+      const auditList=$("#admin-audit-list"); auditList.replaceChildren();
       if(!audit.logs?.length) auditList.innerHTML='<div class="empty-state">No administrative actions recorded yet.</div>';
       (audit.logs||[]).forEach(log=>{const row=document.createElement("div");row.className="admin-audit-row";const label=document.createElement("strong");label.textContent=log.action;const detail=document.createElement("span");detail.textContent=`${log.target_email||log.target_user_id||"Platform"} • ${new Date(log.created_at).toLocaleString()}`;row.append(label,detail);auditList.append(row);});
-    } catch (e) { status.textContent = "Could not load accounts."; list.innerHTML=""; toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
+    } catch (e) { if (loadSequence !== adminUsersLoadSequence) return; status.textContent = "Could not load accounts."; list.replaceChildren(); toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
   }
 
   async function signOut() { await state.supabase.auth.signOut(); state.user = state.profile = null; showOnly("#auth-view"); }
