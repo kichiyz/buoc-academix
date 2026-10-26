@@ -51,7 +51,7 @@ declare
 begin
   if v_actor is null then raise exception 'Authentication required.' using errcode='28000'; end if;
   select role into v_role from public.profiles where id=v_actor;
-  if v_role not in ('teacher','admin') then raise exception 'Teacher or admin access required.' using errcode='42501'; end if;
+  if v_role is null or v_role not in ('teacher','admin') then raise exception 'Teacher or admin access required.' using errcode='42501'; end if;
   if p_attempt_type not in ('retake','remedial') then raise exception 'Attempt type must be retake or remedial.' using errcode='22023'; end if;
   if not exists(select 1 from public.exams e where e.id=p_exam_id and e.status='published'
       and (v_role='admin' or e.teacher_id=v_actor)) then
@@ -91,11 +91,9 @@ begin
   select * into v_exam from public.exams where id=p_exam_id and status='published';
   if not found then raise exception 'This assessment is not available.' using errcode='55000'; end if;
   if not exists(select 1 from public.exam_assignments a where a.exam_id=p_exam_id and a.student_id=v_user) then
-    raise exception 'You are not assigned to this assessment.' using errcode='42501';
-  end if;
+    raise exception 'You are not assigned to this assessment.' using errcode='42501'; end if;
   if not exists(select 1 from public.questions q where q.exam_id=p_exam_id) then
-    raise exception 'This assessment has no questions.' using errcode='55000';
-  end if;
+    raise exception 'This assessment has no questions.' using errcode='55000'; end if;
 
   -- Reopen the same in-progress attempt instead of creating a duplicate.
   select * into v_submission from public.submissions
@@ -121,11 +119,9 @@ begin
 end;
 $function$;
 
--- The original safe question RPC used SECURITY INVOKER, but student RLS intentionally
--- denies direct question-table reads. SECURITY DEFINER plus explicit eligibility checks
--- allows only assigned, verified students to read the safe question fields.
+-- Quote "position": it is a SQL keyword in this RETURNS TABLE declaration.
 create or replace function public.get_exam_questions(p_exam_id uuid)
-returns table(id uuid, position int, question_type text, prompt text, options jsonb, points numeric)
+returns table(id uuid, "position" int, question_type text, prompt text, options jsonb, points numeric)
 language plpgsql stable security definer
 set search_path = public, pg_temp
 as $function$
