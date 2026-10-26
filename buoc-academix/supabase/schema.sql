@@ -108,11 +108,9 @@ create policy "profiles create own student profile"
 on public.profiles for insert to authenticated
 with check (id = auth.uid() and role = 'student' and verified_at is null);
 
-create policy "profiles update own non-privileged fields"
-on public.profiles for update to authenticated
-using (id = auth.uid())
-with check (id = auth.uid() and role = (select p.role from public.profiles p where p.id=auth.uid())
-  and verified_at is not distinct from (select p.verified_at from public.profiles p where p.id=auth.uid()));
+-- No client-side profile UPDATE policy is created. This prevents users from
+-- changing privileged fields (role/verified_at); profile edits can be added later
+-- through a narrowly scoped RPC that only accepts approved fields.
 
 create policy "teachers manage their exams"
 on public.exams for all to authenticated
