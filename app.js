@@ -2,8 +2,8 @@
    The anon/publishable key is designed for browsers; NEVER place service_role or LLM keys here. */
 (() => {
   "use strict";
-  const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-  const SUPABASE_ANON_KEY = "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY";
+  const SUPABASE_URL = "https://otkgtwwxmmdmiavmpyqo.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_A-o7buSKUahNZceiaJBgCw_cvzeW-Rg";
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
