@@ -142,3 +142,9 @@ h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* Exam library assignment controls */
+.exam-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;align-items:stretch}
+.exam-card-actions .btn{margin-top:0;align-self:auto;white-space:normal}
+@media(max-width:600px){.exam-card-actions{display:grid;grid-template-columns:1fr}.exam-card-actions .btn{width:100%;font-size:.78rem;padding:11px 12px}}
