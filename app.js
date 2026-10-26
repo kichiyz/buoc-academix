@@ -258,6 +258,9 @@
     try {
       const result = await adminControl("list_users", { query: $("#admin-user-search")?.value.trim() || "" });
       state.adminUsers = result.users || [];
+      // Multiple auth/session callbacks can trigger overlapping loads. Replace rendered results
+      // after each response so concurrent requests never append duplicate account cards.
+      list.replaceChildren();
       status.textContent = state.adminUsers.length ? `${state.adminUsers.length} account(s) found` : "No accounts matched your search.";
       state.adminUsers.forEach(user => {
         const card = document.createElement("article"); card.className = "admin-user-card";
@@ -275,7 +278,7 @@
         const del = document.createElement("button"); del.className="btn btn-danger"; del.textContent="Delete"; del.disabled=user.id===state.user.id; del.addEventListener("click",async()=>{ if(prompt(`Permanently delete ${user.email}? Type DELETE to confirm.`)!=="DELETE")return; try { await adminControl("delete_user",{user_id:user.id}); toast("Account deleted.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
         controls.append(role,save,verify,suspend,del); card.append(identity,controls); list.append(card);
       });
-      const audit = await adminControl("list_audit"); const auditList=$("#admin-audit-list"); auditList.innerHTML="";
+      const audit = await adminControl("list_audit"); const auditList=$("#admin-audit-list"); auditList.replaceChildren();
       if(!audit.logs?.length) auditList.innerHTML='<div class="empty-state">No administrative actions recorded yet.</div>';
       (audit.logs||[]).forEach(log=>{const row=document.createElement("div");row.className="admin-audit-row";const label=document.createElement("strong");label.textContent=log.action;const detail=document.createElement("span");detail.textContent=`${log.target_email||log.target_user_id||"Platform"} • ${new Date(log.created_at).toLocaleString()}`;row.append(label,detail);auditList.append(row);});
     } catch (e) { status.textContent = "Could not load accounts."; list.innerHTML=""; toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
