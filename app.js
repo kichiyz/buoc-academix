@@ -57,7 +57,8 @@
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
     $(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
     $(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
-    const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = p.role === "admin" ? " Exam Library" : " My Exams";
+    $(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
+    const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
   }
   async function loadProfile() {
     const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at").eq("id", state.user.id).single();
