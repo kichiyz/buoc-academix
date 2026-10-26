@@ -79,3 +79,66 @@ body.role-admin .teacher-only{display:none!important}body.role-teacher .develope
 
 /* Developer identity and access console */
 .dev-admin-panel{margin-top:28px;padding:24px;border:1px solid var(--line,rgba(205,171,255,.2));border-radius:22px;background:rgba(37,25,52,.62)}.admin-search-row{display:grid;gap:8px;margin:18px 0}.admin-search-row>div{display:flex;gap:10px}.admin-search-row input{flex:1;min-width:0}.admin-users-list,.admin-audit-list{display:grid;gap:12px;margin-top:14px}.admin-user-card{display:grid;grid-template-columns:minmax(180px,1fr) minmax(260px,2fr);gap:16px;padding:16px;border:1px solid rgba(205,171,255,.18);border-radius:14px;background:rgba(15,10,24,.4)}.admin-user-identity{display:grid;gap:5px;align-content:start;overflow-wrap:anywhere}.admin-user-identity small{color:var(--muted,#b9a9d5)}.admin-user-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.admin-user-controls select{max-width:130px}.btn-danger{background:#632b43;color:#fff;border:1px solid #b75a79}.admin-audit-row{display:flex;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid rgba(205,171,255,.14);overflow-wrap:anywhere}.admin-audit-row span{color:var(--muted,#b9a9d5);text-align:right}@media(max-width:800px){.admin-user-card{grid-template-columns:1fr}.admin-audit-row{flex-direction:column}.admin-audit-row span{text-align:left}.admin-user-controls>*{flex:1 1 130px}}
+
+
+/* Global rendering reliability layer: predictable sizing, wrapping, responsive grids, and reduced motion. */
+:root{color-scheme:dark;scrollbar-gutter:stable}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{overflow-x:hidden;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+img,svg,video,canvas,iframe{max-width:100%;height:auto}
+button,input,textarea,select{max-width:100%}
+button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-shadow:none}
+button,.btn{overflow-wrap:anywhere}
+.app-shell,.dashboard,.main-area,.page-view,.panel,.dev-admin-panel{min-width:0}
+.page-view:not(.hidden){animation:academix-view-in .16s ease-out both}
+.section-heading>* ,.dev-section-title>*{min-width:0}
+h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
+.admin-users-list{grid-template-columns:minmax(0,1fr)}
+.admin-user-card{min-width:0;align-items:start}
+.admin-user-controls{min-width:0}
+.admin-user-controls select{flex:1 1 120px;max-width:100%}
+.admin-user-controls .btn{flex:0 1 auto;min-width:105px}
+.admin-audit-row>*{min-width:0}
+.empty-state{overflow-wrap:anywhere}
+.form-grid>*{min-width:0}
+#view-developer>*{min-width:0}
+#admin-users-status{margin-top:12px}
+:focus-visible{scroll-margin-block:100px}
+@keyframes academix-view-in{from{opacity:.72}to{opacity:1}}
+@media(max-width:1100px){
+  .main-area{padding-left:clamp(16px,3vw,28px);padding-right:clamp(16px,3vw,28px)}
+  .dev-admin-panel{padding:clamp(16px,2.5vw,24px)}
+  .admin-user-card{grid-template-columns:minmax(0,1fr)}
+  .admin-user-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-user-controls select{grid-column:1/-1;width:100%}
+  .admin-user-controls .btn{width:100%;min-width:0}
+}
+@media(max-width:700px){
+  html{scrollbar-gutter:auto}
+  .main-area{padding:0 14px 28px}
+  .topbar{gap:10px}
+  .topbar h1{overflow-wrap:anywhere}
+  .profile-chip{min-width:0}
+  .section-heading{flex-wrap:wrap}
+  .section-heading>.btn,.dev-section-title>.btn{max-width:100%}
+  .dev-admin-panel{padding:15px;border-radius:16px}
+  .admin-search-row>div{display:grid;grid-template-columns:minmax(0,1fr) auto}
+  .admin-search-row .btn{padding:11px}
+  .admin-user-card{padding:13px}
+  .admin-user-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .admin-user-controls .btn{padding:10px 8px;font-size:.76rem}
+  .admin-audit-row{padding:12px 2px}
+  .exam-controls .btn{min-width:0}
+  .account-meta{flex-wrap:wrap}
+}
+@media(max-width:380px){
+  .main-area{padding-left:10px;padding-right:10px}
+  .admin-user-controls{grid-template-columns:minmax(0,1fr)}
+  .admin-user-controls select{grid-column:auto}
+  .admin-search-row>div{grid-template-columns:minmax(0,1fr)}
+  .admin-search-row .btn{width:100%}
+  .nav-item{min-width:0!important}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
