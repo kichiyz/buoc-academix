@@ -27,12 +27,18 @@
     $("#auth-password").autocomplete = mode === "signin" ? "current-password" : "new-password";
   }
   function switchView(view) {
-    if (view === "developer" && state.profile?.role !== "admin") return toast("Developer access is required.", "error");
-    if (view === "generator" && !["teacher", "admin"].includes(state.profile?.role)) return toast("Teacher access is required.", "error");
+    const role = state.profile?.role;
+    if (view === "developer" && role !== "admin") return toast("Developer access is required.", "error");
+    if (view === "teacher-home" && !["teacher", "admin"].includes(role)) return toast("Teacher access is required.", "error");
+    if (view === "student-home" && role !== "student") return toast("Student access is required.", "error");
+    if (view === "generator" && !["teacher", "admin"].includes(role)) return toast("Teacher access is required.", "error");
     state.view = view;
     $$(".page-view").forEach(el => el.classList.toggle("hidden", el.id !== `view-${view}`));
     $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-    $("#page-heading").textContent = ({ developer: "Developer Center", exams: state.profile?.role === "admin" ? "Exam Library" : "My Exams", generator: "Generate Quiz", grades: "Grades", account: "Account" })[view] || "AcademiX";
+    $("#page-heading").textContent = ({ "student-home": "Learning Home", "teacher-home": "Teaching Hub", developer: "Developer Center", exams: role === "student" ? "My Exams" : "Exam Library", generator: role === "admin" ? "Exam Sandbox" : "Quiz Studio", grades: role === "student" ? "My Grades" : "Results", account: "Account" })[view] || "AcademiX";
+    $("#role-label").textContent = ({ student: "STUDENT LEARNING WORKSPACE", teacher: "TEACHING & ASSESSMENT WORKSPACE", admin: "PLATFORM OPERATIONS / DEVELOPER" })[role] || "ACADEMIX WORKSPACE";
+    $("#dashboard-view").classList.remove("role-student", "role-teacher", "role-admin");
+    $("#dashboard-view").classList.add(role === "admin" ? "role-admin" : role === "teacher" ? "role-teacher" : "role-student");
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
   }
@@ -61,7 +67,7 @@
   async function enterApp() {
     showOnly("#dashboard-view");
     await loadProfile();
-    switchView(state.profile.role === "admin" ? "developer" : "exams");
+    switchView(state.profile.role === "admin" ? "developer" : state.profile.role === "teacher" ? "teacher-home" : "student-home");
   }
   async function authSubmit(event) {
     event.preventDefault();
@@ -244,7 +250,8 @@
       toast(error ? error.message : "If the account exists, a password reset email will be sent.", error ? "error" : "success");
     });
     $$(".nav-item").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
-    $$("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
+    $("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
+    $("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
     $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#generator-form").addEventListener("submit", generateQuiz);
