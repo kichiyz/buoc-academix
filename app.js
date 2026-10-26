@@ -27,11 +27,12 @@
     $("#auth-password").autocomplete = mode === "signin" ? "current-password" : "new-password";
   }
   function switchView(view) {
+    if (view === "developer" && state.profile?.role !== "admin") return toast("Developer access is required.", "error");
     if (view === "generator" && !["teacher", "admin"].includes(state.profile?.role)) return toast("Teacher access is required.", "error");
     state.view = view;
     $$(".page-view").forEach(el => el.classList.toggle("hidden", el.id !== `view-${view}`));
     $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-    $("#page-heading").textContent = ({ exams: "My Exams", generator: "Generate Quiz", grades: "Grades", account: "Account" })[view] || "AcademiX";
+    $("#page-heading").textContent = ({ developer: "Developer Center", exams: state.profile?.role === "admin" ? "Exam Library" : "My Exams", generator: "Generate Quiz", grades: "Grades", account: "Account" })[view] || "AcademiX";
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
   }
@@ -48,7 +49,9 @@
     $("#account-role").textContent = p.role;
     $("#verification-status").textContent = p.verified_at ? "Verified" : "Pending verification";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
-    $$(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
+    $(".teacher-only").forEach(el => el.classList.toggle("hidden", !["teacher", "admin"].includes(p.role)));
+    $(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
+    const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = p.role === "admin" ? " Exam Library" : " My Exams";
   }
   async function loadProfile() {
     const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at").eq("id", state.user.id).single();
@@ -58,7 +61,7 @@
   async function enterApp() {
     showOnly("#dashboard-view");
     await loadProfile();
-    switchView("exams");
+    switchView(state.profile.role === "admin" ? "developer" : "exams");
   }
   async function authSubmit(event) {
     event.preventDefault();
