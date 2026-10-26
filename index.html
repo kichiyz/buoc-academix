@@ -50,7 +50,8 @@
         <a class="brand-row" href="#" aria-label="BUOC AcademiX home"><div class="brand-mark small">A<span>+</span></div><div><b>BUOC AcademiX</b><small>ASSESSMENT PORTAL</small></div></a>
         <div class="sidebar-label">WORKSPACE</div>
         <nav id="main-nav">
-          <button class="nav-item active" data-view="exams"><span>▤</span> My Exams</button>
+          <button class="nav-item developer-only hidden" data-view="developer"><span>⌘</span> Developer Center</button>
+          <button class="nav-item active" id="exam-nav-label" data-view="exams"><span>▤</span> My Exams</button>
           <button class="nav-item teacher-only hidden" data-view="generator"><span>✦</span> Generate Quiz</button>
           <button class="nav-item" data-view="grades"><span>▥</span> Grades</button>
           <button class="nav-item" data-view="account"><span>◉</span> Account</button>
@@ -62,6 +63,18 @@
           <div><p class="eyebrow" id="role-label">STUDENT WORKSPACE</p><h1 id="page-heading">My Exams</h1></div>
           <div class="profile-chip"><div class="avatar" id="avatar">A</div><div><b id="profile-name">Account</b><small id="profile-role">Student</small></div></div>
         </header>
+
+        <section class="page-view hidden" id="view-developer">
+          <div class="welcome-banner"><div><p class="eyebrow">DEVELOPER CONTROL CENTER</p><h2>Welcome to your platform workspace.</h2><p class="muted">Manage your assessment workflow, inspect account status, and test platform features from one place.</p></div><div class="banner-icon">⌘</div></div>
+          <div class="section-heading"><div><h2>Developer tools</h2><p class="muted">Available tools in this deployment</p></div></div>
+          <div class="exam-grid">
+            <article class="exam-card"><span class="badge">Available</span><h3>Exam & Quiz Lab</h3><p class="muted">Generate and review quiz drafts using your authorized study material.</p><button class="btn btn-primary" data-go="generator">Open Quiz Studio →</button></article>
+            <article class="exam-card"><span class="badge">Available</span><h3>Exam Library</h3><p class="muted">Inspect assessments visible to your current role and database policies.</p><button class="btn btn-quiet" data-go="exams">Open Exam Library →</button></article>
+            <article class="exam-card"><span class="badge">Available</span><h3>Grades & Results</h3><p class="muted">Review the results currently accessible to your account.</p><button class="btn btn-quiet" data-go="grades">Open Grades →</button></article>
+            <article class="exam-card"><span class="badge">Account</span><h3>Developer Account</h3><p class="muted">Review your account role and institutional verification status.</p><button class="btn btn-quiet" data-go="account">Open Account →</button></article>
+          </div>
+          <div class="notice">Account suspension/deletion, isolated test exams, audit logs, and infrastructure controls are not implemented yet. This page does not claim those controls are active.</div>
+        </section>
 
         <section class="page-view" id="view-exams">
           <div class="welcome-banner"><div><p class="eyebrow">YOUR LEARNING SPACE</p><h2>Ready to show what you know?</h2><p class="muted">Your assigned assessments and recent activity appear here.</p></div><div class="banner-icon">✦</div></div>
