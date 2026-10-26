@@ -105,27 +105,11 @@
         const card = document.createElement("article"); card.className = "exam-card";
         card.innerHTML = `<span class="badge">${state.profile.role === "teacher" ? "Published" : "Assigned exam"}</span><h3></h3><div class="exam-meta"><span>◷ ${exam.duration_minutes} min</span><span>▤ ${count ?? "—"} questions</span></div><button class="btn ${state.profile.role === "teacher" ? "btn-quiet" : "btn-primary"}">${state.profile.role === "teacher" ? "Exam ID: " + exam.id.slice(0, 8) : "Start exam →"}</button>`;
         card.querySelector("h3").textContent = exam.title;
-        if (state.profile.role !== "teacher") {
+        if (state.profile.role === "student") {
           card.querySelector("button").addEventListener("click", () => startExam(exam));
         } else {
           card.querySelector("button").textContent = "Authorize retake / remedial";
-          card.querySelector("button").addEventListener("click", async () => {
-            const studentId = prompt("Enter the assigned student's profile UUID:");
-            if (!studentId) return;
-            const attemptType = prompt("Type retake or remedial:", "retake");
-            if (!attemptType) return;
-            const normalizedType = attemptType.trim().toLowerCase();
-            if (!["retake", "remedial"].includes(normalizedType)) return toast("Type must be retake or remedial.", "error");
-            const reason = prompt("Reason for authorization (optional):") || "";
-            try {
-              const { data, error } = await state.supabase.rpc("authorize_exam_attempt", {
-                p_exam_id: exam.id, p_student_id: studentId.trim(),
-                p_attempt_type: normalizedType, p_reason: reason
-              });
-              if (error) throw error;
-              toast(`Authorized ${data.attempt_type} attempt #${data.attempt_number}.`, "success");
-            } catch (e) { toast(e.message || "Could not authorize attempt.", "error"); }
-          });
+          card.querySelector("button").addEventListener("click", () => authorizeAttempt(exam));
         }
         target.append(card);
       }
@@ -179,23 +163,88 @@
     } catch (e) { toast(e.message || "Could not publish exam.", "error"); }
   }
   async function startExam(exam) {
+    if (state.profile?.role !== "student") return toast("Only student accounts can take assessments.", "error");
     if (!state.profile.verified_at) return toast("Your account is awaiting institutional verification.", "error");
     try {
       const { data: attempt, error: attemptError } = await state.supabase.rpc("start_exam_attempt", { p_exam_id: exam.id });
       if (attemptError) throw attemptError;
       const submissionId = attempt?.submission_id;
       if (!submissionId) throw new Error("The server did not create or return an exam attempt.");
+
       const { data: questions, error: qError } = await state.supabase.rpc("get_exam_questions", { p_exam_id: exam.id });
       if (qError) throw qError;
       if (!questions?.length) throw new Error("No questions are available for this exam.");
+
+      // A resumed attempt keeps its original time limit instead of receiving a fresh timer.
+      const { data: submission, error: submissionError } = await state.supabase
+        .from("submissions").select("started_at,status").eq("id", submissionId).single();
+      if (submissionError) throw submissionError;
+      if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
+
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
-      state.secondsLeft = Number(exam.duration_minutes) * 60; $("#taking-title").textContent = exam.title;
-      showOnly("#exam-view"); renderQuestion(); startTimer();
+      const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(submission.started_at).getTime()) / 1000));
+      state.secondsLeft = Math.max(0, durationSeconds - elapsedSeconds);
+      $("#taking-title").textContent = exam.title;
+      showOnly("#exam-view"); renderQuestion();
+      if (state.secondsLeft <= 0) {
+        toast("The time limit has elapsed. Submitting this attempt.", "error");
+        await submitExam(null, true);
+      } else {
+        startTimer();
+      }
       if (attempt.attempt_number > 1) {
-        toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attemptNumber}.`, "success");
+        toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attempt_number}.`, "success");
       }
     } catch (e) { toast(e.message || "Could not start exam.", "error"); }
+  }
+
+  async function authorizeAttempt(exam) {
+    try {
+      const { data: assignments, error: assignmentError } = await state.supabase
+        .from("exam_assignments").select("student_id").eq("exam_id", exam.id);
+      if (assignmentError) throw assignmentError;
+      const ids = [...new Set((assignments || []).map(row => row.student_id).filter(Boolean))];
+      if (!ids.length) return toast("No assigned students were found for this exam.", "error");
+
+      const { data: students, error: studentError } = await state.supabase
+        .from("profiles").select("id,full_name,bu_id").in("id", ids);
+      if (studentError) throw studentError;
+      const eligibleStudents = (students || []).filter(student => student.id);
+      if (!eligibleStudents.length) {
+        return toast("Student details are not visible under the current Supabase policies.", "error");
+      }
+
+      const choices = eligibleStudents.map((student, index) =>
+        `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}`
+      ).join("\n");
+      const selection = prompt(`Choose an assigned student by number:\n\n${choices}\n\nEnter student number:`);
+      if (selection === null || !selection.trim()) return;
+      const studentIndex = Number(selection) - 1;
+      if (!Number.isInteger(studentIndex) || studentIndex < 0 || studentIndex >= eligibleStudents.length) {
+        return toast("Enter a valid student number from the list.", "error");
+      }
+      const student = eligibleStudents[studentIndex];
+
+      const typeInput = prompt("Attempt type: retake or remedial", "retake");
+      if (typeInput === null) return;
+      const attemptType = typeInput.trim().toLowerCase();
+      if (!["retake", "remedial"].includes(attemptType)) {
+        return toast("Attempt type must be retake or remedial.", "error");
+      }
+      const reason = prompt("Reason for authorization (optional):") || "";
+      const { data, error } = await state.supabase.rpc("authorize_exam_attempt", {
+        p_exam_id: exam.id,
+        p_student_id: student.id,
+        p_attempt_type: attemptType,
+        p_reason: reason
+      });
+      if (error) throw error;
+      toast(`Authorized ${data.attempt_type} attempt #${data.attempt_number} for ${student.full_name || "student"}.`, "success");
+    } catch (e) {
+      toast(e.message || "Could not authorize attempt.", "error");
+    }
   }
   function renderQuestion() {
     const q = state.currentQuestions[state.questionIndex], i = state.questionIndex, total = state.currentQuestions.length;
