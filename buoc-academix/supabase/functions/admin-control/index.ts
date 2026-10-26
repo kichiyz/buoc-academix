@@ -14,7 +14,10 @@ Deno.serve(async(req)=>{
   const {data:authData,error:authError}=await userClient.auth.getUser();if(authError||!authData.user)return respond({error:"Invalid session."},401);
   const service=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}),actorId=authData.user.id;
   const {data:actor,error:actorError}=await service.from("profiles").select("id,role,verified_at").eq("id",actorId).maybeSingle();
-  if(actorError||actor?.role!=="admin"||!actor.verified_at)return respond({error:"Verified developer/admin access is required."},403);
+  if(actorError){console.error("Admin profile lookup failed:",actorError.message);return respond({error:"Admin profile lookup failed. Check the function logs."},500);}
+  if(!actor)return respond({error:"No profile found for the signed-in account."},403);
+  if(actor.role!=="admin")return respond({error:"Signed-in account role is not admin."},403);
+  if(!actor.verified_at)return respond({error:"Admin account is not verified."},403);
   const body=await req.json(),action=typeof body.action==="string"?body.action:"";
   async function audit(targetId:string|null,targetEmail:string|null,details:Record<string,unknown>={}){const {error}=await service.from("admin_audit_logs").insert({actor_id:actorId,target_user_id:targetId,target_email:targetEmail,action,details});if(error)console.error("Audit insert failed",error.message);}
   if(action==="list_users"){
