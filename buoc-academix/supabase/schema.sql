@@ -164,10 +164,19 @@ create policy "students read own grades"
 on public.grades for select to authenticated
 using (student_id=auth.uid());
 
+-- Administrators need read-only access to the full results table for platform diagnostics.
+-- RLS remains enabled; this policy does not grant write access.
+create policy "admins read all grades"
+on public.grades for select to authenticated
+using (public.current_role() = 'admin');
+
 create policy "teachers read grades for own exams"
 on public.grades for select to authenticated
 using (exists(select 1 from public.exams e where e.id=grades.exam_id and e.teacher_id=auth.uid()
   and public.current_role() in ('teacher','admin')));
+
+-- Authenticated users can issue SELECT; RLS controls which rows they can read.
+grant select on public.grades to authenticated;
 
 -- Do not grant students direct INSERT/UPDATE on grades. Trusted grading is server-side.
 revoke insert, update, delete on public.grades from anon, authenticated;
