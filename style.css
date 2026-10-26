@@ -73,3 +73,6 @@
 
 /* Keep a stable scroll area across short views such as Account; avoid scroll-container clipping. */
 .dashboard{min-height:100vh;align-items:stretch}.main-area{min-height:100vh;overflow:visible}.page-view{min-height:calc(100vh - 170px)}.page-view.hidden{min-height:0}
+
+/* Role-based safety net: never show teacher navigation/tools in the developer workspace. */
+body.role-admin .teacher-only{display:none!important}body.role-teacher .developer-only,body.role-teacher .student-only{display:none!important}body.role-student .teacher-only,body.role-student .developer-only{display:none!important}
