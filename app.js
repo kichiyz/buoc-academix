@@ -58,7 +58,7 @@
     $("#account-name").textContent = p.full_name || "AcademiX user";
     $("#account-email").textContent = u.email;
     $("#account-role").textContent = p.role;
-    $("#verification-status").textContent = p.verified_at ? "Verified" : "Pending verification";
+    $("#verification-status").textContent = p.verified_at ? "Institutionally approved" : "Pending admin approval";
     $("#verification-status").className = `badge ${p.verified_at ? "badge-success" : "badge-warning"}`;
     $$(".teacher-only.nav-item").forEach(el => { if (p.role === "admin") el.remove(); else el.classList.toggle("hidden", p.role !== "teacher"); });
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
@@ -85,7 +85,8 @@
       } else {
         const name = $("#auth-name").value.trim(), buId = $("#auth-bu-id").value.trim();
         if (!name) return toast("Enter your full name.", "error");
-        const { error } = await state.supabase.auth.signUp({ email, password, options: { data: { full_name: name, bu_id: buId } } });
+        const emailRedirectTo = new URL(location.pathname || "/", location.origin).href;
+        const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId } } });
         if (error) throw error;
         toast("Account created. Check your email if confirmation is enabled. Your role and verification must be approved by an administrator.", "success");
         setAuthMode("signin");
