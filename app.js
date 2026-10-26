@@ -208,12 +208,17 @@
     try {
       // Production must replace this direct client write with a trusted submit_exam RPC
       // that grades server-side. This placeholder intentionally does not send correct answers.
-      const { error } = await state.supabase.rpc("submit_exam", {
+      const { data: result, error } = await state.supabase.rpc("submit_exam", {
         p_submission_id: state.currentExam.submissionId,
         p_answers: state.answers
       });
       if (error) throw error;
-      showOnly("#dashboard-view"); toast("Exam submitted successfully.", "success"); switchView("grades");
+      showOnly("#dashboard-view");
+      const scoreMessage = result && result.score != null && result.max_score != null
+        ? `Exam submitted and graded: ${result.score} / ${result.max_score}.`
+        : "Exam submitted successfully.";
+      toast(scoreMessage, "success");
+      switchView("grades");
     } catch (e) { toast(`Submission failed: ${e.message}. Your attempt may remain in progress; do not close this page.`, "error"); startTimer(); }
   }
   async function loadGrades() {
