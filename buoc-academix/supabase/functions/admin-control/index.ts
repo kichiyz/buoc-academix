@@ -7,7 +7,7 @@ Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="POST")return respond({error:"Method not allowed."},405);
  try{
-  const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY"),serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const url=Deno.env.get("PROJECT_URL") ?? Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("PROJECT_ANON_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY"),serviceKey=Deno.env.get("PROJECT_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!anon||!serviceKey)return respond({error:"Admin function secrets are not configured."},500);
   const auth=req.headers.get("Authorization");if(!auth?.startsWith("Bearer "))return respond({error:"Sign-in required."},401);
   const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}},auth:{persistSession:false}});
