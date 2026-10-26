@@ -26,9 +26,9 @@ The earlier `buoc-academix/` directory may contain duplicate starter files. The 
 
 1. Create a Supabase project and keep its database password in a password manager.
 2. In the SQL Editor, review and run `supabase/schema.sql` (or your canonical schema file if already applied).\n3. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
-3. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
-4. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
-5. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
+4. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
+5. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
+6. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
 
 ## Security and readiness notes
 
