@@ -7,7 +7,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
+    draft: null, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
   const configured = !SUPABASE_URL.includes("YOUR_PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
   function toast(message, type = "") {
@@ -41,6 +41,8 @@
     $("#dashboard-view").classList.add(role === "admin" ? "role-admin" : role === "teacher" ? "role-teacher" : "role-student");
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
+    if (view === "developer") loadAdminUsers();
+    if (view === "generator") { const sandbox = role === "admin"; $("#publish-quiz").classList.toggle("hidden", sandbox); $("#draft-mode-note").textContent = sandbox ? "SANDBOX MODE — generated drafts stay in this browser and are never published to real exam tables." : "AI output is a draft. Review every question, option, answer, and explanation before publishing."; }
   }
   function initials(name) { return (name || "A").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase(); }
   function renderProfile() {
@@ -137,6 +139,7 @@
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   async function publishQuiz() {
+    if (state.profile?.role === "admin") return toast("Developer sandbox cannot publish to live exam tables.", "error");
     if (!state.draft) return toast("Generate a draft first.", "error");
     try {
       const { data: exam, error } = await state.supabase.from("exams").insert({
@@ -240,6 +243,44 @@
       const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = `academix-grades-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
     } catch (e) { toast(e.message || "Could not export grades.", "error"); }
   }
+
+  async function adminControl(action, payload = {}) {
+    if (state.profile?.role !== "admin") throw new Error("Developer access required.");
+    const { data, error } = await state.supabase.functions.invoke("admin-control", { body: { action, ...payload } });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+  async function loadAdminUsers() {
+    const status = $("#admin-users-status"), list = $("#admin-users-list");
+    if (!status || !list) return;
+    status.textContent = "Loading accounts…"; list.innerHTML = "";
+    try {
+      const result = await adminControl("list_users", { query: $("#admin-user-search")?.value.trim() || "" });
+      state.adminUsers = result.users || [];
+      status.textContent = state.adminUsers.length ? `${state.adminUsers.length} account(s) found` : "No accounts matched your search.";
+      state.adminUsers.forEach(user => {
+        const card = document.createElement("article"); card.className = "admin-user-card";
+        const identity = document.createElement("div"); identity.className = "admin-user-identity";
+        const name = document.createElement("strong"); name.textContent = user.full_name || user.email || user.id;
+        const email = document.createElement("small"); email.textContent = user.email || "No email";
+        const meta = document.createElement("small"); meta.textContent = `${user.role || "student"} • ${user.verified_at ? "Verified" : "Unverified"} • ${user.suspended ? "Suspended" : "Active"}`;
+        identity.append(name,email,meta);
+        const controls = document.createElement("div"); controls.className = "admin-user-controls";
+        const role = document.createElement("select"); role.setAttribute("aria-label", "Role for " + (user.email || user.id));
+        ["student","teacher","admin"].forEach(value => { const option=document.createElement("option"); option.value=value; option.textContent=value; option.selected=value===(user.role||"student"); role.append(option); });
+        const save = document.createElement("button"); save.className="btn btn-quiet"; save.textContent="Save role"; save.addEventListener("click", async()=>{ if(!confirm(`Change ${user.email}'s role to ${role.value}?`)) return; try { await adminControl("set_role",{user_id:user.id,role:role.value}); toast("Role updated.","success"); await loadAdminUsers(); } catch(e){toast(e.message,"error");} });
+        const verify = document.createElement("button"); verify.className="btn btn-quiet"; verify.textContent=user.verified_at?"Revoke verification":"Verify"; verify.addEventListener("click",async()=>{ try { await adminControl("set_verified",{user_id:user.id,verified:!user.verified_at}); toast("Verification status updated.","success"); await loadAdminUsers(); } catch(e){toast(e.message,"error");} });
+        const suspend = document.createElement("button"); suspend.className="btn btn-quiet"; suspend.textContent=user.suspended?"Reactivate":"Suspend"; suspend.disabled=user.id===state.user.id; suspend.addEventListener("click",async()=>{ const action=user.suspended?"reactivate":"suspend"; if(!confirm(`${action==="suspend"?"Suspend":"Reactivate"} ${user.email}?`))return; try { await adminControl(action,{user_id:user.id}); toast(action==="suspend"?"Account suspended.":"Account reactivated.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
+        const del = document.createElement("button"); del.className="btn btn-danger"; del.textContent="Delete"; del.disabled=user.id===state.user.id; del.addEventListener("click",async()=>{ if(prompt(`Permanently delete ${user.email}? Type DELETE to confirm.`)!=="DELETE")return; try { await adminControl("delete_user",{user_id:user.id}); toast("Account deleted.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
+        controls.append(role,save,verify,suspend,del); card.append(identity,controls); list.append(card);
+      });
+      const audit = await adminControl("list_audit"); const auditList=$("#admin-audit-list"); auditList.innerHTML="";
+      if(!audit.logs?.length) auditList.innerHTML='<div class="empty-state">No administrative actions recorded yet.</div>';
+      (audit.logs||[]).forEach(log=>{const row=document.createElement("div");row.className="admin-audit-row";const label=document.createElement("strong");label.textContent=log.action;const detail=document.createElement("span");detail.textContent=`${log.target_email||log.target_user_id||"Platform"} • ${new Date(log.created_at).toLocaleString()}`;row.append(label,detail);auditList.append(row);});
+    } catch (e) { status.textContent = "Could not load accounts."; list.innerHTML=""; toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
+  }
+
   async function signOut() { await state.supabase.auth.signOut(); state.user = state.profile = null; showOnly("#auth-view"); }
   async function init() {
     if (!configured || !window.supabase) {
@@ -258,6 +299,8 @@
     $$("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
     $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
+    $("#refresh-admin-users")?.addEventListener("click", loadAdminUsers);
+    $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#generator-form").addEventListener("submit", generateQuiz);
     $("#publish-quiz").addEventListener("click", publishQuiz);
     $("#export-grades").addEventListener("click", exportGrades);
