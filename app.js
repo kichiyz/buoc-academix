@@ -105,7 +105,28 @@
         const card = document.createElement("article"); card.className = "exam-card";
         card.innerHTML = `<span class="badge">${state.profile.role === "teacher" ? "Published" : "Assigned exam"}</span><h3></h3><div class="exam-meta"><span>◷ ${exam.duration_minutes} min</span><span>▤ ${count ?? "—"} questions</span></div><button class="btn ${state.profile.role === "teacher" ? "btn-quiet" : "btn-primary"}">${state.profile.role === "teacher" ? "Exam ID: " + exam.id.slice(0, 8) : "Start exam →"}</button>`;
         card.querySelector("h3").textContent = exam.title;
-        if (state.profile.role !== "teacher") card.querySelector("button").addEventListener("click", () => startExam(exam));
+        if (state.profile.role !== "teacher") {
+          card.querySelector("button").addEventListener("click", () => startExam(exam));
+        } else {
+          card.querySelector("button").textContent = "Authorize retake / remedial";
+          card.querySelector("button").addEventListener("click", async () => {
+            const studentId = prompt("Enter the assigned student's profile UUID:");
+            if (!studentId) return;
+            const attemptType = prompt("Type retake or remedial:", "retake");
+            if (!attemptType) return;
+            const normalizedType = attemptType.trim().toLowerCase();
+            if (!["retake", "remedial"].includes(normalizedType)) return toast("Type must be retake or remedial.", "error");
+            const reason = prompt("Reason for authorization (optional):") || "";
+            try {
+              const { data, error } = await state.supabase.rpc("authorize_exam_attempt", {
+                p_exam_id: exam.id, p_student_id: studentId.trim(),
+                p_attempt_type: normalizedType, p_reason: reason
+              });
+              if (error) throw error;
+              toast(`Authorized ${data.attempt_type} attempt #${data.attempt_number}.`, "success");
+            } catch (e) { toast(e.message || "Could not authorize attempt.", "error"); }
+          });
+        }
         target.append(card);
       }
     } catch (e) { target.innerHTML = '<div class="empty-state">Could not load exams. Check your connection and Supabase policies.</div>'; toast(e.message, "error"); }
@@ -160,20 +181,20 @@
   async function startExam(exam) {
     if (!state.profile.verified_at) return toast("Your account is awaiting institutional verification.", "error");
     try {
-      const { data: existing, error: existingError } = await state.supabase.from("submissions").select("id,status").eq("exam_id", exam.id).eq("student_id", state.user.id).maybeSingle();
-      if (existingError) throw existingError;
-      if (existing?.status === "submitted" || existing?.status === "graded") return toast("You have already submitted this exam.", "error");
-      let submissionId = existing?.id;
-      if (!submissionId) {
-        const { data: created, error } = await state.supabase.from("submissions").insert({ exam_id: exam.id, student_id: state.user.id }).select("id").single();
-        if (error) throw error; submissionId = created.id;
-      }
+      const { data: attempt, error: attemptError } = await state.supabase.rpc("start_exam_attempt", { p_exam_id: exam.id });
+      if (attemptError) throw attemptError;
+      const submissionId = attempt?.submission_id;
+      if (!submissionId) throw new Error("The server did not create or return an exam attempt.");
       const { data: questions, error: qError } = await state.supabase.rpc("get_exam_questions", { p_exam_id: exam.id });
       if (qError) throw qError;
       if (!questions?.length) throw new Error("No questions are available for this exam.");
-      state.currentExam = { ...exam, submissionId }; state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
+      state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
+      state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
       state.secondsLeft = Number(exam.duration_minutes) * 60; $("#taking-title").textContent = exam.title;
       showOnly("#exam-view"); renderQuestion(); startTimer();
+      if (attempt.attempt_number > 1) {
+        toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attemptNumber}.`, "success");
+      }
     } catch (e) { toast(e.message || "Could not start exam.", "error"); }
   }
   function renderQuestion() {
@@ -206,8 +227,7 @@
     if (!timedOut && !confirm("Submit this exam now? You cannot change answers after submission.")) return;
     clearInterval(state.timerId);
     try {
-      // Production must replace this direct client write with a trusted submit_exam RPC
-      // that grades server-side. This placeholder intentionally does not send correct answers.
+      // Answers are graded by the trusted server-side RPC; the browser never receives the answer key.
       const { data: result, error } = await state.supabase.rpc("submit_exam", {
         p_submission_id: state.currentExam.submissionId,
         p_answers: state.answers
@@ -219,7 +239,11 @@
         : "Exam submitted successfully.";
       toast(scoreMessage, "success");
       switchView("grades");
-    } catch (e) { toast(`Submission failed: ${e.message}. Your attempt may remain in progress; do not close this page.`, "error"); startTimer(); }
+    } catch (e) {
+      toast(`Submission failed: ${e.message}. Your attempt may remain in progress; retry submission when ready.`, "error");
+      if (state.secondsLeft > 0) startTimer();
+      else updateTimer();
+    }
   }
   async function loadGrades() {
     const target = $("#grades-list"); target.innerHTML = '<div class="empty-state">Loading grades…</div>';
