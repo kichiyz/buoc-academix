@@ -468,6 +468,32 @@
       const { error } = await state.supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
       toast(error ? error.message : "If the account exists, a password reset email will be sent.", error ? "error" : "success");
     });
+    $("#password-recovery-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const password = $("#recovery-password").value;
+      const confirmation = $("#recovery-password-confirm").value;
+      if (password.length < 8) return toast("Use at least 8 characters for your new password.", "error");
+      if (password !== confirmation) return toast("The passwords do not match.", "error");
+      const button = $("#password-recovery-form button[type='submit']");
+      button.disabled = true;
+      try {
+        const { error } = await state.supabase.auth.updateUser({ password });
+        if (error) throw error;
+        await state.supabase.auth.signOut();
+        $("#password-recovery-form").classList.add("hidden");
+        $("#auth-form").classList.remove("hidden");
+        $("#forgot-password").classList.remove("hidden");
+        $("#recovery-password").value = "";
+        $("#recovery-password-confirm").value = "";
+        setAuthMode("signin");
+        showOnly("#auth-view");
+        toast("Password updated. Sign in with your new password.", "success");
+      } catch (error) {
+        toast(error.message || "Could not update the password.", "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
     $$(".nav-item").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
     $$("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
     $$("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
@@ -483,9 +509,26 @@
     $("#next-question").addEventListener("click", () => { if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
     $("#exit-exam").addEventListener("click", () => { if (confirm("Leave this attempt? Your answers may not be submitted.")) { clearInterval(state.timerId); showOnly("#dashboard-view"); switchView("exams"); } });
-    state.supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) { state.user = session.user; try { await enterApp(); } catch (e) { toast(e.message || "Could not load your profile.", "error"); } }
-      else { state.user = state.profile = null; showOnly("#auth-view"); }
+    state.supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        showOnly("#auth-view");
+        $("#auth-form").classList.add("hidden");
+        $("#forgot-password").classList.add("hidden");
+        $("#password-recovery-form").classList.remove("hidden");
+        $("#auth-title").textContent = "Reset your password";
+        $("#auth-subtitle").textContent = "Enter and confirm your new password below.";
+        return;
+      }
+      if (session?.user) {
+        state.user = session.user;
+        try { await enterApp(); } catch (e) { toast(e.message || "Could not load your profile.", "error"); }
+      } else {
+        state.user = state.profile = null;
+        $("#auth-form").classList.remove("hidden");
+        $("#password-recovery-form").classList.add("hidden");
+        $("#forgot-password").classList.remove("hidden");
+        showOnly("#auth-view");
+      }
     });
     const { data: { session } } = await state.supabase.auth.getSession();
     if (session?.user) { state.user = session.user; try { await enterApp(); } catch (e) { toast(e.message, "error"); } }
