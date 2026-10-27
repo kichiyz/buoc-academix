@@ -558,7 +558,11 @@
         return;
       }
       if (session?.user) {
+        const sameUser = state.user?.id === session.user.id;
         state.user = session.user;
+        // Token refreshes happen during normal use. Re-entering the app on every
+        // refresh resets the active view and can kick users out of Quiz Studio.
+        if (event === "TOKEN_REFRESHED" && sameUser) return;
         try { await enterApp(); } catch (e) { toast(e.message || "Could not load your profile.", "error"); }
       } else {
         state.user = state.profile = null;
