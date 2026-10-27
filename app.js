@@ -216,18 +216,54 @@
     }
   }
   function renderDraft() {
-    const panel = $("#draft-panel"), target = $("#draft-questions");
-    target.innerHTML = ""; panel.classList.remove("hidden");
-    state.draft.questions.forEach((q, i) => {
-      const block = document.createElement("div"); block.className = "question-draft";
-      const h = document.createElement("h3"); h.textContent = `${i + 1}. ${q.prompt}`; block.append(h);
-      const opts = document.createElement("div"); opts.className = "draft-options";
-      q.options.forEach(o => { const el = document.createElement("div"); el.className = `draft-option ${o === q.correct_answer ? "correct" : ""}`; el.textContent = `${o === q.correct_answer ? "✓ " : ""}${o}`; opts.append(el); });
-      block.append(opts); const exp = document.createElement("p"); exp.className = "muted"; exp.textContent = `Answer: ${q.correct_answer}. ${q.explanation || ""}`; block.append(exp); target.append(block);
+    const panel=$("#draft-panel"), target=$("#draft-questions");
+    target.replaceChildren();panel.classList.remove("hidden");
+    if(!state.draft?.questions?.length){target.innerHTML='<div class="empty-state">No questions in this draft. Generate a new draft to continue.</div>';panel.scrollIntoView({behavior:"smooth",block:"start"});return;}
+    const questions=state.draft.questions;
+    questions.forEach((q,i)=>{
+      const block=document.createElement("article");block.className="question-draft phase-three-question";
+      const heading=document.createElement("div");heading.className="phase-three-question-heading";
+      const h=document.createElement("h3");h.textContent=`Question ${i+1}`;
+      const remove=document.createElement("button");remove.type="button";remove.className="btn btn-quiet";remove.textContent="Remove";
+      remove.addEventListener("click",()=>{if(!confirm(`Remove question ${i+1} from this draft?`))return;state.draft.questions.splice(i,1);state.draft.questions.forEach((item,index)=>item.position=index+1);renderDraft();});
+      heading.append(h,remove);block.append(heading);
+      const promptLabel=document.createElement("label");promptLabel.textContent="Question prompt";
+      const prompt=document.createElement("textarea");prompt.rows=3;prompt.maxLength=3000;prompt.required=true;prompt.value=q.prompt||"";
+      prompt.addEventListener("input",()=>{q.prompt=prompt.value;});promptLabel.append(prompt);block.append(promptLabel);
+      const optionsLabel=document.createElement("label");optionsLabel.textContent="Answer options (one per line)";
+      const options=document.createElement("textarea");options.rows=Math.max(3,Math.min(6,(q.options||[]).length));options.maxLength=6000;options.required=true;options.value=(q.options||[]).join("\n");
+      options.addEventListener("input",()=>{q.options=options.value.split("\n").map(v=>v.trim()).filter(Boolean);renderAnswerSelect(answer,q);});optionsLabel.append(options);block.append(optionsLabel);
+      const answerLabel=document.createElement("label");answerLabel.textContent="Correct answer";
+      const answer=document.createElement("select");answer.required=true;answerLabel.append(answer);block.append(answerLabel);
+      const renderAnswerSelect=(select,question)=>{const previous=question.correct_answer;select.replaceChildren();(question.options||[]).forEach(option=>{const opt=document.createElement("option");opt.value=option;opt.textContent=option;select.append(opt);});if((question.options||[]).includes(previous))select.value=previous;else {select.selectedIndex=0;question.correct_answer=select.value||"";}};
+      renderAnswerSelect(answer,q);answer.addEventListener("change",()=>{q.correct_answer=answer.value;});
+      const explanationLabel=document.createElement("label");explanationLabel.textContent="Explanation (optional)";
+      const explanation=document.createElement("textarea");explanation.rows=2;explanation.maxLength=3000;explanation.value=q.explanation||"";explanation.addEventListener("input",()=>{q.explanation=explanation.value;});explanationLabel.append(explanation);block.append(explanationLabel);
+      const pointsLabel=document.createElement("label");pointsLabel.textContent="Points";
+      const points=document.createElement("input");points.type="number";points.min="1";points.max="100";points.step="1";points.required=true;points.value=Number(q.points)||1;points.addEventListener("input",()=>{q.points=Number(points.value);});pointsLabel.append(points);block.append(pointsLabel);
+      target.append(block);
     });
-    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    const summary=document.createElement("p");summary.className="muted phase-three-summary";summary.textContent=`${questions.length} question(s) • Changes apply to this draft only until published.`;target.prepend(summary);
+    panel.scrollIntoView({behavior:"smooth",block:"start"});
   }
   async function publishQuiz() {
+    if (!state.draft?.questions?.length) return toast("Add at least one question before publishing.", "error");
+    for (let i=0;i<state.draft.questions.length;i++) {
+      const q=state.draft.questions[i];
+      q.position=i+1;
+      q.prompt=String(q.prompt||"").trim();
+      q.options=Array.isArray(q.options)?q.options.map(v=>String(v).trim()).filter(Boolean):[];
+      q.correct_answer=String(q.correct_answer||"").trim();
+      q.points=Number(q.points)||1;
+      if(!q.prompt)return toast(`Question ${i+1} needs a prompt.`,"error");
+      if(q.options.length<2)return toast(`Question ${i+1} needs at least two answer options.`,"error");
+      if(new Set(q.options).size!==q.options.length)return toast(`Question ${i+1} has duplicate options.`,"error");
+      if(!q.options.includes(q.correct_answer))return toast(`Choose a valid correct answer for question ${i+1}.`,"error");
+      if(!Number.isInteger(q.points)||q.points<1||q.points>100)return toast(`Question ${i+1} must have 1–100 points.`,"error");
+    }
+    const duration=Number($("#publish-duration").value);
+    if(!Number.isInteger(duration)||duration<1||duration>300)return toast("Exam duration must be between 1 and 300 whole minutes.","error");
+
     if (state.profile?.role === "admin") return toast("Developer sandbox cannot publish to live exam tables.", "error");
     if (!state.draft) return toast("Generate a draft first.", "error");
     try {
