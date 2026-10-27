@@ -163,3 +163,12 @@ h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
 .phase-two-row small{color:var(--muted);line-height:1.55}
 .phase-two-row>.badge{flex:none}
 @media(max-width:640px){.phase-two-row{flex-direction:column;gap:10px}.phase-two-row>.badge{align-self:flex-start}}
+
+/* Phase 3: editable quiz draft controls */
+.phase-three-question{display:grid;gap:12px;padding:18px;margin:14px 0;border:1px solid var(--line);border-radius:16px;background:#ffffff04}
+.phase-three-question-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.phase-three-question-heading h3{margin:0}
+.phase-three-question label{display:grid;gap:7px;font-weight:600;color:var(--text)}
+.phase-three-question input,.phase-three-question textarea,.phase-three-question select{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--bg2);color:var(--text);padding:11px;line-height:1.5}
+.phase-three-question textarea{resize:vertical}
+.phase-three-summary{margin:12px 0}
