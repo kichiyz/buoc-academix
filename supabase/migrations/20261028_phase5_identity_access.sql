@@ -100,7 +100,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.profiles p
-    WHERE p.id = auth.uid() AND p.role = 'admin'::public.app_role
+    WHERE p.id = auth.uid() AND p.role = 'admin'::public.app_role AND p.suspended_at IS NULL
   ) THEN
     RAISE EXCEPTION 'Administrator access required.' USING ERRCODE = '42501';
   END IF;
@@ -145,7 +145,7 @@ BEGIN
     RAISE EXCEPTION 'Authentication required.' USING ERRCODE = '28000';
   END IF;
 
-  SELECT role INTO v_actor_role FROM public.profiles WHERE id = v_actor;
+  SELECT role INTO v_actor_role FROM public.profiles WHERE id = v_actor AND suspended_at IS NULL;
   IF v_actor_role IS DISTINCT FROM 'admin'::public.app_role THEN
     RAISE EXCEPTION 'Administrator access required.' USING ERRCODE = '42501';
   END IF;
