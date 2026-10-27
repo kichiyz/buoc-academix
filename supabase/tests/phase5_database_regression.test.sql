@@ -4,10 +4,10 @@
 -- These assertions verify the audit outcome constraint without creating or modifying audit records.
 BEGIN;
 
-CREATE TEMP TABLE phase5_assertions (ok boolean NOT NULL);
+CREATE TEMP TABLE phase5_assertions (check_name text PRIMARY KEY, ok boolean NOT NULL);
 
-INSERT INTO phase5_assertions
-SELECT EXISTS (
+INSERT INTO phase5_assertions(check_name, ok)
+SELECT 'audit_outcomes', EXISTS (
   SELECT 1
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -27,8 +27,8 @@ BEGIN
   END IF;
 END $$;
 
-INSERT INTO phase5_assertions
-SELECT EXISTS (
+INSERT INTO phase5_assertions(check_name, ok)
+SELECT 'rls_enabled', EXISTS (
   SELECT 1 FROM pg_class t
   JOIN pg_namespace n ON n.oid = t.relnamespace
   WHERE n.nspname = 'public' AND t.relname = 'admin_audit_log' AND t.relrowsecurity
@@ -36,7 +36,7 @@ SELECT EXISTS (
 
 DO $$
 BEGIN
-  IF NOT (SELECT ok FROM phase5_assertions ORDER BY ok LIMIT 1 OFFSET 1) THEN
+  IF NOT (SELECT ok FROM phase5_assertions WHERE check_name = 'rls_enabled') THEN
     RAISE EXCEPTION 'Phase 5 admin_audit_log must have row-level security enabled';
   END IF;
 END $$;
