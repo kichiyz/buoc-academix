@@ -8,7 +8,7 @@
   <title>BUOC AcademiX</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261027-assignment1">
+  <link rel="stylesheet" href="style.css?v=phase4-teacher-ui1">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -163,10 +163,21 @@
       <form id="exam-form" class="panel exam-paper"><div id="question-container"></div><div class="exam-controls"><button class="btn btn-quiet" type="button" id="previous-question">← Previous</button><span id="question-count-label" class="muted"></span><button class="btn btn-primary" type="button" id="next-question">Next →</button><button class="btn btn-primary hidden" type="submit" id="submit-exam">Submit exam</button></div></form>
       <p class="fine-print centered">Your answers are saved only when submitted. Avoid refreshing or closing this page during an attempt.</p>
     </section>
+    <div id="workflow-modal" class="workflow-modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflow-modal-title" aria-describedby="workflow-modal-description">
+      <button class="workflow-modal-backdrop" type="button" data-workflow-close aria-label="Close dialog"></button>
+      <section class="workflow-modal-card">
+        <header class="workflow-modal-header">
+          <div><p class="eyebrow">TEACHER WORKFLOW</p><h2 id="workflow-modal-title">Manage assessment</h2><p id="workflow-modal-description" class="muted"></p></div>
+          <button id="workflow-modal-close" class="workflow-modal-x" type="button" aria-label="Close dialog">×</button>
+        </header>
+        <div id="workflow-modal-body" class="workflow-modal-body"></div>
+        <footer id="workflow-modal-footer" class="workflow-modal-footer"></footer>
+      </section>
+    </div>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="academix-config.js?v=phase4-env1"></script>
-  <script src="app.js?v=phase4-env1"></script>
+  <script src="app.js?v=phase4-teacher-ui1"></script>
 </body>
 </html>
