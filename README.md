@@ -9,11 +9,17 @@ The frontend files are in the repository root so GitHub Pages can serve `index.h
 - `index.html` — application interface
 - `style.css` — responsive dark-purple and gold theme
 - `app.js` — browser-side application logic
+- `academix-config.js` — public client configuration and environment label
+- `docs/test-environment.md` — isolated test-environment setup guide
 - `buoc-academix/supabase/schema.sql` — initial database schema and row-level security setup
 - `supabase/migrations/20261027_exam_attempts.sql` — database migration for initial attempts, authorized retakes, and remedial attempts
 - `buoc-academix/supabase/functions/generate-quiz/index.ts` — server-side quiz generation function
 
 The earlier `buoc-academix/` directory may contain duplicate starter files. The root files are the intended GitHub Pages entry point.
+
+## Environment configuration
+
+The frontend reads the Supabase URL, publishable key, and environment label from `academix-config.js`. That file is public by design: it must contain only the browser-safe publishable/anon key, never a service-role key or AI provider secret. The committed config targets the current production Supabase project. To create a safe test deployment, use a separate Supabase project and a separate deployment copy/site with its own `academix-config.js`; follow `docs/test-environment.md`. A label saying TEST is not isolation by itself—the separate Supabase project is the security boundary.
 
 ## GitHub Pages
 
