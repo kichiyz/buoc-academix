@@ -172,3 +172,10 @@ h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
 .phase-three-question input,.phase-three-question textarea,.phase-three-question select{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--bg2);color:var(--text);padding:11px;line-height:1.5}
 .phase-three-question textarea{resize:vertical}
 .phase-three-summary{margin:12px 0}
+
+
+/* Phase 4: always-visible deployment environment label */
+.environment-badge{display:inline-flex;align-items:center;margin-top:9px;padding:5px 9px;border:1px solid #8f829f;border-radius:999px;font-size:.62rem;letter-spacing:.09em;font-weight:800;color:#e8def3;background:#ffffff08}
+.environment-badge[data-environment="TEST"]{border-color:#ffbd69;color:#ffcf8e;background:#ffbd6914}
+.environment-badge[data-environment="PRODUCTION"]{border-color:#8be0bd;color:#a8f0d1;background:#8be0bd10}
+.environment-badge[data-environment="UNCONFIGURED"]{border-color:#ff8f9a;color:#ffb3bb;background:#ff8f9a10}
