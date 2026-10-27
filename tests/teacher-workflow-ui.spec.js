@@ -9,7 +9,7 @@ test("teacher workflow dialog is present, accessible, and hidden at startup", as
   await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog).toHaveAttribute("aria-labelledby", "workflow-modal-title");
   await expect(page.locator("#workflow-modal-title")).toHaveText("Manage assessment");
-  await expect(page.locator("#workflow-modal-close")).toHaveAccessibleName("Close dialog");
+  await expect(page.locator("#workflow-modal-close")).toHaveAttribute("aria-label", "Close dialog");
   await expect(dialog).toBeHidden();
 });
 
