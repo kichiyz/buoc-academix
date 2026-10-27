@@ -12,6 +12,7 @@ The frontend files are in the repository root so GitHub Pages can serve `index.h
 - `academix-config.js` — public client configuration and environment label
 - `docs/test-environment.md` — isolated test-environment setup guide
 - `buoc-academix/supabase/schema.sql` — initial database schema and row-level security setup
+- `supabase/migrations/20261027_admin_diagnostics_read.sql` — narrow read-only admin access for Exam Registry and Results Inspector diagnostics
 - `supabase/migrations/20261027_exam_attempts.sql` — database migration for initial attempts, authorized retakes, and remedial attempts
 - `buoc-academix/supabase/functions/generate-quiz/index.ts` — server-side quiz generation function
 
@@ -32,10 +33,11 @@ The frontend reads the Supabase URL, publishable key, and environment label from
 
 1. Create a Supabase project and keep its database password in a password manager.
 2. In the SQL Editor, review and run `supabase/schema.sql` (or your canonical schema file if already applied).
-3. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
-4. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
-5. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
-6. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
+3. Review and run `supabase/migrations/20261027_admin_diagnostics_read.sql` to permit read-only admin inspection of exam and submission metadata. This does not grant write access.
+4. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
+5. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
+6. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
+7. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
 
 ## Security and readiness notes
 
