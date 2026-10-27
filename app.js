@@ -7,7 +7,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
+    draft: null, adminUsers: [], teacherRequest: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
   const configured = !SUPABASE_URL.includes("YOUR_PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 
   function toast(message, type = "") {
@@ -70,12 +70,41 @@
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
+    renderTeacherRequest();
   }
   async function loadProfile() {
     const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at").eq("id", state.user.id).single();
     if (error) throw error;
-    state.profile = data; renderProfile();
+    state.profile = data;
+    await loadTeacherRequest();
+    renderProfile();
   }
+
+  async function loadTeacherRequest() {
+    state.teacherRequest = null;
+    if (!state.user || !state.supabase) return;
+    const { data, error } = await state.supabase.from("teacher_access_requests").select("status,requested_at,reviewed_at,review_note").eq("user_id", state.user.id).maybeSingle();
+    if (error) { console.warn("Teacher request status unavailable:", error.message); return; }
+    state.teacherRequest = data || null;
+  }
+  function renderTeacherRequest() {
+    const panel=$("#teacher-request-panel"), title=$("#teacher-request-title"), message=$("#teacher-request-message"), button=$("#teacher-request-button");
+    if(!panel||!title||!message||!button)return;
+    const request=state.teacherRequest;
+    panel.classList.toggle("hidden",state.profile?.role!=="student");
+    button.classList.add("hidden");
+    if(state.profile?.role!=="student")return;
+    if(request?.status==="pending"){title.textContent="Teacher access pending";message.textContent="An administrator must review your request. You remain a Student until approved.";}
+    else if(request?.status==="rejected"){title.textContent="Teacher access request not approved";message.textContent=(request.review_note?request.review_note+" ":"")+"You remain a Student. You may submit a new request when ready.";button.textContent="Reapply for Teacher access";button.classList.remove("hidden");}
+    else {title.textContent="Request Teacher access";message.textContent="Teacher access requires administrator approval. Your account remains a Student while your request is reviewed.";button.textContent="Request Teacher access";button.classList.remove("hidden");}
+  }
+  async function submitTeacherRequest() {
+    const button=$("#teacher-request-button");button.disabled=true;
+    try {const {error}=await state.supabase.rpc("request_teacher_access");if(error)throw error;await loadTeacherRequest();renderTeacherRequest();toast("Teacher access request submitted for administrator review.","success");}
+    catch(error){toast(error.message||"Could not submit the Teacher access request. Ensure the Supabase migration has been applied.","error");}
+    finally{button.disabled=false;}
+  }
+
   async function enterApp() {
     showOnly("#dashboard-view");
     await loadProfile();
@@ -92,9 +121,10 @@
         const name = $("#auth-name").value.trim(), buId = $("#auth-bu-id").value.trim();
         if (!name) return toast("Enter your full name.", "error");
         const emailRedirectTo = "https://kichiyz.github.io/buoc-academix/";
-        const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId } } });
+        const requestedRole = $("#auth-role").value === "teacher" ? "teacher" : "student";
+        const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId, requested_role: requestedRole } } });
         if (error) throw error;
-        toast("Account created. Check your email if confirmation is enabled. Your role and verification must be approved by an administrator.", "success");
+        toast(requestedRole === "teacher" ? "Account created. Your Teacher access request is pending administrator approval. Check your email if confirmation is enabled." : "Account created. Check your email if confirmation is enabled.", "success");
         setAuthMode("signin");
       }
     } catch (e) { toast(e.message || "Authentication failed.", "error"); }
@@ -431,12 +461,19 @@
         const identity = document.createElement("div"); identity.className = "admin-user-identity";
         const name = document.createElement("strong"); name.textContent = user.full_name || user.email || user.id;
         const email = document.createElement("small"); email.textContent = user.email || "No email";
-        const meta = document.createElement("small"); meta.textContent = `${user.role || "student"} • ${user.verified_at ? "Verified" : "Unverified"} • ${user.suspended ? "Suspended" : "Active"}`;
+        const meta = document.createElement("small"); meta.textContent = `${user.role || "student"} • ${user.verified_at ? "Verified" : "Unverified"} • ${user.suspended ? "Suspended" : "Active"}${user.teacher_request_status ? " • Teacher request: " + user.teacher_request_status : ""}`;
         identity.append(name,email,meta);
         const controls = document.createElement("div"); controls.className = "admin-user-controls";
         const role = document.createElement("select"); role.setAttribute("aria-label", "Role for " + (user.email || user.id));
         ["student","teacher","admin"].forEach(value => { const option=document.createElement("option"); option.value=value; option.textContent=value; option.selected=value===(user.role||"student"); role.append(option); });
         const save = document.createElement("button"); save.className="btn btn-quiet"; save.textContent="Save role"; save.addEventListener("click", async()=>{ if(!confirm(`Change ${user.email}'s role to ${role.value}?`)) return; try { await adminControl("set_role",{user_id:user.id,role:role.value}); toast("Role updated.","success"); await loadAdminUsers(); } catch(e){toast(e.message,"error");} });
+        if (user.teacher_request_status === "pending") {
+          const approve=document.createElement("button");approve.className="btn btn-primary";approve.textContent="Approve Teacher";
+          approve.addEventListener("click",async()=>{if(!confirm("Approve Teacher access for "+user.email+"?"))return;try{await adminControl("approve_teacher_request",{user_id:user.id});toast("Teacher access approved.","success");await loadAdminUsers();}catch(e){toast(e.message,"error");}});
+          const reject=document.createElement("button");reject.className="btn btn-quiet";reject.textContent="Reject request";
+          reject.addEventListener("click",async()=>{const note=prompt("Optional reason for rejection:")||"";if(!confirm("Reject Teacher access request for "+user.email+"?"))return;try{await adminControl("reject_teacher_request",{user_id:user.id,review_note:note});toast("Request rejected. Applicant can reapply later.","success");await loadAdminUsers();}catch(e){toast(e.message,"error");}});
+          controls.append(approve,reject);
+        }
         const verify = document.createElement("button"); verify.className="btn btn-quiet"; verify.textContent=user.verified_at?"Revoke verification":"Verify"; verify.addEventListener("click",async()=>{ try { await adminControl("set_verified",{user_id:user.id,verified:!user.verified_at}); toast("Verification status updated.","success"); await loadAdminUsers(); } catch(e){toast(e.message,"error");} });
         const suspend = document.createElement("button"); suspend.className="btn btn-quiet"; suspend.textContent=user.suspended?"Reactivate":"Suspend"; suspend.disabled=user.id===state.user.id; suspend.addEventListener("click",async()=>{ const action=user.suspended?"reactivate":"suspend"; if(!confirm(`${action==="suspend"?"Suspend":"Reactivate"} ${user.email}?`))return; try { await adminControl(action,{user_id:user.id}); toast(action==="suspend"?"Account suspended.":"Account reactivated.","success"); await loadAdminUsers(); }catch(e){toast(e.message,"error");} });
         const del = document.createElement("button"); del.className="btn btn-danger"; del.textContent="Delete"; del.disabled=user.id===state.user.id; del.addEventListener("click",async()=>{ if(prompt(`Permanently delete ${user.email}? Type DELETE to confirm.`)!=="DELETE")return; try { await adminControl("delete_user",{user_id:user.id}); toast("Account deleted.","success"); await loadAdminUsers(); }catch(e){ const originalError=e.message || "The delete function returned an error."; try { const check=await adminControl("list_users",{query:""}); const stillExists=(check.users||[]).some(account=>account.id===user.id); if(!stillExists){ toast("The account is no longer listed. Deletion appears to have succeeded, but the admin function returned an error; its cleanup/audit step may have failed.","success"); await loadAdminUsers(); return; } }catch(checkError){} toast(`Delete operation reported an error: ${originalError}`, "error"); await loadAdminUsers(); } });
@@ -463,6 +500,7 @@
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));
     $("#auth-form").addEventListener("submit", authSubmit);
+    $("#teacher-request-button")?.addEventListener("click", submitTeacherRequest);
     $("#forgot-password").addEventListener("click", async () => {
       const email = $("#auth-email").value.trim(); if (!email) return toast("Enter your email address first.", "error");
       const { error } = await state.supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
