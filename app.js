@@ -11,6 +11,13 @@
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
     draft: null, adminUsers: [], teacherRequest: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
   const configured = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
+  // Phase 4 safety boundary: prevent TEST mode from connecting to production.
+  // This guard supplements, but cannot replace, a separately provisioned test project.
+  const PRODUCTION_SUPABASE_URL = "https://otkgtwwxmmdmiavmpyqo.supabase.co";
+  const normalizedSupabaseUrl = SUPABASE_URL.replace(/\\/+$/, "").toLowerCase();
+  const environmentConfigSafe = ["TEST", "PRODUCTION"].includes(APP_ENVIRONMENT) &&
+    !(APP_ENVIRONMENT === "TEST" && normalizedSupabaseUrl === PRODUCTION_SUPABASE_URL);
+
 
   function toast(message, type = "") {
     const el = $("#toast"); el.textContent = message; el.className = `toast ${type}`.trim();
@@ -836,8 +843,20 @@
     // Protect against accidental duplicate script execution or repeated DOM-ready handlers.
     if (window.__academixInitStarted) return;
     window.__academixInitStarted = true;
+    if (!environmentConfigSafe) {
+      showOnly("#auth-view");
+      const message = APP_ENVIRONMENT === "TEST" && normalizedSupabaseUrl === PRODUCTION_SUPABASE_URL
+        ? "SAFETY BLOCK: TEST mode is pointing at the production database. Use a separate test Supabase project before signing in."
+        : "Setup required: environment must be TEST or PRODUCTION. Check academix-config.js.";
+      toast(message, "error");
+      const badge = $("#environment-badge");
+      if (badge) { badge.textContent = "ENVIRONMENT CONFIGURATION ERROR"; badge.dataset.environment = "UNCONFIGURED"; }
+      return;
+    }
     if (!configured || !window.supabase) {
-      showOnly("#auth-view"); toast("Setup required: add your Supabase project URL and publishable/anon key in app.js.", "error"); return;
+      showOnly("#auth-view");
+      toast("Setup required: add your Supabase project URL and publishable/anon key in academix-config.js.", "error");
+      return;
     }
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));

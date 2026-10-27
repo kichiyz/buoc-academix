@@ -1,30 +1,39 @@
 # Phase 4 — Isolated test environment
 
-## Status and boundary
+## Goal
 
-The production frontend is configured through `academix-config.js`. For a real test environment, use a **separate Supabase project** and a separate deployed copy of this frontend. Do not switch the live production site's config to test values while students are using it. The environment badge is informational; the separate database/project is what prevents test submissions from entering production tables.
+Run test accounts, draft exams, attempts, submissions, and grades in a test system that cannot write to production. The production site must remain pointed at the production Supabase project.
 
-## Setup
+## Implemented in this branch
 
-1. In Supabase, create a new project dedicated to testing (for example, `buoc-academix-test`). Use a distinct database password.
-2. In the test project SQL Editor, apply the reviewed schema and migrations in dependency order. At minimum, review the canonical schema and every file under `supabase/migrations/`; do not assume a migration has been applied just because it exists in GitHub.
-3. Configure the test project's Auth settings and redirect URLs for the test site's exact URL. Do not reuse production student data or production credentials.
-4. Make a separate deployment copy/repository or branch output for the test site. In that copy only, edit `academix-config.js`:
-   - `environment: "TEST"`
-   - `supabaseUrl`: the test project's Project URL
-   - `supabasePublishableKey`: the test project's publishable/anon key
-5. Verify the visible badge says `ENVIRONMENT: TEST`, then create test-only accounts and test-only exams. Confirm submissions and grades appear only in the test Supabase project.
-6. Keep the production site's `academix-config.js` pointed at the production project. Never put Supabase service-role keys or AI provider keys in this file or in any frontend file.
+- The app rejects an invalid environment label.
+- The app blocks startup if `environment: "TEST"` is paired with the known production Supabase URL.
+- `academix-config.test.template.js` provides a placeholder-only configuration for a separate test deployment.
+- The UI's environment badge is informational only. The actual isolation boundary is the separate Supabase project and its credentials/RLS policies.
 
-## Important implementation note
+These code changes are on branch `phase-4/isolation-guard`; they are not deployed to the production site.
 
-This first Phase 4 change makes frontend environment selection explicit and adds a visible environment indicator. It does **not** automatically provision a second Supabase project, copy database schema, or enforce a test/production flag inside one shared database. Those tasks require Supabase dashboard/CLI access and a separately configured deployment. Until those checks are complete, treat Phase 4 as in progress and do not use real student records for testing.
+## Required setup (manual Supabase step)
+
+1. Create a **new Supabase project** dedicated to testing, such as `buoc-academix-test`. Do not use the production project.
+2. In that new project, apply the reviewed canonical schema and required migrations in dependency order. Review each migration before running it; a file existing in GitHub does not mean it has been applied.
+3. Configure the test project's Auth redirect URLs for the test deployment URL.
+4. Deploy a separate copy of the frontend from this branch (or a separate test repository). In that copy, create `academix-config.js` from `academix-config.test.template.js` and replace the placeholders with the **test project's** URL and publishable/anon key.
+5. Keep the root production `academix-config.js` unchanged and pointed at production.
+6. Use only test accounts and synthetic exam data. Do not copy real student records or live exam content into the test project.
+7. Deploy the test site, sign in with a test-only account, create a test exam/attempt/submission, and confirm those rows exist only in the test project's tables.
+8. Confirm production still uses its existing project URL and that test configuration fails closed if accidentally pointed at that URL.
 
 ## Smoke-test checklist
 
-- [ ] Test site shows `ENVIRONMENT: TEST`.
-- [ ] Test site's config URL matches the test project, not production.
-- [ ] Test project's schema/migrations are applied and RLS is enabled.
+- [ ] Test deployment uses a distinct Supabase project ref from production.
+- [ ] Test config uses `environment: "TEST"` and the test project's publishable/anon key.
+- [ ] Changing test config's URL to the known production URL causes startup to be blocked.
 - [ ] Test users, exams, submissions, and grades exist only in the test project.
-- [ ] Production site still points to the production project.
-- [ ] No service-role or provider secrets exist in frontend files or Git history.
+- [ ] Production site's config has not been changed by this branch.
+- [ ] No service-role key or AI provider secret is present in frontend files or Git history.
+- [ ] RLS policies have been reviewed and verified in the test project.
+
+## Limits
+
+This branch does **not** provision a Supabase project, copy/apply database schema, deploy a test site, or prove data separation. Those steps require Supabase dashboard/CLI access and an end-to-end test. Until the checklist passes, Phase 4 remains in progress and the system should not be treated as safely isolated.
