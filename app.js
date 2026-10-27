@@ -41,7 +41,7 @@
     $("#dashboard-view").classList.add(role === "admin" ? "role-admin" : role === "teacher" ? "role-teacher" : "role-student");
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
-    if (view === "developer") loadAdminUsers();
+    if (view === "developer") { loadAdminUsers(); loadExamRegistry(); loadResultsInspector(); }
     if (view === "generator") { const sandbox = role === "admin"; $("#publish-quiz").classList.toggle("hidden", sandbox); $("#draft-mode-note").textContent = sandbox ? "SANDBOX MODE — generated drafts stay in this browser and are never published to real exam tables." : "AI output is a draft. Review every question, option, answer, and explanation before publishing."; }
   }
   function initials(name) { return (name || "A").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase(); }
@@ -498,6 +498,71 @@
     } catch (e) { toast(e.message || "Could not export grades.", "error"); }
   }
 
+  // Phase 2: read-only diagnostic views. Queries deliberately use ordinary
+  // authenticated client access so Supabase RLS remains the authorization boundary.
+  let registryRows = [], inspectorRows = [];
+  function renderExamRegistry() {
+    const target=$("#exam-registry-list"), status=$("#exam-registry-status");
+    if(!target||!status)return;
+    const query=$("#exam-registry-search").value.trim().toLowerCase();
+    const rows=registryRows.filter(x=>[x.title,x.status,x.id].some(v=>String(v??"").toLowerCase().includes(query)));
+    target.replaceChildren();
+    if(!rows.length){status.textContent=registryRows.length?"No exams match this filter.":"No exams are visible to this account.";return;}
+    status.textContent=`Showing ${rows.length} of ${registryRows.length} exam record(s). Read-only view.`;
+    const frag=document.createDocumentFragment();
+    rows.forEach(exam=>{
+      const row=document.createElement("article");row.className="phase-two-row";
+      const info=document.createElement("div"), title=document.createElement("strong"), meta=document.createElement("small");
+      title.textContent=exam.title||"Untitled exam";
+      meta.textContent=`ID: ${exam.id} • ${exam.duration_minutes??"—"} min • Published: ${exam.published_at?new Date(exam.published_at).toLocaleString():"—"}`;
+      info.append(title,meta);
+      const badge=document.createElement("span");badge.className="badge";badge.textContent=exam.status||"unknown";
+      row.append(info,badge);frag.append(row);
+    });
+    target.append(frag);
+  }
+  async function loadExamRegistry() {
+    if(state.profile?.role!=="admin")return toast("Developer access is required.","error");
+    const status=$("#exam-registry-status"), target=$("#exam-registry-list");
+    status.textContent="Loading exam records…";target.replaceChildren();
+    try{
+      const {data,error}=await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id,created_at").order("created_at",{ascending:false}).limit(200);
+      if(error)throw error;
+      registryRows=data||[];renderExamRegistry();
+    }catch(e){registryRows=[];status.textContent="Could not load exam registry. The database returned an access or query error.";toast("Exam Registry: "+(e.message||"request failed"),"error");}
+  }
+  function renderResultsInspector() {
+    const target=$("#results-inspector-list"), status=$("#results-inspector-status");
+    if(!target||!status)return;
+    const query=$("#results-inspector-search").value.trim().toLowerCase();
+    const rows=inspectorRows.filter(x=>[x.exam_id,x.student_id,x.status,x.attempt_type,x.exams?.title].some(v=>String(v??"").toLowerCase().includes(query)));
+    target.replaceChildren();
+    if(!rows.length){status.textContent=inspectorRows.length?"No submissions match this filter.":"No submission records are visible to this account.";return;}
+    status.textContent=`Showing ${rows.length} of ${inspectorRows.length} submission record(s). Read-only view.`;
+    const frag=document.createDocumentFragment();
+    rows.forEach(sub=>{
+      const row=document.createElement("article");row.className="phase-two-row";
+      const info=document.createElement("div"), title=document.createElement("strong"), meta=document.createElement("small");
+      title.textContent=sub.exams?.title||("Exam "+String(sub.exam_id||"").slice(0,8));
+      const score=sub.score==null||sub.max_score==null?"Not scored":`${sub.score} / ${sub.max_score}`;
+      meta.textContent=`Student: ${sub.student_id} • Attempt #${sub.attempt_number??"—"} (${sub.attempt_type||"—"}) • ${score} • Started: ${sub.started_at?new Date(sub.started_at).toLocaleString():"—"} • Submitted: ${sub.submitted_at?new Date(sub.submitted_at).toLocaleString():"—"}`;
+      info.append(title,meta);
+      const badge=document.createElement("span");badge.className="badge";badge.textContent=sub.status||"unknown";
+      row.append(info,badge);frag.append(row);
+    });
+    target.append(frag);
+  }
+  async function loadResultsInspector() {
+    if(state.profile?.role!=="admin")return toast("Developer access is required.","error");
+    const status=$("#results-inspector-status"), target=$("#results-inspector-list");
+    status.textContent="Loading submission records…";target.replaceChildren();
+    try{
+      const {data,error}=await state.supabase.from("submissions").select("id,exam_id,student_id,attempt_number,attempt_type,status,score,max_score,started_at,submitted_at,exams(title)").order("started_at",{ascending:false}).limit(300);
+      if(error)throw error;
+      inspectorRows=data||[];renderResultsInspector();
+    }catch(e){inspectorRows=[];status.textContent="Could not load submissions. Check table permissions, relationships, and RLS.";toast("Results Inspector: "+(e.message||"request failed"),"error");}
+  }
+
   async function adminControl(action, payload = {}) {
     if (state.profile?.role !== "admin") throw new Error("Developer access required.");
     const { data, error } = await state.supabase.functions.invoke("admin-control", { body: { action, ...payload } });
@@ -610,6 +675,12 @@
     $$("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
     $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
+    $("#refresh-exam-registry")?.addEventListener("click", loadExamRegistry);
+    $("#search-exam-registry")?.addEventListener("click", renderExamRegistry);
+    $("#exam-registry-search")?.addEventListener("input", renderExamRegistry);
+    $("#refresh-results-inspector")?.addEventListener("click", loadResultsInspector);
+    $("#search-results-inspector")?.addEventListener("click", renderResultsInspector);
+    $("#results-inspector-search")?.addEventListener("input", renderResultsInspector);
     $("#refresh-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
