@@ -94,7 +94,7 @@ ${material}`;
     if (provider === "gemini") {
       const key = Deno.env.get("GEMINI_API_KEY");
       if (!key) return json({ error: "Quiz generation is not configured: add GEMINI_API_KEY to Supabase function secrets." }, 500);
-      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash";
+      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,7 +109,20 @@ ${material}`;
       console.log("Gemini request duration_ms:", Date.now() - aiStartedAt, "status:", response.status);
       if (!response.ok) {
         console.error("Gemini request failed:", response.status, JSON.stringify(result).slice(0, 1000));
-        return json({ error: response.status === 429 ? "The AI provider is busy or its quota was reached. Try again later." : "The AI provider rejected the quiz request. Check the GEMINI_API_KEY and model configuration in Supabase." }, 502);
+        const providerMessage = typeof result?.error?.message === "string" ? result.error.message.slice(0, 300) : "";
+        if (response.status === 429) {
+          return json({ error: "Gemini rate limit or quota reached. Check your Google AI Studio quota/billing, then try again." }, 429);
+        }
+        if (response.status === 401 || response.status === 403) {
+          return json({ error: "Gemini authentication failed. Verify that GEMINI_API_KEY is valid and has access to the Gemini API." }, 502);
+        }
+        if (response.status === 404) {
+          return json({ error: "Gemini model not found or unavailable: " + model + ". Set GEMINI_MODEL to a model available to your API key. Provider detail: " + (providerMessage || "no detail returned"), 502);
+        }
+        if (response.status === 503 || response.status === 504) {
+          return json({ error: "Gemini is temporarily unavailable or overloaded. Wait briefly and retry; this is not necessarily a key problem." }, 503);
+        }
+        return json({ error: "Gemini request failed (HTTP " + response.status + "). Check the function logs for provider details" + (providerMessage ? ": " + providerMessage : ".") }, 502);
       }
       rawText = result?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
     } else if (provider === "openai") {
