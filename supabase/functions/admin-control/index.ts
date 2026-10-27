@@ -236,18 +236,39 @@ Deno.serve(async (req: Request) => {
         if ((count || 0) <= 1) return response(409, { error: "Cannot suspend the last active administrator." });
       }
 
+      const auditId = await beginAudit(userId, shouldSuspend ? "account_suspended" : "account_reactivated", {}, reason);
+      const previousSuspendedAt = target.suspended_at;
+      const previousSuspensionReason = (await admin.from("profiles").select("suspension_reason").eq("id", userId).maybeSingle()).data?.suspension_reason ?? null;
       const { error: profileError } = await admin.from("profiles").update({
         suspended_at: shouldSuspend ? new Date().toISOString() : null,
         suspension_reason: shouldSuspend ? reason : null,
       }).eq("id", userId);
-      if (profileError) throw profileError;
+      if (profileError) { await failAudit(auditId, profileError); throw profileError; }
 
       const { error: authError } = await admin.auth.admin.updateUserById(userId, {
         ban_duration: shouldSuspend ? "876000h" : "none",
       });
-      if (authError) throw authError;
-
-      await audit(userId, shouldSuspend ? "account_suspended" : "account_reactivated", {}, reason);
+      if (authError) {
+        const { error: rollbackError } = await admin.from("profiles").update({
+          suspended_at: previousSuspendedAt, suspension_reason: previousSuspensionReason,
+        }).eq("id", userId);
+        await failAudit(auditId, authError);
+        if (rollbackError) console.error("Suspension profile rollback failed:", rollbackError);
+        throw authError;
+      }
+      try { await finishAudit(auditId, { suspended: shouldSuspend }); }
+      catch (error) {
+        const { error: authRollbackError } = await admin.auth.admin.updateUserById(userId, {
+          ban_duration: shouldSuspend ? "none" : "876000h",
+        });
+        const { error: profileRollbackError } = await admin.from("profiles").update({
+          suspended_at: previousSuspendedAt, suspension_reason: previousSuspensionReason,
+        }).eq("id", userId);
+        await failAudit(auditId, error);
+        if (authRollbackError) console.error("Suspension auth rollback failed:", authRollbackError);
+        if (profileRollbackError) console.error("Suspension profile rollback failed:", profileRollbackError);
+        throw error;
+      }
       return response(200, { success: true });
     }
 
@@ -263,24 +284,31 @@ Deno.serve(async (req: Request) => {
         return response(409, { error: "No pending Teacher access request exists." });
       }
 
+      const reviewNote = cleanReason(body?.review_note, approve ? "Approved by administrator." : "Not approved by administrator.");
+      const auditId = await beginAudit(userId, approve ? "teacher_request_approved" : "teacher_request_rejected", { review_note: reviewNote }, reviewNote);
+      const { data: previousProfile } = await admin.from("profiles").select("role,verified_at").eq("id", userId).maybeSingle();
       const { error: updateRequestError } = await admin.from("teacher_access_requests").update({
-        status: approve ? "approved" : "rejected",
-        reviewed_by: actorId,
-        reviewed_at: new Date().toISOString(),
-        review_note: cleanReason(body?.review_note, approve ? "Approved by administrator." : "Not approved by administrator."),
+        status: approve ? "approved" : "rejected", reviewed_by: actorId,
+        reviewed_at: new Date().toISOString(), review_note: reviewNote,
       }).eq("user_id", userId);
-      if (updateRequestError) throw updateRequestError;
+      if (updateRequestError) { await failAudit(auditId, updateRequestError); throw updateRequestError; }
 
       if (approve) {
         const { error } = await admin.from("profiles")
-          .update({ role: "teacher", verified_at: new Date().toISOString() })
-          .eq("id", userId);
-        if (error) throw error;
+          .update({ role: "teacher", verified_at: new Date().toISOString() }).eq("id", userId);
+        if (error) {
+          await admin.from("teacher_access_requests").update({ status: "pending", reviewed_by: null, reviewed_at: null, review_note: null }).eq("user_id", userId);
+          await failAudit(auditId, error);
+          throw error;
+        }
       }
-
-      await audit(userId, approve ? "teacher_request_approved" : "teacher_request_rejected", {
-        review_note: cleanReason(body?.review_note, approve ? "Approved by administrator." : "Not approved by administrator."),
-      });
+      try { await finishAudit(auditId, { review_note: reviewNote }); }
+      catch (error) {
+        if (approve && previousProfile) await admin.from("profiles").update(previousProfile).eq("id", userId);
+        await admin.from("teacher_access_requests").update({ status: "pending", reviewed_by: null, reviewed_at: null, review_note: null }).eq("user_id", userId);
+        await failAudit(auditId, error);
+        throw error;
+      }
       return response(200, { success: true });
     }
 
