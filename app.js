@@ -14,7 +14,7 @@
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
   // This guard supplements, but cannot replace, a separately provisioned test project.
   const PRODUCTION_SUPABASE_URL = "https://otkgtwwxmmdmiavmpyqo.supabase.co";
-  const normalizedSupabaseUrl = SUPABASE_URL.replace(/\\/+$/, "").toLowerCase();
+  const normalizedSupabaseUrl = SUPABASE_URL.replace(/\/+$/, "").toLowerCase();
   const environmentConfigSafe = ["TEST", "PRODUCTION"].includes(APP_ENVIRONMENT) &&
     !(APP_ENVIRONMENT === "TEST" && normalizedSupabaseUrl === PRODUCTION_SUPABASE_URL);
 
