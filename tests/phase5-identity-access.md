@@ -29,7 +29,7 @@ Run only against the isolated local/test Supabase environment. Do not run destru
 
 ## Safety notes
 
-- The branch is a development change only; it is not merged into `main` and has not been deployed.
-- The migration and Edge Function must be tested together before merging.
+- Phase 5 code is committed to `main`, but it is not considered complete until the migration and Edge Function pass these tests in the isolated test environment.
+- Do not deploy to production; test directly from `main` in the isolated test environment.
 - Verify the installed Supabase Auth version's ban/unban behavior in the isolated test project.
 - Review the cascade behavior for account deletion before testing with any non-disposable account.
