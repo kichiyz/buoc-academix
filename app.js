@@ -1,5 +1,5 @@
-/* BUOC AcademiX client. Configure the two public Supabase values below.
-   The anon/publishable key is designed for browsers; NEVER place service_role or LLM keys here. */
+/* BUOC AcademiX client. Public Supabase configuration is loaded from academix-config.js.
+   Only publishable/anon keys belong in browser code; NEVER place service_role or LLM keys here. */
 (() => {
   "use strict";
   const APP_CONFIG = window.ACADEMIX_CONFIG || {};
@@ -10,7 +10,7 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
     draft: null, adminUsers: [], teacherRequest: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
-  const configured = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) && /^sb_publishable_[A-Za-z0-9_-]+$|^[A-Za-z0-9_-]+$/.test(SUPABASE_ANON_KEY);
+  const configured = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
 
   function toast(message, type = "") {
     const el = $("#toast"); el.textContent = message; el.className = `toast ${type}`.trim();
