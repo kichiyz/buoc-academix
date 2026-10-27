@@ -152,3 +152,14 @@ h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
 
 /* Exam UX polish */
 .exam-instructions{padding:15px 18px;margin-bottom:16px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:14px;background:#21182e}.exam-instructions b{display:block;margin-bottom:6px}.exam-instructions p{margin:0 0 7px;color:var(--muted);font-size:.88rem;line-height:1.55}.exam-instructions small{color:var(--gold);font-size:.75rem}.question-navigator-wrap{display:flex;align-items:flex-start;gap:14px;margin:0 0 18px;padding:13px 15px;border:1px solid var(--line);border-radius:14px;background:#17102555}.question-navigator-wrap>.muted{font-size:.78rem;white-space:nowrap;padding-top:8px}.question-navigator{display:flex;flex-wrap:wrap;gap:7px;min-width:0}.question-jump{width:38px;height:38px;min-width:38px;border:1px solid var(--line);border-radius:10px;background:#21182e;color:var(--text);font-weight:700;cursor:pointer;touch-action:manipulation}.question-jump.answered{border-color:#72d9ce;background:#72d9ce18}.question-jump.current{outline:2px solid var(--gold);outline-offset:1px;color:var(--gold)}.exam-controls .btn,.answer-option{min-height:46px;touch-action:manipulation}@media(max-width:600px){.exam-screen{padding:14px 12px 34px}.exam-top{flex-wrap:wrap;gap:10px}.exam-top>button{width:100%}.exam-top>div:nth-child(2){order:initial;flex:1 1 55%;min-width:0}.exam-top h1{font-size:1.12rem;line-height:1.35}.timer{font-size:1rem;padding:10px;min-width:80px}.exam-instructions{padding:13px;margin-bottom:12px}.question-navigator-wrap{display:block;padding:12px;margin-bottom:12px}.question-navigator-wrap>.muted{display:block;padding:0 0 9px}.question-navigator{gap:6px}.question-jump{width:36px;height:36px;min-width:36px}.exam-paper{padding:18px 14px;min-height:0}.question-title{font-size:1.12rem;line-height:1.5}.answer-option{padding:13px 11px;gap:10px;font-size:.92rem}.exam-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:24px;padding-top:16px}.exam-controls span{grid-column:1/-1;order:-1}.exam-controls .btn{width:100%;min-width:0;padding:12px 8px}.exam-controls #submit-exam{grid-column:1/-1}}
+
+/* Phase 2: compact, responsive read-only registry and results inspector */
+.phase-two-panel{margin-top:22px}
+.phase-two-list{display:grid;gap:10px;margin-top:12px}
+.phase-two-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#ffffff04;min-width:0}
+.phase-two-row>div{min-width:0;flex:1}
+.phase-two-row strong,.phase-two-row small{display:block;overflow-wrap:anywhere}
+.phase-two-row strong{margin-bottom:6px}
+.phase-two-row small{color:var(--muted);line-height:1.55}
+.phase-two-row>.badge{flex:none}
+@media(max-width:640px){.phase-two-row{flex-direction:column;gap:10px}.phase-two-row>.badge{align-self:flex-start}}
