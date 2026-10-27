@@ -179,3 +179,43 @@ h1,h2,h3,p,small,strong,label,span{overflow-wrap:anywhere}
 .environment-badge[data-environment="TEST"]{border-color:#ffbd69;color:#ffcf8e;background:#ffbd6914}
 .environment-badge[data-environment="PRODUCTION"]{border-color:#8be0bd;color:#a8f0d1;background:#8be0bd10}
 .environment-badge[data-environment="UNCONFIGURED"]{border-color:#ff8f9a;color:#ffb3bb;background:#ff8f9a10}
+
+
+/* Teacher workflow dialogs: accessible, searchable assignment and attempt controls */
+body.workflow-modal-open{overflow:hidden}
+.workflow-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}
+.workflow-modal.hidden{display:none!important}
+.workflow-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;background:#0b0712d9;backdrop-filter:blur(7px);cursor:default}
+.workflow-modal-card{position:relative;z-index:1;width:min(720px,100%);max-height:min(86vh,900px);display:flex;flex-direction:column;background:linear-gradient(145deg,#2a203b,#20172f);border:1px solid #59426d;border-radius:20px;box-shadow:0 28px 90px #0009;overflow:hidden}
+.workflow-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px 26px 18px;border-bottom:1px solid var(--line)}
+.workflow-modal-header h2{font:600 1.35rem "Space Grotesk";margin:0 0 7px}
+.workflow-modal-header p.muted{margin:0;font-size:.84rem;line-height:1.5}
+.workflow-modal-x{width:38px;height:38px;flex:none;border:1px solid var(--line);border-radius:11px;background:#ffffff08;color:var(--text);font-size:1.5rem;line-height:1}
+.workflow-modal-x:hover{background:#ffffff14}
+.workflow-modal-body{padding:22px 26px;overflow:auto;min-height:100px}
+.workflow-modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 26px 22px;border-top:1px solid var(--line);background:#17102535}
+.workflow-assignment-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:end;gap:10px}
+.workflow-search-label,.workflow-form label{display:flex;flex-direction:column;gap:8px;color:#e8def3;font-size:.82rem;font-weight:700}
+.workflow-selection-summary{margin:16px 0 10px;color:var(--gold);font-size:.8rem;font-weight:700}
+.workflow-student-list{display:grid;gap:8px}
+.workflow-student-row{display:flex;align-items:center;gap:13px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:#ffffff04;cursor:pointer}
+.workflow-student-row:hover{border-color:#8c72bb;background:#ffffff08}
+.workflow-student-row[hidden]{display:none}
+.workflow-student-row input{width:18px;height:18px;flex:none;accent-color:var(--gold)}
+.workflow-student-identity{display:grid;gap:4px;min-width:0}
+.workflow-student-identity strong{font-size:.87rem;overflow-wrap:anywhere}
+.workflow-student-identity small{color:var(--muted);font-size:.73rem;line-height:1.4}
+.workflow-form{display:grid;gap:18px}
+.workflow-form label{margin:0}
+.workflow-form select,.workflow-form textarea{margin:0}
+@media(max-width:600px){
+  .workflow-modal{padding:10px;align-items:end}
+  .workflow-modal-card{max-height:92vh;border-radius:18px}
+  .workflow-modal-header{padding:20px 18px 15px}
+  .workflow-modal-body{padding:18px}
+  .workflow-modal-footer{padding:14px 18px 18px;display:grid;grid-template-columns:1fr 1fr}
+  .workflow-modal-footer .btn{width:100%}
+  .workflow-assignment-toolbar{grid-template-columns:1fr 1fr}
+  .workflow-search-label{grid-column:1/-1}
+  .workflow-assignment-toolbar .btn{font-size:.78rem;padding:10px}
+}
