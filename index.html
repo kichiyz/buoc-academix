@@ -42,6 +42,13 @@
           <button class="text-button full" id="forgot-password" type="button">Forgot password?</button>
           <p class="fine-print">BU email prompts are a convenience, not proof of enrollment. Access should be approved by a verified administrator.</p>
         </form>
+        <form id="password-recovery-form" class="hidden">
+          <h2>Set a new password</h2>
+          <p class="muted">Choose a new password for your AcademiX account.</p>
+          <label>New password<input id="recovery-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></label>
+          <label>Confirm new password<input id="recovery-password-confirm" type="password" autocomplete="new-password" minlength="8" required placeholder="Re-enter your password"></label>
+          <button class="btn btn-primary full" type="submit">Save new password <span>→</span></button>
+        </form>
       </div>
     </section>
 
@@ -149,6 +156,6 @@
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20261027-teacher-nav-fix2"></script>
+  <script src="app.js?v=20261027-password-recovery1"></script>
 </body>
 </html>
