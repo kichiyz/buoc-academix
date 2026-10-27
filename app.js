@@ -2,13 +2,15 @@
    The anon/publishable key is designed for browsers; NEVER place service_role or LLM keys here. */
 (() => {
   "use strict";
-  const SUPABASE_URL = "https://otkgtwwxmmdmiavmpyqo.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_A-o7buSKUahNZceiaJBgCw_cvzeW-Rg";
+  const APP_CONFIG = window.ACADEMIX_CONFIG || {};
+  const SUPABASE_URL = String(APP_CONFIG.supabaseUrl || "").trim();
+  const SUPABASE_ANON_KEY = String(APP_CONFIG.supabasePublishableKey || "").trim();
+  const APP_ENVIRONMENT = String(APP_CONFIG.environment || "UNCONFIGURED").trim().toUpperCase();
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
     draft: null, adminUsers: [], teacherRequest: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
-  const configured = !SUPABASE_URL.includes("YOUR_PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
+  const configured = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) && /^sb_publishable_[A-Za-z0-9_-]+$|^[A-Za-z0-9_-]+$/.test(SUPABASE_ANON_KEY);
 
   function toast(message, type = "") {
     const el = $("#toast"); el.textContent = message; el.className = `toast ${type}`.trim();
@@ -47,6 +49,8 @@
   function initials(name) { return (name || "A").trim().split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase(); }
   function renderProfile() {
     const p = state.profile, u = state.user;
+    const environmentBadge = $("#environment-badge");
+    if (environmentBadge) { environmentBadge.textContent = `ENVIRONMENT: ${APP_ENVIRONMENT}`; environmentBadge.dataset.environment = APP_ENVIRONMENT; }
     document.body.classList.toggle("role-admin", p.role === "admin");
     document.body.classList.toggle("role-teacher", p.role === "teacher");
     document.body.classList.toggle("role-student", p.role === "student");
