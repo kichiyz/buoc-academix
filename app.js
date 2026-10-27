@@ -339,128 +339,279 @@
     } catch (e) { toast(e.message || "Could not start exam.", "error"); }
   }
 
+  let workflowReturnFocus = null;
+  function openWorkflowModal(title, description) {
+    const modal = $("#workflow-modal");
+    workflowReturnFocus = document.activeElement;
+    $("#workflow-modal-title").textContent = title;
+    $("#workflow-modal-description").textContent = description || "";
+    $("#workflow-modal-body").replaceChildren();
+    $("#workflow-modal-footer").replaceChildren();
+    modal.classList.remove("hidden");
+    document.body.classList.add("workflow-modal-open");
+    $("#workflow-modal-close").focus();
+    return { body: $("#workflow-modal-body"), footer: $("#workflow-modal-footer") };
+  }
+  function closeWorkflowModal() {
+    const modal = $("#workflow-modal");
+    if (!modal || modal.classList.contains("hidden")) return;
+    modal.classList.add("hidden");
+    document.body.classList.remove("workflow-modal-open");
+    if (workflowReturnFocus && typeof workflowReturnFocus.focus === "function") workflowReturnFocus.focus();
+    workflowReturnFocus = null;
+  }
+  function workflowButton(label, variant, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn " + variant;
+    button.textContent = label;
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
   async function manageAssignments(exam) {
     if (!["teacher", "admin"].includes(state.profile?.role)) {
       return toast("Teacher access is required to manage assignments.", "error");
     }
+    const { body, footer } = openWorkflowModal(
+      "Manage assigned students",
+      "Choose the verified student accounts that can access “" + exam.title + "”. Save to apply your changes."
+    );
+    body.innerHTML = '<div class="empty-state">Loading verified student accounts…</div>';
+    footer.append(workflowButton("Close", "btn-quiet", closeWorkflowModal));
     try {
-      const [{ data: students, error: studentsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+      const [{ data: studentsData, error: studentsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
         state.supabase.from("profiles").select("id,full_name,bu_id,verified_at").eq("role", "student").not("verified_at", "is", null).order("full_name"),
         state.supabase.from("exam_assignments").select("student_id").eq("exam_id", exam.id)
       ]);
       if (studentsError) throw studentsError;
       if (assignmentsError) throw assignmentsError;
-      if (!students?.length) return toast("No institutionally verified student accounts are available to assign.", "error");
-
+      const students = studentsData || [];
       const assignedIds = new Set((assignments || []).map(row => row.student_id));
-      const choices = students.map((student, index) =>
-        `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}${assignedIds.has(student.id) ? " — CURRENTLY ASSIGNED" : ""}`
-      ).join("\n");
-      const selection = prompt(
-        `Manage students for "${exam.title}". Enter registered BU student IDs (for example 2025-01-04051), separated by commas. You may also enter the list number shown before a student's name. Type NONE to remove all assignments; Cancel leaves them unchanged.\n\n${choices}`,
-        students.filter(student => assignedIds.has(student.id)).map(student => student.bu_id || String(students.findIndex(s => s.id === student.id) + 1)).join(", ")
-      );
-      if (selection === null) return;
-      const normalized = selection.trim().toUpperCase();
-      let selectedIds = new Set();
-      if (normalized !== "" && normalized !== "NONE") {
-        const entries = normalized.split(",").map(part => part.trim()).filter(Boolean);
-        const selectedStudents = [];
-        const invalidEntries = [];
-        for (const entry of entries) {
-          // Prefer exact registered BU ID matching; retain list-position selection for convenience.
-          const byBuId = students.filter(student => String(student.bu_id || "").trim().toUpperCase() === entry);
-          if (byBuId.length === 1) {
-            selectedStudents.push(byBuId[0]);
-            continue;
-          }
-          if (byBuId.length > 1) {
-            invalidEntries.push(entry + " (duplicate BU ID)");
-            continue;
-          }
-          if (/^\\d+$/.test(entry)) {
-            const index = Number(entry);
-            if (Number.isInteger(index) && index >= 1 && index <= students.length) {
-              selectedStudents.push(students[index - 1]);
-              continue;
+      const selectedIds = new Set(assignedIds);
+      body.replaceChildren();
+      footer.replaceChildren();
+      if (!students.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No institutionally verified student accounts are available to assign.";
+        body.append(empty);
+        footer.append(workflowButton("Close", "btn-quiet", closeWorkflowModal));
+        return;
+      }
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "workflow-assignment-toolbar";
+      const searchLabel = document.createElement("label");
+      searchLabel.className = "workflow-search-label";
+      searchLabel.textContent = "Find a student";
+      const search = document.createElement("input");
+      search.type = "search";
+      search.placeholder = "Search name or BU ID…";
+      search.maxLength = 120;
+      search.setAttribute("aria-label", "Search verified students by name or BU ID");
+      searchLabel.append(search);
+      const selectVisible = workflowButton("Select visible", "btn-quiet", () => {
+        students.forEach(student => {
+          const row = rows.get(student.id);
+          if (row && !row.hidden) selectedIds.add(student.id);
+        });
+        syncRows();
+      });
+      const clearSelection = workflowButton("Clear selection", "btn-quiet", () => {
+        selectedIds.clear();
+        syncRows();
+      });
+      toolbar.append(searchLabel, selectVisible, clearSelection);
+      const summary = document.createElement("p");
+      summary.className = "workflow-selection-summary";
+      const list = document.createElement("div");
+      list.className = "workflow-student-list";
+      list.setAttribute("aria-label", "Verified student accounts");
+      const rows = new Map();
+
+      function syncRows() {
+        rows.forEach((row, id) => {
+          const checkbox = row.querySelector("input[type=checkbox]");
+          checkbox.checked = selectedIds.has(id);
+        });
+        summary.textContent = selectedIds.size + " student(s) selected";
+      }
+
+      students.forEach(student => {
+        const row = document.createElement("label");
+        row.className = "workflow-student-row";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selectedIds.has(student.id);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selectedIds.add(student.id);
+          else selectedIds.delete(student.id);
+          summary.textContent = selectedIds.size + " student(s) selected";
+        });
+        const identity = document.createElement("span");
+        identity.className = "workflow-student-identity";
+        const name = document.createElement("strong");
+        name.textContent = student.full_name || "Unnamed student";
+        const meta = document.createElement("small");
+        meta.textContent = (student.bu_id ? "BU ID: " + student.bu_id : "No BU ID on file") +
+          (assignedIds.has(student.id) ? " • Currently assigned" : " • Not assigned");
+        identity.append(name, meta);
+        row.append(checkbox, identity);
+        row.dataset.searchText = [student.full_name, student.bu_id].filter(Boolean).join(" ").toLowerCase();
+        rows.set(student.id, row);
+        list.append(row);
+      });
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLowerCase();
+        rows.forEach(row => { row.hidden = !row.dataset.searchText.includes(query); });
+      });
+      syncRows();
+      body.append(toolbar, summary, list);
+      footer.append(
+        workflowButton("Cancel", "btn-quiet", closeWorkflowModal),
+        workflowButton("Save assignments", "btn-primary", async event => {
+          const saveButton = footer.querySelector(".btn-primary");
+          saveButton.disabled = true;
+          saveButton.textContent = "Saving…";
+          try {
+            const toAdd = students.filter(student => selectedIds.has(student.id) && !assignedIds.has(student.id));
+            const toRemove = [...assignedIds].filter(id => !selectedIds.has(id));
+            if (!toAdd.length && !toRemove.length) {
+              closeWorkflowModal();
+              return toast("Assignments are already up to date.", "success");
             }
+            if (toAdd.length) {
+              const { error } = await state.supabase.from("exam_assignments").insert(
+                toAdd.map(student => ({ exam_id: exam.id, student_id: student.id }))
+              );
+              if (error) throw error;
+            }
+            for (const studentId of toRemove) {
+              const { error } = await state.supabase.from("exam_assignments").delete()
+                .eq("exam_id", exam.id).eq("student_id", studentId);
+              if (error) throw error;
+            }
+            closeWorkflowModal();
+            toast("Assignments saved for " + selectedIds.size + " student(s).", "success");
+            await loadExams();
+          } catch (error) {
+            toast(error.message || "Could not save assignments. Check the exam_assignments policies.", "error");
+            saveButton.disabled = false;
+            saveButton.textContent = "Save assignments";
           }
-          invalidEntries.push(entry);
-        }
-        if (invalidEntries.length) {
-          return toast("These student numbers are not registered to a verified student account: " + invalidEntries.join(", "), "error");
-        }
-        selectedIds = new Set(selectedStudents.map(student => student.id));
-      } else if (normalized === "") {
-        return toast("No selection entered; assignments were not changed.", "error");
-      }
-
-      const toAdd = students.filter(student => selectedIds.has(student.id) && !assignedIds.has(student.id));
-      const toRemove = [...assignedIds].filter(id => !selectedIds.has(id));
-      if (!toAdd.length && !toRemove.length) return toast("Assignments are already up to date.", "success");
-
-      if (toAdd.length) {
-        const { error } = await state.supabase.from("exam_assignments").insert(
-          toAdd.map(student => ({ exam_id: exam.id, student_id: student.id }))
-        );
-        if (error) throw error;
-      }
-      for (const studentId of toRemove) {
-        const { error } = await state.supabase.from("exam_assignments").delete()
-          .eq("exam_id", exam.id).eq("student_id", studentId);
-        if (error) throw error;
-      }
-      toast(`Assignments updated: ${selectedIds.size} student(s) assigned.`, "success");
-      await loadExams();
-    } catch (e) {
-      toast(e.message || "Could not update exam assignments. Check the exam_assignments RLS policies.", "error");
+        })
+      );
+    } catch (error) {
+      body.replaceChildren();
+      const message = document.createElement("div");
+      message.className = "empty-state";
+      message.textContent = error.message || "Could not load verified students or current assignments.";
+      body.append(message);
     }
   }
 
   async function authorizeAttempt(exam) {
+    if (!["teacher", "admin"].includes(state.profile?.role)) {
+      return toast("Teacher access is required to authorize an attempt.", "error");
+    }
+    const { body, footer } = openWorkflowModal(
+      "Authorize retake or remedial",
+      "Choose an assigned student and record why another attempt is being authorized."
+    );
+    body.innerHTML = '<div class="empty-state">Loading assigned students…</div>';
+    footer.append(workflowButton("Close", "btn-quiet", closeWorkflowModal));
     try {
       const { data: assignments, error: assignmentError } = await state.supabase
         .from("exam_assignments").select("student_id").eq("exam_id", exam.id);
       if (assignmentError) throw assignmentError;
       const ids = [...new Set((assignments || []).map(row => row.student_id).filter(Boolean))];
-      if (!ids.length) return toast("No assigned students were found for this exam.", "error");
-
-      const { data: students, error: studentError } = await state.supabase
+      if (!ids.length) {
+        body.replaceChildren();
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "Assign at least one student to this exam before authorizing another attempt.";
+        body.append(empty);
+        return;
+      }
+      const { data: studentRows, error: studentError } = await state.supabase
         .from("profiles").select("id,full_name,bu_id").in("id", ids);
       if (studentError) throw studentError;
-      const eligibleStudents = (students || []).filter(student => student.id);
-      if (!eligibleStudents.length) {
-        return toast("Student details are not visible under the current Supabase policies.", "error");
+      const students = (studentRows || []).filter(student => student.id)
+        .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
+      if (!students.length) {
+        body.replaceChildren();
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "Student details are not visible under the current database policies.";
+        body.append(empty);
+        return;
       }
-
-      const choices = eligibleStudents.map((student, index) =>
-        `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}`
-      ).join("\n");
-      const selection = prompt(`Choose an assigned student by number:\n\n${choices}\n\nEnter student number:`);
-      if (selection === null || !selection.trim()) return;
-      const studentIndex = Number(selection) - 1;
-      if (!Number.isInteger(studentIndex) || studentIndex < 0 || studentIndex >= eligibleStudents.length) {
-        return toast("Enter a valid student number from the list.", "error");
-      }
-      const student = eligibleStudents[studentIndex];
-
-      const typeInput = prompt("Attempt type: retake or remedial", "retake");
-      if (typeInput === null) return;
-      const attemptType = typeInput.trim().toLowerCase();
-      if (!["retake", "remedial"].includes(attemptType)) {
-        return toast("Attempt type must be retake or remedial.", "error");
-      }
-      const reason = prompt("Reason for authorization (optional):") || "";
-      const { data, error } = await state.supabase.rpc("authorize_exam_attempt", {
-        p_exam_id: exam.id,
-        p_student_id: student.id,
-        p_attempt_type: attemptType,
-        p_reason: reason
+      body.replaceChildren();
+      footer.replaceChildren();
+      const form = document.createElement("div");
+      form.className = "workflow-form";
+      const studentLabel = document.createElement("label");
+      studentLabel.textContent = "Assigned student";
+      const studentSelect = document.createElement("select");
+      studentSelect.required = true;
+      students.forEach(student => {
+        const option = document.createElement("option");
+        option.value = student.id;
+        option.textContent = (student.full_name || "Unnamed student") + (student.bu_id ? " • BU ID: " + student.bu_id : "");
+        studentSelect.append(option);
       });
-      if (error) throw error;
-      toast(`Authorized ${data.attempt_type} attempt #${data.attempt_number} for ${student.full_name || "student"}.`, "success");
-    } catch (e) {
-      toast(e.message || "Could not authorize attempt.", "error");
+      studentLabel.append(studentSelect);
+      const typeLabel = document.createElement("label");
+      typeLabel.textContent = "Attempt type";
+      const typeSelect = document.createElement("select");
+      [["retake", "Retake"], ["remedial", "Remedial"]].forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        typeSelect.append(option);
+      });
+      typeLabel.append(typeSelect);
+      const reasonLabel = document.createElement("label");
+      reasonLabel.textContent = "Reason (optional)";
+      const reason = document.createElement("textarea");
+      reason.rows = 3;
+      reason.maxLength = 1000;
+      reason.placeholder = "Add a brief reason for this authorization…";
+      reasonLabel.append(reason);
+      form.append(studentLabel, typeLabel, reasonLabel);
+      body.append(form);
+      footer.append(
+        workflowButton("Cancel", "btn-quiet", closeWorkflowModal),
+        workflowButton("Authorize attempt", "btn-primary", async () => {
+          const authorizeButton = footer.querySelector(".btn-primary");
+          authorizeButton.disabled = true;
+          authorizeButton.textContent = "Authorizing…";
+          try {
+            const student = students.find(item => item.id === studentSelect.value);
+            const { data, error } = await state.supabase.rpc("authorize_exam_attempt", {
+              p_exam_id: exam.id,
+              p_student_id: studentSelect.value,
+              p_attempt_type: typeSelect.value,
+              p_reason: reason.value.trim()
+            });
+            if (error) throw error;
+            closeWorkflowModal();
+            toast("Authorized " + data.attempt_type + " attempt #" + data.attempt_number +
+              " for " + (student?.full_name || "student") + ".", "success");
+          } catch (error) {
+            toast(error.message || "Could not authorize attempt.", "error");
+            authorizeButton.disabled = false;
+            authorizeButton.textContent = "Authorize attempt";
+          }
+        })
+      );
+    } catch (error) {
+      body.replaceChildren();
+      const message = document.createElement("div");
+      message.className = "empty-state";
+      message.textContent = error.message || "Could not load students assigned to this exam.";
+      body.append(message);
     }
   }
   function renderQuestion() {
@@ -726,7 +877,14 @@
     $$(".nav-item").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
     $$("[data-go]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.go)));
     $$("[data-action=\"planned\"]").forEach(b => b.addEventListener("click", () => toast(b.dataset.feature + " is planned but not implemented yet.", "error")));
-    $("#signout").addEventListener("click", signOut);
+    $("#workflow-modal-close")?.addEventListener("click", closeWorkflowModal);
+    $("#workflow-modal")?.addEventListener("click", event => {
+      if (event.target.matches("[data-workflow-close]")) closeWorkflowModal();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !$("#workflow-modal")?.classList.contains("hidden")) closeWorkflowModal();
+    });
+        $("#signout").addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#refresh-exam-registry")?.addEventListener("click", loadExamRegistry);
     $("#search-exam-registry")?.addEventListener("click", renderExamRegistry);
