@@ -65,6 +65,13 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "");
     const userId = typeof body?.user_id === "string" ? body.user_id : "";
     const reason = cleanReason(body?.reason);
+    const reasonRequiredActions = new Set(["set_role", "suspend", "reactivate"]);
+    if (reasonRequiredActions.has(action) && (typeof body?.reason !== "string" || body.reason.trim().length < 3)) {
+      return response(400, { error: "Provide a reason of at least 3 characters." });
+    }
+    if (typeof body?.reason === "string" && body.reason.trim().length > 500) {
+      return response(400, { error: "Reason must be 500 characters or fewer." });
+    }
     const audit = async (
       targetId: string | null,
       auditAction: string,
@@ -84,11 +91,14 @@ Deno.serve(async (req: Request) => {
 
     if (action === "list_users") {
       const query = String(body?.query || "").trim().toLowerCase().slice(0, 120);
-      const { data: users, error: usersError } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-      if (usersError) throw usersError;
+      const collectedUsers: any[] = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data: pageData, error: usersError } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (usersError) throw usersError;
+        const batch = pageData.users || [];
+        collectedUsers.push(...batch);
+        if (batch.length < 1000) break;
+      }
 
       const { data: profiles, error: profilesError } = await admin
         .from("profiles")
@@ -102,7 +112,7 @@ Deno.serve(async (req: Request) => {
 
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
       const requestMap = new Map((requests || []).map((r) => [r.user_id, r]));
-      const rows = (users.users || []).map((u) => {
+      const rows = collectedUsers.map((u) => {
         const p = profileMap.get(u.id);
         const request = requestMap.get(u.id);
         return {
