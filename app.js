@@ -106,9 +106,20 @@
   }
 
   async function enterApp() {
-    showOnly("#dashboard-view");
-    await loadProfile();
-    switchView(state.profile.role === "admin" ? "developer" : state.profile.role === "teacher" ? "teacher-home" : "student-home");
+    // Auth INITIAL_SESSION and getSession can resolve together. Do not let the
+    // duplicate initialization reset whichever tab the user has already opened.
+    if (state.profile?.id === state.user?.id) return;
+    if (state.enteringUserId === state.user?.id) return;
+    const enteringUserId = state.user?.id;
+    state.enteringUserId = enteringUserId;
+    try {
+      showOnly("#dashboard-view");
+      await loadProfile();
+      if (state.user?.id !== enteringUserId) return;
+      switchView(state.profile.role === "admin" ? "developer" : state.profile.role === "teacher" ? "teacher-home" : "student-home");
+    } finally {
+      if (state.enteringUserId === enteringUserId) state.enteringUserId = null;
+    }
   }
   async function authSubmit(event) {
     event.preventDefault();
@@ -189,6 +200,10 @@
       })();
       const data = await Promise.race([request, timeout]);
       state.draft = data; renderDraft();
+      // Clear the submitted prompt/material after successful generation so stale
+      // inputs do not remain in the generator form.
+      $("#quiz-title").value = "";
+      $("#quiz-material").value = "";
       console.info("[AcademiX] Quiz generation completed in", Math.round(performance.now() - startedAt), "ms");
       toast("Draft generated. Review every answer before publishing.", "success");
     } catch (e) {
