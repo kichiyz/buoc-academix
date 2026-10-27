@@ -10,6 +10,9 @@ create table if not exists public.teacher_access_requests (
 );
 alter table public.teacher_access_requests enable row level security;
 revoke all on public.teacher_access_requests from anon, authenticated;
+-- The admin-control Edge Function uses the service-role client for administrative
+-- reads and updates. Keep these grants in the migration so new environments match production.
+grant select, insert, update, delete on public.teacher_access_requests to service_role;
 grant select on public.teacher_access_requests to authenticated;
 drop policy if exists "users read own teacher access request" on public.teacher_access_requests;
 create policy "users read own teacher access request"
