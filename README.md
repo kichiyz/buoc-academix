@@ -36,6 +36,8 @@ The frontend reads the Supabase URL, publishable key, and environment label from
 3. Review and run `supabase/migrations/20261027_admin_diagnostics_read.sql` to permit read-only admin inspection of exam and submission metadata. This does not grant write access.
 4. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
 5. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
+6. For Phase 5, apply `supabase/migrations/20261028_phase5_identity_access.sql` in the isolated test project, then deploy `supabase/functions/admin-control/` to that same project. Configure `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` as Edge Function secrets; never put the service-role key in browser code or Git.
+7. Run `tests/phase5-identity-access.md` against disposable local/test accounts before merging or deploying.
 6. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
 7. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
 
