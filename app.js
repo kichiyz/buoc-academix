@@ -164,19 +164,41 @@
   }
   async function generateQuiz(event) {
     event.preventDefault();
-    const button = $("#generate-button"); button.disabled = true; button.textContent = "Generating…";
+    const button = $("#generate-button");
+    const startedAt = performance.now();
+    const stages = ["Analyzing study material…", "Generating questions with AI…", "Validating answers…"];
+    let stageIndex = 0;
+    button.disabled = true;
+    button.textContent = stages[stageIndex];
+    const stageTimer = setInterval(() => {
+      stageIndex = Math.min(stageIndex + 1, stages.length - 1);
+      button.textContent = stages[stageIndex];
+    }, 8000);
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Quiz generation timed out after 60 seconds. Please try again with shorter study material.")), 60000));
     try {
-      const { data: sessionData } = await state.supabase.auth.getSession();
-      const { data, error } = await state.supabase.functions.invoke("generate-quiz", {
-        body: { title: $("#quiz-title").value.trim(), material: $("#quiz-material").value,
-          count: Number($("#quiz-count").value), questionType: $("#quiz-type").value, difficulty: $("#quiz-difficulty").value }
-      });
-      if (error) throw error;
-      if (!data?.questions) throw new Error(data?.error || "The generator returned no questions.");
+      const request = (async () => {
+        const { error: sessionError } = await state.supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        const { data, error } = await state.supabase.functions.invoke("generate-quiz", {
+          body: { title: $("#quiz-title").value.trim(), material: $("#quiz-material").value.slice(0, 30000),
+            count: Number($("#quiz-count").value), questionType: $("#quiz-type").value, difficulty: $("#quiz-difficulty").value }
+        });
+        if (error) throw error;
+        if (!data?.questions) throw new Error(data?.error || "The generator returned no questions.");
+        return data;
+      })();
+      const data = await Promise.race([request, timeout]);
       state.draft = data; renderDraft();
+      console.info("[AcademiX] Quiz generation completed in", Math.round(performance.now() - startedAt), "ms");
       toast("Draft generated. Review every answer before publishing.", "success");
-    } catch (e) { toast(e.message || "Could not generate quiz.", "error"); }
-    finally { button.disabled = false; button.innerHTML = "✦ Generate draft"; }
+    } catch (e) {
+      console.error("[AcademiX] Quiz generation failed after", Math.round(performance.now() - startedAt), "ms", e);
+      toast(e.message || "Could not generate quiz.", "error");
+    } finally {
+      clearInterval(stageTimer);
+      button.disabled = false;
+      button.innerHTML = "✦ Generate draft";
+    }
   }
   function renderDraft() {
     const panel = $("#draft-panel"), target = $("#draft-questions");
