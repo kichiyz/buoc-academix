@@ -1,0 +1,35 @@
+name: Phase 5 Identity and Access Regression Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/admin-control/**"
+      - "supabase/migrations/*phase5*"
+      - "tests/phase5-regression.test.mjs"
+      - ".github/workflows/phase5-regression.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/admin-control/**"
+      - "supabase/migrations/*phase5*"
+      - "tests/phase5-regression.test.mjs"
+      - ".github/workflows/phase5-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase5-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Phase 5 regression tests
+        run: node --test tests/phase5-regression.test.mjs
