@@ -72,21 +72,34 @@ Deno.serve(async (req: Request) => {
     if (typeof body?.reason === "string" && body.reason.trim().length > 500) {
       return response(400, { error: "Reason must be 500 characters or fewer." });
     }
-    const audit = async (
+    // Write an audit intent before privileged mutations. A failed or interrupted operation
+    // remains visible as failure; successful operations are finalized after the mutation.
+    const beginAudit = async (
       targetId: string | null,
       auditAction: string,
       details: Record<string, unknown> = {},
       auditReason = reason,
-    ) => {
-      const { error } = await admin.from("admin_audit_log").insert({
-        actor_id: actorId,
-        target_user_id: targetId,
-        action: auditAction,
-        outcome: "success",
-        reason: auditReason,
-        details,
-      });
+    ): Promise<number> => {
+      const { data, error } = await admin.from("admin_audit_log").insert({
+        actor_id: actorId, target_user_id: targetId, action: auditAction,
+        outcome: "failure", reason: auditReason,
+        details: { ...details, phase: "started" },
+      }).select("id").single();
       if (error) throw error;
+      return Number(data.id);
+    };
+    const finishAudit = async (auditId: number, details: Record<string, unknown> = {}) => {
+      const { error } = await admin.from("admin_audit_log").update({
+        outcome: "success", details: { ...details, phase: "completed" },
+      }).eq("id", auditId);
+      if (error) throw error;
+    };
+    const failAudit = async (auditId: number, error: unknown) => {
+      const message = error instanceof Error ? error.message : "Administrative operation failed.";
+      const { error: auditError } = await admin.from("admin_audit_log").update({
+        outcome: "failure", details: { phase: "failed", error: message.slice(0, 500) },
+      }).eq("id", auditId);
+      if (auditError) console.error("Could not finalize failure audit:", auditError);
     };
 
     if (action === "list_users") {
@@ -181,19 +194,33 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         if ((count || 0) <= 1) return response(409, { error: "Cannot demote the last administrator." });
       }
+      const auditId = await beginAudit(userId, "role_changed", { old_role: target.role, new_role: newRole });
       const { error } = await admin.from("profiles").update({ role: newRole }).eq("id", userId);
-      if (error) throw error;
-      await audit(userId, "role_changed", { old_role: target.role, new_role: newRole });
+      if (error) { await failAudit(auditId, error); throw error; }
+      try { await finishAudit(auditId, { old_role: target.role, new_role: newRole }); }
+      catch (error) {
+        const { error: rollbackError } = await admin.from("profiles").update({ role: target.role }).eq("id", userId);
+        await failAudit(auditId, error);
+        if (rollbackError) console.error("Role rollback failed:", rollbackError);
+        throw error;
+      }
       return response(200, { success: true });
     }
 
     if (action === "set_verified") {
       const verified = body?.verified === true;
+      const previousVerifiedAt = target.verified_at;
+      const auditId = await beginAudit(userId, "verification_changed", { verified });
       const { error } = await admin.from("profiles")
-        .update({ verified_at: verified ? new Date().toISOString() : null })
-        .eq("id", userId);
-      if (error) throw error;
-      await audit(userId, "verification_changed", { verified });
+        .update({ verified_at: verified ? new Date().toISOString() : null }).eq("id", userId);
+      if (error) { await failAudit(auditId, error); throw error; }
+      try { await finishAudit(auditId, { verified }); }
+      catch (error) {
+        const { error: rollbackError } = await admin.from("profiles").update({ verified_at: previousVerifiedAt }).eq("id", userId);
+        await failAudit(auditId, error);
+        if (rollbackError) console.error("Verification rollback failed:", rollbackError);
+        throw error;
+      }
       return response(200, { success: true });
     }
 
@@ -261,10 +288,12 @@ Deno.serve(async (req: Request) => {
       if (body?.confirmation !== "DELETE") {
         return response(400, { error: "Explicit DELETE confirmation is required." });
       }
+      // Persist the audit intent before the irreversible Auth deletion. If deletion fails,
+      // the row is finalized as failure; if the process is interrupted, phase=started remains.
+      const auditId = await beginAudit(userId, "account_deleted", { deleted: true }, "Account deletion explicitly confirmed by administrator.");
       const { error } = await admin.auth.admin.deleteUser(userId);
-      if (error) throw error;
-      // The audit row intentionally has no FK to target_user_id, so it survives deletion.
-      await audit(userId, "account_deleted", { deleted: true }, "Account deletion explicitly confirmed by administrator.");
+      if (error) { await failAudit(auditId, error); throw error; }
+      await finishAudit(auditId, { deleted: true });
       return response(200, { success: true });
     }
 
