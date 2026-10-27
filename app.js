@@ -255,15 +255,16 @@
       const submissionId = attempt?.submission_id;
       if (!submissionId) throw new Error("The server did not create or return an exam attempt.");
 
-      const { data: questions, error: qError } = await state.supabase.rpc("get_exam_questions", { p_exam_id: exam.id });
-      if (qError) throw qError;
-      if (!questions?.length) throw new Error("No questions are available for this exam.");
-
-      // A resumed attempt keeps its original time limit instead of receiving a fresh timer.
+      // Read the server start timestamp immediately, before fetching questions, so question
+      // loading time does not make the visible timer appear to start late.
       const { data: submission, error: submissionError } = await state.supabase
         .from("submissions").select("started_at,status").eq("id", submissionId).single();
       if (submissionError) throw submissionError;
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
+
+      const { data: questions, error: qError } = await state.supabase.rpc("get_exam_questions", { p_exam_id: exam.id });
+      if (qError) throw qError;
+      if (!questions?.length) throw new Error("No questions are available for this exam.");
 
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
