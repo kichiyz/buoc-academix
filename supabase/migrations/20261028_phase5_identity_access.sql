@@ -27,6 +27,21 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_log (
   ))
 );
 
+-- Reapply the full allowed-action constraint safely if this migration is rerun
+-- after a partially completed local test.
+ALTER TABLE public.admin_audit_log
+  DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
+ALTER TABLE public.admin_audit_log
+  ADD CONSTRAINT admin_audit_log_action_check CHECK (action IN (
+    'role_changed',
+    'account_suspended',
+    'account_reactivated',
+    'account_deleted',
+    'verification_changed',
+    'teacher_request_approved',
+    'teacher_request_rejected'
+  ));
+
 CREATE INDEX IF NOT EXISTS admin_audit_log_target_created_idx
   ON public.admin_audit_log(target_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS admin_audit_log_actor_created_idx
