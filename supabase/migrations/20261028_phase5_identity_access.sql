@@ -55,7 +55,13 @@ DROP POLICY IF EXISTS "Admins read identity audit log" ON public.admin_audit_log
 CREATE POLICY "Admins read identity audit log"
 ON public.admin_audit_log
 FOR SELECT TO authenticated
-USING (public.current_role() = 'admin'::public.app_role);
+USING (
+  public.current_role() = 'admin'::public.app_role
+  AND EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid() AND p.suspended_at IS NULL
+  )
+);
 
 -- Keep existing verification semantics, but deny exam access to suspended accounts.
 CREATE OR REPLACE FUNCTION public.is_verified()
