@@ -24,8 +24,9 @@ Deno.serve(async(req)=>{
    const query=typeof body.query==="string"?body.query.trim().toLowerCase().slice(0,120):"";
    const {data:authUsers,error}=await service.auth.admin.listUsers({page:1,perPage:1000});if(error)return respond({error:"Could not retrieve account directory."},500);
    const {data:profiles,error:pe}=await service.from("profiles").select("id,full_name,role,verified_at,bu_id");if(pe)return respond({error:"Could not retrieve account profiles."},500);
-   const byId=new Map((profiles??[]).map((p:any)=>[p.id,p]));
-   const users=(authUsers.users??[]).map((u:any)=>{const p:any=byId.get(u.id)??{};return{id:u.id,email:u.email??"",full_name:p.full_name??"",role:p.role??"student",verified_at:p.verified_at??null,bu_id:p.bu_id??null,suspended:!!u.banned_until&&new Date(u.banned_until).getTime()>Date.now(),created_at:u.created_at,last_sign_in_at:u.last_sign_in_at??null};}).filter((u:any)=>!query||[u.email,u.full_name,u.bu_id].some((v:string|null)=>(v??"").toLowerCase().includes(query))).sort((a:any,b:any)=>a.email.localeCompare(b.email)).slice(0,100);
+   const {data:requests,error:re}=await service.from("teacher_access_requests").select("user_id,status,review_note");if(re)return respond({error:"Could not retrieve Teacher requests. Apply the teacher approval migration first."},500);
+   const byId=new Map((profiles??[]).map((p:any)=>[p.id,p]));const requestsById=new Map((requests??[]).map((r:any)=>[r.user_id,r]));
+   const users=(authUsers.users??[]).map((u:any)=>{const p:any=byId.get(u.id)??{},r:any=requestsById.get(u.id)??{};return{id:u.id,email:u.email??"",full_name:p.full_name??"",role:p.role??"student",verified_at:p.verified_at??null,bu_id:p.bu_id??null,teacher_request_status:r.status??null,teacher_request_note:r.review_note??null,suspended:!!u.banned_until&&new Date(u.banned_until).getTime()>Date.now(),created_at:u.created_at,last_sign_in_at:u.last_sign_in_at??null};}).filter((u:any)=>!query||[u.email,u.full_name,u.bu_id].some((v:string|null)=>(v??"").toLowerCase().includes(query))).sort((a:any,b:any)=>a.email.localeCompare(b.email)).slice(0,100);
    return respond({users});
   }
   if(action==="list_audit"){const {data,error}=await service.from("admin_audit_logs").select("id,action,target_user_id,target_email,details,created_at,actor_id").order("created_at",{ascending:false}).limit(30);if(error)return respond({error:"Could not load audit log. Apply the audit schema SQL first."},500);return respond({logs:data??[]});}
@@ -38,6 +39,15 @@ Deno.serve(async(req)=>{
    if(id===actorId&&role!=="admin")return respond({error:"You cannot remove your own admin role here."},400);
    if(target.role==="admin"&&role!=="admin"){const {count}=await service.from("profiles").select("id",{count:"exact",head:true}).eq("role","admin");if((count??0)<=1)return respond({error:"Cannot demote the last admin."},409);}
    const {error}=await service.from("profiles").update({role}).eq("id",id);if(error)return respond({error:"Role update failed."},500);
+  }else if(action==="approve_teacher_request"){
+   const {data:request,error:requestError}=await service.from("teacher_access_requests").select("status").eq("user_id",id).maybeSingle();if(requestError)return respond({error:"Could not load Teacher request."},500);if(!request||request.status!=="pending")return respond({error:"This Teacher request is not pending."},409);
+   const {error:roleError}=await service.from("profiles").update({role:"teacher"}).eq("id",id);if(roleError)return respond({error:"Could not grant Teacher role."},500);
+   const {error:requestUpdateError}=await service.from("teacher_access_requests").update({status:"approved",reviewed_by:actorId,reviewed_at:new Date().toISOString(),review_note:null}).eq("user_id",id);if(requestUpdateError){await service.from("profiles").update({role:target.role}).eq("id",id);return respond({error:"Could not record approval; role change rolled back."},500);}
+  }else if(action==="reject_teacher_request"){
+   const {data:request,error:requestError}=await service.from("teacher_access_requests").select("status").eq("user_id",id).maybeSingle();if(requestError)return respond({error:"Could not load Teacher request."},500);if(!request||request.status!=="pending")return respond({error:"This Teacher request is not pending."},409);
+   const note=typeof body.review_note==="string"?body.review_note.trim().slice(0,500):"";
+   const {error:requestUpdateError}=await service.from("teacher_access_requests").update({status:"rejected",reviewed_by:actorId,reviewed_at:new Date().toISOString(),review_note:note||null}).eq("user_id",id);if(requestUpdateError)return respond({error:"Could not reject Teacher request."},500);
+   if(target.role==="teacher"){const {error:roleError}=await service.from("profiles").update({role:"student"}).eq("id",id);if(roleError)return respond({error:"Request rejected, but could not restrict Teacher role."},500);}
   }else if(action==="set_verified"){
    if(typeof body.verified!=="boolean")return respond({error:"Verification flag is required."},400);
    const {error}=await service.from("profiles").update({verified_at:body.verified?new Date().toISOString():null}).eq("id",id);if(error)return respond({error:"Verification update failed."},500);
@@ -47,7 +57,7 @@ Deno.serve(async(req)=>{
    if(target.role==="admin"){const {count}=await service.from("profiles").select("id",{count:"exact",head:true}).eq("role","admin");if((count??0)<=1)return respond({error:"Cannot delete the last admin."},409);}
    const {error}=await service.auth.admin.deleteUser(id);if(error)return respond({error:"Account deletion failed."},500);
   }else return respond({error:"Unsupported admin action."},400);
-  await audit(id,email,action==="set_role"?{role:body.role}:action==="set_verified"?{verified:body.verified}:{});
+  await audit(id,email,action==="set_role"?{role:body.role}:action==="set_verified"?{verified:body.verified}:action==="reject_teacher_request"?{review_note:typeof body.review_note==="string"?body.review_note.slice(0,500):""}:{});
   return respond({ok:true,action,user_id:id});
  }catch(error){console.error("admin-control error",error);return respond({error:"Unexpected admin-control failure."},500);}
 });
