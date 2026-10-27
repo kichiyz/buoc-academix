@@ -194,7 +194,20 @@
           body: { title: $("#quiz-title").value.trim(), material: $("#quiz-material").value.slice(0, 30000),
             count: Number($("#quiz-count").value), questionType: $("#quiz-type").value, difficulty: $("#quiz-difficulty").value }
         });
-        if (error) throw error;
+        if (error) {
+          // Supabase FunctionsHttpError carries the Edge Function Response in
+          // error.context. Read its JSON body so the UI shows the real cause
+          // (missing API key, quota, invalid model, rejected input, etc.).
+          let detail = "";
+          try {
+            const response = error.context;
+            if (response && typeof response.json === "function") {
+              const body = await response.json();
+              detail = typeof body?.error === "string" ? body.error : "";
+            }
+          } catch (_) {}
+          throw new Error(detail || error.message || "Quiz generation failed. Check the generate-quiz function logs.");
+        }
         if (!data?.questions) throw new Error(data?.error || "The generator returned no questions.");
         return data;
       })();
