@@ -287,18 +287,40 @@
         `${index + 1}. ${student.full_name || "Unnamed student"}${student.bu_id ? ` (BU ID: ${student.bu_id})` : ""}${assignedIds.has(student.id) ? " — CURRENTLY ASSIGNED" : ""}`
       ).join("\n");
       const selection = prompt(
-        `Manage students for "${exam.title}". Enter comma-separated student numbers to be assigned. Existing assignments are marked. Type NONE to remove all assignments; Cancel leaves them unchanged.\n\n${choices}`,
-        students.map((student, index) => assignedIds.has(student.id) ? String(index + 1) : "").filter(Boolean).join(", ")
+        `Manage students for "${exam.title}". Enter registered BU student IDs (for example 2025-01-04051), separated by commas. You may also enter the list number shown before a student's name. Type NONE to remove all assignments; Cancel leaves them unchanged.\n\n${choices}`,
+        students.filter(student => assignedIds.has(student.id)).map(student => student.bu_id || String(students.findIndex(s => s.id === student.id) + 1)).join(", ")
       );
       if (selection === null) return;
       const normalized = selection.trim().toUpperCase();
       let selectedIds = new Set();
       if (normalized !== "" && normalized !== "NONE") {
-        const indices = normalized.split(",").map(part => Number(part.trim()));
-        if (indices.some(index => !Number.isInteger(index) || index < 1 || index > students.length)) {
-          return toast("Use valid student numbers separated by commas, or type NONE.", "error");
+        const entries = normalized.split(",").map(part => part.trim()).filter(Boolean);
+        const selectedStudents = [];
+        const invalidEntries = [];
+        for (const entry of entries) {
+          // Prefer exact registered BU ID matching; retain list-position selection for convenience.
+          const byBuId = students.filter(student => String(student.bu_id || "").trim().toUpperCase() === entry);
+          if (byBuId.length === 1) {
+            selectedStudents.push(byBuId[0]);
+            continue;
+          }
+          if (byBuId.length > 1) {
+            invalidEntries.push(entry + " (duplicate BU ID)");
+            continue;
+          }
+          if (/^\\d+$/.test(entry)) {
+            const index = Number(entry);
+            if (Number.isInteger(index) && index >= 1 && index <= students.length) {
+              selectedStudents.push(students[index - 1]);
+              continue;
+            }
+          }
+          invalidEntries.push(entry);
         }
-        selectedIds = new Set(indices.map(index => students[index - 1].id));
+        if (invalidEntries.length) {
+          return toast("These student numbers are not registered to a verified student account: " + invalidEntries.join(", "), "error");
+        }
+        selectedIds = new Set(selectedStudents.map(student => student.id));
       } else if (normalized === "") {
         return toast("No selection entered; assignments were not changed.", "error");
       }
