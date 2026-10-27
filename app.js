@@ -412,9 +412,10 @@
   }
   function renderQuestion() {
     const q = state.currentQuestions[state.questionIndex], i = state.questionIndex, total = state.currentQuestions.length;
-    $("#progress-label").textContent = `QUESTION ${i + 1} OF ${total}`;
+    if (!q) return;
+    $("#progress-label").textContent = `Question ${i + 1} of ${total}`;
     $("#progress-fill").style.width = `${((i + 1) / total) * 100}%`;
-    $("#question-count-label").textContent = `${Object.keys(state.answers).length} answered`;
+    $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`;
     $("#previous-question").disabled = i === 0;
     $("#next-question").classList.toggle("hidden", i === total - 1);
     $("#submit-exam").classList.toggle("hidden", i !== total - 1);
@@ -422,13 +423,24 @@
     const num = document.createElement("p"); num.className = "question-number"; num.textContent = `QUESTION ${String(i + 1).padStart(2, "0")}`; target.append(num);
     const title = document.createElement("h2"); title.className = "question-title"; title.textContent = q.prompt; target.append(title);
     const list = document.createElement("div"); list.className = "answer-list";
-    q.options.forEach((option, j) => {
+    (q.options || []).forEach(option => {
       const label = document.createElement("label"); label.className = "answer-option";
       const input = document.createElement("input"); input.type = "radio"; input.name = `answer-${q.id}`; input.value = option; input.checked = state.answers[q.id] === option;
-      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = `${Object.keys(state.answers).length} answered`; });
+      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`; renderQuestionNavigator(); });
       const text = document.createElement("span"); text.textContent = option; label.append(input, text); list.append(label);
     });
-    target.append(list);
+    target.append(list); renderQuestionNavigator();
+  }
+  function renderQuestionNavigator() {
+    const nav = $("#question-navigator"); if (!nav) return;
+    nav.innerHTML = "";
+    state.currentQuestions.forEach((q, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "question-jump"; b.textContent = String(i + 1);
+      b.setAttribute("aria-label", `Go to question ${i + 1}`);
+      if (state.answers[q.id] !== undefined) b.classList.add("answered");
+      if (i === state.questionIndex) { b.classList.add("current"); b.setAttribute("aria-current", "step"); }
+      b.addEventListener("click", () => { state.questionIndex = i; renderQuestion(); }); nav.append(b);
+    });
   }
   function startTimer() {
     clearInterval(state.timerId); updateTimer();
