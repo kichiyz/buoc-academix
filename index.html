@@ -149,13 +149,13 @@
 
     <section id="exam-view" class="exam-screen hidden">
       <header class="exam-top"><button id="exit-exam" class="btn btn-quiet">← Back to exams</button><div><p class="eyebrow">ASSESSMENT IN PROGRESS</p><h1 id="taking-title">Exam</h1></div><div class="timer" id="exam-timer">--:--</div></header>
-      <div class="exam-progress"><span id="progress-label">Question 1</span><div class="progress-track"><div id="progress-fill"></div></div></div>
+      <div class="exam-instructions panel"><b>Before you begin</b><p>Read each question carefully. Use the question numbers to navigate. Your answers are submitted when you select Submit exam. The timer continues while this attempt is open.</p><small id="exam-attempt-label"></small></div><div class="exam-progress"><span id="progress-label">Question 1</span><div class="progress-track"><div id="progress-fill"></div></div></div><div class="question-navigator-wrap"><span class="muted">Question navigator</span><div id="question-navigator" class="question-navigator" aria-label="Question navigation"></div></div>
       <form id="exam-form" class="panel exam-paper"><div id="question-container"></div><div class="exam-controls"><button class="btn btn-quiet" type="button" id="previous-question">← Previous</button><span id="question-count-label" class="muted"></span><button class="btn btn-primary" type="button" id="next-question">Next →</button><button class="btn btn-primary hidden" type="submit" id="submit-exam">Submit exam</button></div></form>
       <p class="fine-print centered">Your answers are saved only when submitted. Avoid refreshing or closing this page during an attempt.</p>
     </section>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20261027-teacher-approval1"></script>
+  <script src="app.js?v=20261027-ux-polish1"></script>
 </body>
 </html>
