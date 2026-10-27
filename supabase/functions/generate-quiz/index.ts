@@ -93,7 +93,7 @@ ${material}`;
     if (provider === "gemini") {
       const key = Deno.env.get("GEMINI_API_KEY");
       if (!key) return json({ error: "Quiz generation is not configured: add GEMINI_API_KEY to Supabase function secrets." }, 500);
-      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash";
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
