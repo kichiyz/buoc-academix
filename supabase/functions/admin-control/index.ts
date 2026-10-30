@@ -194,17 +194,12 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         if ((count || 0) <= 1) return response(409, { error: "Cannot demote the last administrator." });
       }
-      const auditId = await beginAudit(userId, "role_changed", { old_role: target.role, new_role: newRole });
-      const { error } = await admin.from("profiles").update({ role: newRole }).eq("id", userId);
-      if (error) { await failAudit(auditId, error); throw error; }
-      try { await finishAudit(auditId, { old_role: target.role, new_role: newRole }); }
-      catch (error) {
-        const { error: rollbackError } = await admin.from("profiles").update({ role: target.role }).eq("id", userId);
-        await failAudit(auditId, error);
-        if (rollbackError) console.error("Role rollback failed:", rollbackError);
-        throw error;
-      }
-      return response(200, { success: true });
+      const { data: managed, error } = await userClient.rpc("admin_manage_account", {
+        p_target_user_id: userId, p_action: "change_role",
+        p_new_role: newRole, p_reason: reason,
+      });
+      if (error) throw error;
+      return response(200, { success: true, account: managed });
     }
 
     if (action === "set_verified") {
@@ -236,40 +231,23 @@ Deno.serve(async (req: Request) => {
         if ((count || 0) <= 1) return response(409, { error: "Cannot suspend the last active administrator." });
       }
 
-      const auditId = await beginAudit(userId, shouldSuspend ? "account_suspended" : "account_reactivated", {}, reason);
-      const previousSuspendedAt = target.suspended_at;
-      const previousSuspensionReason = (await admin.from("profiles").select("suspension_reason").eq("id", userId).maybeSingle()).data?.suspension_reason ?? null;
-      const { error: profileError } = await admin.from("profiles").update({
-        suspended_at: shouldSuspend ? new Date().toISOString() : null,
-        suspension_reason: shouldSuspend ? reason : null,
-      }).eq("id", userId);
-      if (profileError) { await failAudit(auditId, profileError); throw profileError; }
+      const { data: managed, error } = await userClient.rpc("admin_manage_account", {
+        p_target_user_id: userId,
+        p_action: shouldSuspend ? "suspend" : "reactivate",
+        p_new_role: null,
+        p_reason: reason,
+      });
+      if (error) throw error;
 
       const { error: authError } = await admin.auth.admin.updateUserById(userId, {
         ban_duration: shouldSuspend ? "876000h" : "none",
       });
       if (authError) {
-        const { error: rollbackError } = await admin.from("profiles").update({
-          suspended_at: previousSuspendedAt, suspension_reason: previousSuspensionReason,
-        }).eq("id", userId);
-        await failAudit(auditId, authError);
-        if (rollbackError) console.error("Suspension profile rollback failed:", rollbackError);
-        throw authError;
+        console.error("Profile access state updated, but Auth ban synchronization failed:", authError);
+        return response(502, { success: false, profile_updated: true,
+          error: "Profile access state was updated, but Auth ban synchronization failed. Review this account before retrying." });
       }
-      try { await finishAudit(auditId, { suspended: shouldSuspend }); }
-      catch (error) {
-        const { error: authRollbackError } = await admin.auth.admin.updateUserById(userId, {
-          ban_duration: shouldSuspend ? "none" : "876000h",
-        });
-        const { error: profileRollbackError } = await admin.from("profiles").update({
-          suspended_at: previousSuspendedAt, suspension_reason: previousSuspensionReason,
-        }).eq("id", userId);
-        await failAudit(auditId, error);
-        if (authRollbackError) console.error("Suspension auth rollback failed:", authRollbackError);
-        if (profileRollbackError) console.error("Suspension profile rollback failed:", profileRollbackError);
-        throw error;
-      }
-      return response(200, { success: true });
+      return response(200, { success: true, account: managed });
     }
 
     if (action === "approve_teacher_request" || action === "reject_teacher_request") {
