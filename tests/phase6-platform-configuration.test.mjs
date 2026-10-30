@@ -59,6 +59,9 @@ test("provider links use known official dashboards and safe new-tab attributes",
 });
 
 test("current asset cache versions are active", () => {
-  assert.match(html, /style\.css\?v=phase7-auditdisplay3/);
-  assert.match(html, /app\.js\?v=phase7-auditdisplay3/);
+  const styleVersion = html.match(/style\.css\?v=([^"\s]+)/)?.[1];
+  const appVersion = html.match(/app\.js\?v=([^"\s]+)/)?.[1];
+  assert.ok(styleVersion, "style.css must have a cache-busting version");
+  assert.ok(appVersion, "app.js must have a cache-busting version");
+  assert.equal(appVersion, styleVersion, "style.css and app.js cache versions must stay in sync");
 });
