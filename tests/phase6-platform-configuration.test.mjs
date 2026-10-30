@@ -6,6 +6,7 @@ const html = await readFile("index.html", "utf8");
 const app = await readFile("app.js", "utf8");
 const css = await readFile("style.css", "utf8");
 const config = await readFile("academix-config.js", "utf8");
+const buildFallback = await readFile("academix-build.js", "utf8");
 const pagesWorkflow = await readFile(".github/workflows/pages-deploy.yml", "utf8");
 
 test("Platform Operations is part of the administrator Developer Center", () => {
@@ -28,6 +29,7 @@ test("Pages build generates public metadata and the Developer Center displays ev
   assert.match(pagesWorkflow, /builtAt: new Date\(\)\.toISOString\(\)/);
   assert.match(pagesWorkflow, /window\.ACADEMIX_BUILD/);
   assert.match(app, /window\.ACADEMIX_BUILD/);
+  assert.match(buildFallback, /window\.ACADEMIX_BUILD = Object\.freeze\(\{\}\)/);
   assert.match(app, /platform-build-branch/);
   assert.match(app, /build\.environment \|\| APP_ENVIRONMENT/);
   assert.match(html, /id="platform-build-branch"/);
