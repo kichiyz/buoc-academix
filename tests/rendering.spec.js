@@ -16,7 +16,9 @@ test("home page loads and core local assets respond", async ({ page, request }) 
   const markup = await html.text();
   const localAssets = [...markup.matchAll(/(?:src|href)=["']([^"'#]+)["']/g)]
     .map((match) => match[1])
-    .filter((url) => !/^(?:https?:|data:|mailto:|tel:|javascript:)/i.test(url));
+    .filter((url) => !/^(?:https?:|data:|mailto:|tel:|javascript:)/i.test(url))
+    // This file is generated only by the local sandbox launcher and is intentionally absent in CI.
+    .filter((url) => !url.startsWith("academix-config.local.js"));
 
   for (const asset of localAssets) {
     const url = new URL(asset, "http://127.0.0.1:4173/");
