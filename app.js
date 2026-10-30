@@ -774,6 +774,70 @@
     }catch(e){inspectorRows=[];status.textContent="Could not load submissions. Check table permissions, relationships, and RLS.";toast("Results Inspector: "+(e.message||"request failed"),"error");}
   }
 
+  // Phase 6: read-only operational checks and browser-local UI preferences.
+  function renderPlatformBuildInfo() {
+    const build = window.ACADEMIX_BUILD || {};
+    $("#platform-build-environment").textContent = build.environment || APP_ENVIRONMENT;
+    $("#platform-build-version").textContent = build.version || "Not supplied";
+    const commit = String(build.commit || "").trim();
+    $("#platform-build-commit").textContent = commit ? commit.slice(0, 12) : "Not supplied by deployment";
+    const builtAt = build.builtAt ? new Date(build.builtAt) : null;
+    $("#platform-build-time").textContent = builtAt && !Number.isNaN(builtAt.getTime())
+      ? builtAt.toLocaleString()
+      : "Not supplied by deployment";
+    const branch = String(build.branch || "").trim();
+    const branchTarget = $("#platform-build-branch");
+    if (branchTarget) branchTarget.textContent = branch || "Not supplied by deployment";
+  }
+  function renderPlatformHealth(items, checkedAt) {
+    const target = $("#platform-health-status");
+    if (!target) return;
+    target.replaceChildren();
+    items.forEach(item => {
+      const row = document.createElement("div"); row.className = "platform-health-row";
+      const label = document.createElement("span"); label.textContent = item.label;
+      const value = document.createElement("b"); value.className = "platform-state " + (item.state === "available" ? "state-available" : item.state === "degraded" ? "state-degraded" : "state-unknown");
+      value.textContent = item.state === "available" ? "Available" : item.state === "degraded" ? "Degraded" : "Unknown";
+      row.append(label, value); target.append(row);
+      if (item.detail) { const detail = document.createElement("small"); detail.className = "platform-health-detail"; detail.textContent = item.detail; target.append(detail); }
+    });
+    $("#platform-health-checked").textContent = "Last checked: " + checkedAt.toLocaleString();
+  }
+  async function loadPlatformHealth() {
+    if (state.profile?.role !== "admin") return toast("Developer access is required.", "error");
+    const button = $("#refresh-platform-status");
+    if (button) button.disabled = true;
+    const checkedAt = new Date(), results = [];
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(SUPABASE_URL + "/auth/v1/health", { method: "GET", headers: { apikey: SUPABASE_ANON_KEY }, signal: controller.signal, cache: "no-store" });
+      results.push({ label: "Authentication API", state: response.ok ? "available" : "degraded", detail: "Health endpoint responded with HTTP " + response.status + "." });
+    } catch (error) {
+      results.push({ label: "Authentication API", state: "unknown", detail: error.name === "AbortError" ? "Request timed out; provider status is unknown." : "Browser/network request failed; provider status is unknown." });
+    } finally { clearTimeout(timeout); }
+    try {
+      const { error } = await state.supabase.from("profiles").select("id").eq("id", state.user.id).limit(1);
+      if (error) throw error;
+      results.push({ label: "Database access", state: "available", detail: "Authenticated profile read succeeded under current database policies." });
+    } catch (error) {
+      results.push({ label: "Database access", state: "degraded", detail: "Authenticated profile read failed: " + String(error.message || "request error").slice(0, 180) });
+    }
+    renderPlatformHealth(results, checkedAt);
+    if (button) button.disabled = false;
+  }
+  function initPlatformFlags() {
+    const read = key => { try { return localStorage.getItem("academix.ui." + key) === "true"; } catch { return false; } };
+    const write = (key, value) => { try { localStorage.setItem("academix.ui." + key, String(value)); } catch { $("#platform-flags-status").textContent = "Browser storage is unavailable; preferences will not persist."; } };
+    const diagnostic = $("#flag-diagnostic-hints"), compact = $("#flag-compact-status");
+    if (!diagnostic || !compact) return;
+    diagnostic.checked = read("diagnosticHints"); compact.checked = read("compactStatus");
+    diagnostic.addEventListener("change", () => { write("diagnosticHints", diagnostic.checked); document.body.classList.toggle("platform-hide-diagnostic-hints", !diagnostic.checked); $("#platform-flags-status").textContent = "Diagnostic hints preference saved in this browser."; });
+    compact.addEventListener("change", () => { write("compactStatus", compact.checked); document.body.classList.toggle("platform-compact-status", compact.checked); $("#platform-flags-status").textContent = "Compact status preference saved in this browser."; });
+    document.body.classList.toggle("platform-compact-status", compact.checked);
+    document.body.classList.toggle("platform-hide-diagnostic-hints", !diagnostic.checked);
+  }
+
   async function adminControl(action, payload = {}) {
     if (state.profile?.role !== "admin") throw new Error("Developer access required.");
     const { data, error } = await state.supabase.functions.invoke("admin-control", { body: { action, ...payload } });
@@ -913,6 +977,10 @@
     $("#search-results-inspector")?.addEventListener("click", renderResultsInspector);
     $("#results-inspector-search")?.addEventListener("input", renderResultsInspector);
     $("#refresh-admin-users")?.addEventListener("click", loadAdminUsers);
+    $("#refresh-platform-status")?.addEventListener("click", loadPlatformHealth);
+    $("#jump-platform-configuration")?.addEventListener("click", () => $("#platform-configuration")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    renderPlatformBuildInfo();
+    initPlatformFlags();
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#generator-form").addEventListener("submit", generateQuiz);
