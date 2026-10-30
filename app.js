@@ -899,7 +899,30 @@
       if (loadSequence !== adminUsersLoadSequence) return;
       const auditList=$("#admin-audit-list"); auditList.replaceChildren();
       if(!audit.logs?.length) auditList.innerHTML='<div class="empty-state">No administrative actions recorded yet.</div>';
-      (audit.logs||[]).forEach(log=>{const row=document.createElement("div");row.className="admin-audit-row";const label=document.createElement("strong");label.textContent=`${log.action} · ${log.outcome||"success"}`;const detail=document.createElement("span");detail.textContent=`Target: ${log.target_email||log.target_user_id||"Platform"} • Actor: ${log.actor_id||"Unavailable"} • ${new Date(log.created_at).toLocaleString()}`;row.append(label,detail);if(log.reason){const reason=document.createElement("small");reason.textContent=`Reason: ${log.reason}`;row.append(reason);}if(log.details&&Object.keys(log.details).length){const details=document.createElement("small");details.textContent=`Details: ${JSON.stringify(log.details)}`;row.append(details);}auditList.append(row);});
+      (audit.logs||[]).forEach(log=>{
+        const row=document.createElement("article");
+        row.className="admin-audit-row";
+        const label=document.createElement("strong");
+        label.className="admin-audit-label";
+        label.textContent=`${log.action} \u00b7 ${log.outcome||"success"}`;
+        const detail=document.createElement("span");
+        detail.className="admin-audit-meta";
+        detail.textContent=`Target: ${log.target_email||log.target_user_id||"Platform"} \u2022 Actor: ${log.actor_id||"Unavailable"} \u2022 ${new Date(log.created_at).toLocaleString()}`;
+        row.append(label,detail);
+        if(log.reason){
+          const reason=document.createElement("small");
+          reason.className="admin-audit-reason";
+          reason.textContent=`Reason: ${log.reason}`;
+          row.append(reason);
+        }
+        if(log.details&&Object.keys(log.details).length){
+          const details=document.createElement("small");
+          details.className="admin-audit-details";
+          details.textContent=`Details: ${JSON.stringify(log.details,null,2)}`;
+          row.append(details);
+        }
+        auditList.append(row);
+      });
     } catch (e) { if (loadSequence !== adminUsersLoadSequence) return; status.textContent = "Could not load accounts."; list.replaceChildren(); toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
   }
 
