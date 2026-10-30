@@ -826,9 +826,10 @@
     const diagnostic = $("#flag-diagnostic-hints"), compact = $("#flag-compact-status");
     if (!diagnostic || !compact) return;
     diagnostic.checked = read("diagnosticHints"); compact.checked = read("compactStatus");
-    diagnostic.addEventListener("change", () => { write("diagnosticHints", diagnostic.checked); $("#platform-flags-status").textContent = "Diagnostic hints preference saved in this browser."; });
+    diagnostic.addEventListener("change", () => { write("diagnosticHints", diagnostic.checked); document.body.classList.toggle("platform-hide-diagnostic-hints", !diagnostic.checked); $("#platform-flags-status").textContent = "Diagnostic hints preference saved in this browser."; });
     compact.addEventListener("change", () => { write("compactStatus", compact.checked); document.body.classList.toggle("platform-compact-status", compact.checked); $("#platform-flags-status").textContent = "Compact status preference saved in this browser."; });
     document.body.classList.toggle("platform-compact-status", compact.checked);
+    document.body.classList.toggle("platform-hide-diagnostic-hints", !diagnostic.checked);
   }
 
   async function adminControl(action, payload = {}) {
