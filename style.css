@@ -219,3 +219,22 @@ body.workflow-modal-open{overflow:hidden}
   .workflow-search-label{grid-column:1/-1}
   .workflow-assignment-toolbar .btn{font-size:.78rem;padding:10px}
 }
+
+/* Phase 6 platform configuration */
+.platform-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.platform-card{min-width:0;padding:20px;border:1px solid var(--line);border-radius:15px;background:#281e38}
+.platform-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.platform-card-heading h3{font:600 1rem "Space Grotesk";margin:0}
+.platform-card>p{font-size:.8rem}
+.platform-health-list{display:grid;gap:7px;margin:14px 0}
+.platform-health-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:9px;background:#17102566;font-size:.82rem}
+.platform-state{font-size:.72rem}.state-available{color:var(--success)}.state-degraded{color:var(--danger)}.state-unknown{color:var(--muted)}
+.platform-health-detail{display:block;color:var(--muted);font-size:.72rem;line-height:1.5;padding:0 10px 6px}
+.platform-metadata{display:grid;gap:0;margin:12px 0}
+.platform-metadata div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #44345788;font-size:.78rem}
+.platform-metadata dt{color:var(--muted)}.platform-metadata dd{margin:0;text-align:right;overflow-wrap:anywhere}
+.platform-flag{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #44345788}
+.platform-flag span b,.platform-flag span small{display:block}.platform-flag span b{font-size:.82rem}.platform-flag span small{font-size:.7rem;color:var(--muted);margin-top:4px}.platform-flag input{width:18px;height:18px;accent-color:var(--gold);flex:none}
+.platform-provider-links{display:grid;gap:10px}.platform-provider-links a{color:var(--gold);font-size:.82rem;text-decoration:none}.platform-provider-links a:hover{text-decoration:underline}
+.platform-compact-status .platform-health-row{padding:6px 9px;font-size:.76rem}
+@media(max-width:900px){.platform-grid{grid-template-columns:1fr}}
