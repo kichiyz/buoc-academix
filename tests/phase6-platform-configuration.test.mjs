@@ -58,7 +58,7 @@ test("provider links use known official dashboards and safe new-tab attributes",
   assert.match(html, /rel="noopener noreferrer"/);
 });
 
-test("Phase 6 asset cache versions are active", () => {
-  assert.match(html, /style\.css\?v=phase6-platform1/);
-  assert.match(html, /app\.js\?v=phase6-platform2/);
+test("current asset cache versions are active", () => {
+  assert.match(html, /style\.css\?v=phase7-auditfix1/);
+  assert.match(html, /app\.js\?v=phase7-auditfix1/);
 });
