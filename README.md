@@ -1,58 +1,73 @@
 # BUOC AcademiX
 
-**BUOC AcademiX** is a starter platform for creating AI-assisted quizzes and practical examinations for the Bicol University community.
+BUOC AcademiX is a browser-based assessment platform for the Bicol University community. It provides role-based Student, Teacher, and Developer workspaces, assessment authoring, exam delivery, results views, and administrative operations.
 
-## Project structure
+> **Release notice:** A successful GitHub Pages deployment does not by itself mean the platform is approved for institutional use. Complete the release checks below before inviting real students or using live examinations.
 
-The frontend files are in the repository root so GitHub Pages can serve `index.html` directly:
+## Application structure
 
-- `index.html` — application interface
-- `style.css` — responsive dark-purple and gold theme
-- `app.js` — browser-side application logic
-- `academix-config.js` — public client configuration and environment label
-- `docs/test-environment.md` — isolated test-environment setup guide
-- `buoc-academix/supabase/schema.sql` — initial database schema and row-level security setup
-- `supabase/migrations/20261027_admin_diagnostics_read.sql` — narrow read-only admin access for Exam Registry and Results Inspector diagnostics
-- `supabase/migrations/20261027_exam_attempts.sql` — database migration for initial attempts, authorized retakes, and remedial attempts
-- `buoc-academix/supabase/functions/generate-quiz/index.ts` — server-side quiz generation function
+GitHub Pages serves the frontend from the repository root:
 
-The earlier `buoc-academix/` directory may contain duplicate starter files. The root files are the intended GitHub Pages entry point.
+- `index.html` — application markup and page structure
+- `style.css` — responsive interface styles
+- `app.js` — client-side application behavior
+- `academix-config.js` — public Supabase URL, publishable key, and environment label
+- `academix-build.js` — deployment build metadata
+- `supabase/schema.sql` — canonical database schema
+- `supabase/migrations/` — ordered database migrations
+- `supabase/functions/` — server-side Supabase Edge Functions
+- `supabase/tests/` — database regression tests
+- `tests/` — frontend and application regression tests
+- `docs/` — operational and environment documentation
 
-## Environment configuration
+The obsolete nested `buoc-academix/` starter copy has been removed. Keep the root frontend and root `supabase/` directory as the canonical application sources.
 
-The frontend reads the Supabase URL, publishable key, and environment label from `academix-config.js`. That file is public by design: it must contain only the browser-safe publishable/anon key, never a service-role key or AI provider secret. The committed config targets the current production Supabase project. To create a safe test deployment, use a separate Supabase project and a separate deployment copy/site with its own `academix-config.js`; follow `docs/test-environment.md`. A label saying TEST is not isolation by itself—the separate Supabase project is the security boundary.
+## Configuration and secrets
 
-## GitHub Pages
+The committed `academix-config.js` is downloaded by every browser and must contain only the Supabase project URL, a publishable/anon key, and a non-secret environment label. A publishable key is not a substitute for correct Row Level Security.
 
-1. Open **Settings → Pages** in this repository.
-2. Under **Build and deployment**, select **Deploy from a branch**.
-3. Choose branch **main** and folder **/(root)**, then click **Save**.
-4. Wait for the deployment workflow to finish. GitHub will show the published site URL in the Pages section.
+Never commit:
+- Supabase service-role or secret keys
+- AI provider API keys
+- Database passwords, access tokens, or private credentials
+- Real student records, answer keys, or private examination content
 
-## Supabase setup
-
-1. Create a Supabase project and keep its database password in a password manager.
-2. In the SQL Editor, review and run `supabase/schema.sql` (or your canonical schema file if already applied).
-3. Review and run `supabase/migrations/20261027_admin_diagnostics_read.sql` to permit read-only admin inspection of exam and submission metadata. This does not grant write access.
-4. Then review and run `supabase/migrations/20261027_exam_attempts.sql` to enable the `start_exam_attempt` and `authorize_exam_attempt` RPCs used by the app.
-5. Deploy the Edge Function in `buoc-academix/supabase/functions/generate-quiz/` using the Supabase CLI.
-6. Phase 5: apply `supabase/migrations/20261028_phase5_identity_access.sql` in the isolated test project and deploy `supabase/functions/admin-control/` to that same project. Configure `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` as Edge Function secrets; never put the service-role key in browser code or Git.
-7. Configure the required Supabase URL and publishable/anon key in the frontend only after checking the project settings and RLS policies.
-8. Add the LLM provider API key as a **Supabase Edge Function secret**. Never put it in `app.js`, HTML, CSS, or any public repository file.
-9. Run `tests/phase5-identity-access.md` against disposable local/test accounts before production rollout.
-
-## Security and readiness notes
-
-- This repository is public. Do not commit passwords, access tokens, service-role keys, private student data, or LLM API keys.
-- A Supabase publishable/anon key is intended for client-side use only when Row Level Security (RLS) and policies are correctly configured.
-- Do not use real student records or real examinations until authorization, access control, answer-key protection, submission/grading logic, and data retention have been reviewed and tested.
-- This is a starter scaffold, not a production-ready or institutionally approved system. The database policies, quiz generation, and grading flow require end-to-end testing before use.
-- The app is not officially affiliated with or endorsed by Bicol University unless separately authorized.
+Store privileged credentials as Supabase Edge Function secrets. Do not put them in HTML, CSS, frontend JavaScript, or GitHub Pages artifacts.
 
 ## Local development
 
-You can open `index.html` directly for a basic interface preview. For authentication, database access, and AI generation, configure Supabase and deploy the Edge Function first. A local static server is recommended during development.
+Use the repository's local Supabase configuration and a local static server. Do not point local/test workflows at production unless the specific test is explicitly read-only and authorized.
 
-## License
+Typical checks:
 
-No license has been added yet. Unless a license is added, standard copyright restrictions apply to reuse of this code.
+```powershell
+node --check app.js
+node --test tests/*.test.mjs
+npx playwright test
+supabase.cmd test db
+supabase.cmd db lint --local
+```
+
+Run the relevant checks for the files changed. Playwright and Supabase CLI checks require their local dependencies and services.
+
+## GitHub Pages deployment
+
+The Pages workflow deploys the root frontend. Review the workflow run after merging changes to `main`; verify the deployed commit and test the live site after the deployment completes.
+
+## Release checklist
+
+- [ ] Confirm the production Supabase URL and publishable key are correct.
+- [ ] Confirm all required migrations have been reviewed and applied to the intended project.
+- [ ] Verify RLS policies and server-side authorization for every role and privileged action.
+- [ ] Verify student signup, email confirmation, institutional verification, and password recovery redirects.
+- [ ] Verify teacher authoring, publishing, assignment, submissions, grading, and results end to end.
+- [ ] Verify student exam access, timed attempts, submission deadlines, retakes/remedials, and results.
+- [ ] Verify administrative account controls and audit records.
+- [ ] Verify Edge Functions are deployed and their secrets are configured.
+- [ ] Run frontend and database regression suites.
+- [ ] Test the live site on desktop and mobile after deployment.
+- [ ] Obtain any required institutional authorization before representing the platform as an official Bicol University service.
+
+## Institutional affiliation
+
+BUOC AcademiX is an independent project unless and until the relevant university offices formally authorize its use or endorsement.
