@@ -57,5 +57,5 @@ test("provider links use known official dashboards and safe new-tab attributes",
 
 test("Phase 6 asset cache versions are active", () => {
   assert.match(html, /style\.css\?v=phase6-platform1/);
-  assert.match(html, /app\\.js\\?v=phase6-platform2/);
+  assert.match(html, /app\.js\?v=phase6-platform2/);
 });
