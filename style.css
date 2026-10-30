@@ -238,3 +238,5 @@ body.workflow-modal-open{overflow:hidden}
 .platform-provider-links{display:grid;gap:10px}.platform-provider-links a{color:var(--gold);font-size:.82rem;text-decoration:none}.platform-provider-links a:hover{text-decoration:underline}
 .platform-compact-status .platform-health-row{padding:6px 9px;font-size:.76rem}
 @media(max-width:900px){.platform-grid{grid-template-columns:1fr}}
+
+.platform-hide-diagnostic-hints .platform-diagnostic-hint{display:none!important}
