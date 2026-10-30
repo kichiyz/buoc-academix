@@ -19,6 +19,39 @@
     !(APP_ENVIRONMENT === "TEST" && normalizedSupabaseUrl === PRODUCTION_SUPABASE_URL);
 
 
+
+  function renderTestEnvironmentStatus() {
+    const status = $("#test-environment-status");
+    const tag = $("#test-environment-tag");
+    const button = $("#check-test-environment");
+    if (!status || !tag) return;
+    const localHost = ["localhost", "127.0.0.1"].includes(location.hostname);
+    const localConfig = APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL);
+    if (!localHost) {
+      tag.textContent = "LOCAL ONLY";
+      status.textContent = "This deployed site uses production. Start the sandbox on your computer to use the isolated test database.";
+    } else if (localConfig) {
+      tag.textContent = "LOCAL CONFIG";
+      status.textContent = "Local test configuration loaded. Use Check local sandbox to verify Supabase.";
+    } else {
+      tag.textContent = "NOT CONNECTED";
+      status.textContent = "Local Supabase is not configured. Follow TEST-ENVIRONMENT.md; production credentials are blocked on localhost.";
+    }
+    button?.addEventListener("click", async () => {
+      if (!localHost || !localConfig) return toast("The isolated sandbox is available only after the local setup script configures TEST mode.", "error");
+      status.textContent = "Checking local Supabase…";
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: { apikey: SUPABASE_ANON_KEY }, signal: AbortSignal.timeout(5000) });
+        if (!response.ok) throw new Error(`Auth health returned HTTP ${response.status}`);
+        status.textContent = "ONLINE — connected to the local Supabase instance. Test data stays on this computer.";
+        tag.textContent = "ONLINE";
+      } catch (error) {
+        status.textContent = `OFFLINE — ${error.message}. Run supabase start and retry.`;
+        tag.textContent = "OFFLINE";
+      }
+    });
+  }
+
   function toast(message, type = "") {
     const el = $("#toast"); el.textContent = message; el.className = `toast ${type}`.trim();
     clearTimeout(toast.timeout); toast.timeout = setTimeout(() => el.classList.add("hidden"), 4500);
@@ -1007,6 +1040,7 @@
     $("#refresh-platform-status")?.addEventListener("click", loadPlatformHealth);
     $("#jump-platform-configuration")?.addEventListener("click", () => $("#platform-configuration")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     renderPlatformBuildInfo();
+    renderTestEnvironmentStatus();
     initPlatformFlags();
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
