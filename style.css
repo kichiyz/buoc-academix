@@ -236,7 +236,21 @@ body.workflow-modal-open{overflow:hidden}
 .platform-flag{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #44345788}
 .platform-flag span b,.platform-flag span small{display:block}.platform-flag span b{font-size:.82rem}.platform-flag span small{font-size:.7rem;color:var(--muted);margin-top:4px}.platform-flag input{width:18px;height:18px;accent-color:var(--gold);flex:none}
 .platform-provider-links{display:grid;gap:10px}.platform-provider-links a{color:var(--gold);font-size:.82rem;text-decoration:none}.platform-provider-links a:hover{text-decoration:underline}
+.platform-compact-status .platform-card{padding:14px}
+.platform-compact-status .platform-card-heading{margin-bottom:8px;gap:7px}
+.platform-compact-status .platform-card-heading h3{font-size:.92rem}
+.platform-compact-status .platform-card>p{font-size:.74rem;margin:6px 0}
+.platform-compact-status .platform-health-list{gap:5px;margin:9px 0}
 .platform-compact-status .platform-health-row{padding:6px 9px;font-size:.76rem}
+.platform-compact-status .platform-health-detail{font-size:.67rem;line-height:1.35;padding:0 8px 4px}
+.platform-compact-status .platform-metadata{margin:8px 0}
+.platform-compact-status .platform-metadata div{gap:8px;padding:6px 0;font-size:.72rem}
+.platform-compact-status .platform-flag{gap:8px;padding:8px 0}
+.platform-compact-status .platform-flag span b{font-size:.76rem}
+.platform-compact-status .platform-flag span small{font-size:.66rem;margin-top:2px}
+.platform-compact-status .platform-flag input{width:16px;height:16px}
+.platform-compact-status .platform-provider-links{gap:6px}
+.platform-compact-status .platform-provider-links a{font-size:.74rem}
 @media(max-width:900px){.platform-grid{grid-template-columns:1fr}}
 
 .platform-hide-diagnostic-hints .platform-diagnostic-hint{display:none!important}
