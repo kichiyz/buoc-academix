@@ -978,6 +978,7 @@
     $("#results-inspector-search")?.addEventListener("input", renderResultsInspector);
     $("#refresh-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#refresh-platform-status")?.addEventListener("click", loadPlatformHealth);
+    $("#jump-platform-configuration")?.addEventListener("click", () => $("#platform-configuration")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     renderPlatformBuildInfo();
     initPlatformFlags();
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
