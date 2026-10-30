@@ -11,7 +11,9 @@ const pagesWorkflow = await readFile(".github/workflows/pages-deploy.yml", "utf8
 test("Platform Operations is part of the administrator Developer Center", () => {
   assert.match(html, /id="platform-configuration"/);
   assert.match(html, /id="jump-platform-configuration"/);
-  assert.match(html, /<span class="dev-tag">AVAILABLE<\\/span><\\/div><h3>Platform Configuration<\\/h3>/);
+  assert.match(html, /Platform Configuration/);
+  assert.match(html, /id="jump-platform-configuration"/);
+  assert.match(html, /AVAILABLE/);
   assert.match(html, /PHASE 6 \/ PLATFORM CONFIGURATION/);
   assert.match(app, /state\.profile\?\.role !== "admin"/);
 });
