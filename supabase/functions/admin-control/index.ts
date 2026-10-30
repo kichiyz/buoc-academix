@@ -194,11 +194,19 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         if ((count || 0) <= 1) return response(409, { error: "Cannot demote the last administrator." });
       }
+      const auditId = await beginAudit(userId, "role_changed", { previous_role: target.role, new_role: newRole });
       const { data: managed, error } = await userClient.rpc("admin_manage_account", {
         p_target_user_id: userId, p_action: "change_role",
         p_new_role: newRole, p_reason: reason,
       });
-      if (error) throw error;
+      if (error) { await failAudit(auditId, error); throw error; }
+      try { await finishAudit(auditId, { previous_role: target.role, new_role: newRole }); }
+      catch (auditError) {
+        const { error: rollbackError } = await admin.from("profiles").update({ role: target.role }).eq("id", userId);
+        await failAudit(auditId, auditError);
+        if (rollbackError) console.error("Role rollback failed:", rollbackError);
+        throw auditError;
+      }
       return response(200, { success: true, account: managed });
     }
 
@@ -231,21 +239,28 @@ Deno.serve(async (req: Request) => {
         if ((count || 0) <= 1) return response(409, { error: "Cannot suspend the last active administrator." });
       }
 
+      const auditId = await beginAudit(userId, shouldSuspend ? "account_suspended" : "account_reactivated");
       const { data: managed, error } = await userClient.rpc("admin_manage_account", {
         p_target_user_id: userId,
         p_action: shouldSuspend ? "suspend" : "reactivate",
         p_new_role: null,
         p_reason: reason,
       });
-      if (error) throw error;
+      if (error) { await failAudit(auditId, error); throw error; }
 
       const { error: authError } = await admin.auth.admin.updateUserById(userId, {
         ban_duration: shouldSuspend ? "876000h" : "none",
       });
       if (authError) {
+        await failAudit(auditId, authError);
         console.error("Profile access state updated, but Auth ban synchronization failed:", authError);
         return response(502, { success: false, profile_updated: true,
           error: "Profile access state was updated, but Auth ban synchronization failed. Review this account before retrying." });
+      }
+      try { await finishAudit(auditId); }
+      catch (auditError) {
+        await failAudit(auditId, auditError);
+        throw auditError;
       }
       return response(200, { success: true, account: managed });
     }
