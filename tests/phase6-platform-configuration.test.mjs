@@ -30,15 +30,15 @@ test("Pages build generates public metadata and the Developer Center displays ev
   assert.match(app, /window\.ACADEMIX_BUILD/);
   assert.match(app, /platform-build-branch/);
   assert.match(app, /build\.environment \|\| APP_ENVIRONMENT/);
-  assert.match(index, /id="platform-build-branch"/);
-  assert.match(index, /academix-build\.js\?v=phase6-build1/);
+  assert.match(html, /id="platform-build-branch"/);
+  assert.match(html, /academix-build\.js\?v=phase6-build1/);
   assert.match(pagesWorkflow, /github\.ref == 'refs\/heads\/main'/);
   assert.doesNotMatch(config, /service_role|secret|private_key/i);
 });
 
 test("missing deployment metadata is displayed explicitly instead of guessed", () => {
   assert.match(app, /Not supplied by deployment/);
-  assert.doesNotMatch(index, /<dd>phase-6\/platform-configuration<\/dd>/);
+  assert.doesNotMatch(html, /<dd>phase-6\/platform-configuration<\/dd>/);
 });
 
 test("UI flags are browser-local and cannot replace authorization checks", () => {
