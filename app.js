@@ -812,6 +812,7 @@
         const email = document.createElement("small"); email.textContent = user.email || "No email";
         const meta = document.createElement("small"); meta.textContent = `${user.role || "student"} • ${user.verified_at ? "Verified" : "Unverified"} • ${user.suspended ? "Suspended" : "Active"}${user.teacher_request_status ? " • Teacher request: " + user.teacher_request_status : ""}`;
         identity.append(name,email,meta);
+        if (user.suspended && user.suspension_reason) { const suspensionReason = document.createElement("small"); suspensionReason.textContent = `Suspension reason: ${user.suspension_reason}`; suspensionReason.className = "muted"; identity.append(suspensionReason); }
         const controls = document.createElement("div"); controls.className = "admin-user-controls";
         const role = document.createElement("select"); role.setAttribute("aria-label", "Role for " + (user.email || user.id));
         ["student","teacher","admin"].forEach(value => { const option=document.createElement("option"); option.value=value; option.textContent=value; option.selected=value===(user.role||"student"); role.append(option); });
