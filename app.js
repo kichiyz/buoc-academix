@@ -10,7 +10,8 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
     draft: null, adminUsers: [], teacherRequest: null, currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
-  const configured = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
+  const validSupabaseUrl = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) || (APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL));
+  const configured = validSupabaseUrl && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
   // This guard supplements, but cannot replace, a separately provisioned test project.
   const PRODUCTION_SUPABASE_URL = "https://otkgtwwxmmdmiavmpyqo.supabase.co";
