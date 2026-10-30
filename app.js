@@ -777,11 +777,17 @@
   // Phase 6: read-only operational checks and browser-local UI preferences.
   function renderPlatformBuildInfo() {
     const build = window.ACADEMIX_BUILD || {};
-    $("#platform-build-environment").textContent = APP_ENVIRONMENT;
+    $("#platform-build-environment").textContent = build.environment || APP_ENVIRONMENT;
     $("#platform-build-version").textContent = build.version || "Not supplied";
     const commit = String(build.commit || "").trim();
     $("#platform-build-commit").textContent = commit ? commit.slice(0, 12) : "Not supplied by deployment";
-    $("#platform-build-time").textContent = build.builtAt ? new Date(build.builtAt).toLocaleString() : "Not supplied by deployment";
+    const builtAt = build.builtAt ? new Date(build.builtAt) : null;
+    $("#platform-build-time").textContent = builtAt && !Number.isNaN(builtAt.getTime())
+      ? builtAt.toLocaleString()
+      : "Not supplied by deployment";
+    const branch = String(build.branch || "").trim();
+    const branchTarget = $("#platform-build-branch");
+    if (branchTarget) branchTarget.textContent = branch || "Not supplied by deployment";
   }
   function renderPlatformHealth(items, checkedAt) {
     const target = $("#platform-health-status");
