@@ -18,6 +18,6 @@ test("audit reason and details are independently spaced readable blocks", () => 
 });
 
 test("audit rendering fix is cache-busted in the deployed entry point", () => {
-  assert.match(html, /style\.css\?v=phase7-auditfinal2/);
-  assert.match(html, /app\.js\?v=phase7-auditfinal2/);
+  assert.match(html, /style\.css\?v=phase7-auditdisplay3/);
+  assert.match(html, /app\.js\?v=phase7-auditdisplay3/);
 });
