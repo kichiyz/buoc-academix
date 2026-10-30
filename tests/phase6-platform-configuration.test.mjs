@@ -6,6 +6,7 @@ const html = await readFile("index.html", "utf8");
 const app = await readFile("app.js", "utf8");
 const css = await readFile("style.css", "utf8");
 const config = await readFile("academix-config.js", "utf8");
+const pagesWorkflow = await readFile(".github/workflows/pages-deploy.yml", "utf8");
 
 test("Platform Operations is part of the administrator Developer Center", () => {
   assert.match(html, /id="platform-configuration"/);
@@ -20,10 +21,24 @@ test("service health uses public Auth health and authenticated RLS-scoped profil
   assert.match(app, /Browser\/network request failed; provider status is unknown/);
 });
 
-test("deployment metadata is never fabricated when the build pipeline does not supply it", () => {
+test("Pages build generates public metadata and the Developer Center displays every field", () => {
+  assert.match(pagesWorkflow, /Generate public deployment metadata/);
+  assert.match(pagesWorkflow, /BUILD_COMMIT/);
+  assert.match(pagesWorkflow, /BUILD_BRANCH/);
+  assert.match(pagesWorkflow, /builtAt: new Date\(\)\.toISOString\(\)/);
+  assert.match(pagesWorkflow, /window\.ACADEMIX_BUILD/);
   assert.match(app, /window\.ACADEMIX_BUILD/);
-  assert.match(app, /Not supplied by deployment/);
+  assert.match(app, /platform-build-branch/);
+  assert.match(app, /build\.environment \|\| APP_ENVIRONMENT/);
+  assert.match(index, /id="platform-build-branch"/);
+  assert.match(index, /academix-build\.js\?v=phase6-build1/);
+  assert.match(pagesWorkflow, /github\.ref == 'refs\/heads\/main'/);
   assert.doesNotMatch(config, /service_role|secret|private_key/i);
+});
+
+test("missing deployment metadata is displayed explicitly instead of guessed", () => {
+  assert.match(app, /Not supplied by deployment/);
+  assert.doesNotMatch(index, /<dd>phase-6\/platform-configuration<\/dd>/);
 });
 
 test("UI flags are browser-local and cannot replace authorization checks", () => {
