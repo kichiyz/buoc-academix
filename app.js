@@ -1455,7 +1455,22 @@
     } catch (e) { if (loadSequence !== adminUsersLoadSequence) return; status.textContent = "Could not load accounts."; list.replaceChildren(); toast(e.message || "Admin controls are unavailable. Deploy admin-control and configure its secrets.", "error"); }
   }
 
-  async function signOut() { await state.supabase.auth.signOut(); state.user = state.profile = null; showOnly("#auth-view"); }
+  async function signOut() {
+    const buttons = [$("#signout"), $("#account-signout")].filter(Boolean);
+    if (buttons.some(button => button.disabled)) return;
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+      const { error } = await state.supabase.auth.signOut();
+      if (error) throw error;
+      state.user = state.profile = null;
+      showOnly("#auth-view");
+      toast("You have been signed out.", "success");
+    } catch (error) {
+      toast(error?.message || "Could not sign out. Check your connection and try again.", "error");
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
   async function init() {
     // Protect against accidental duplicate script execution or repeated DOM-ready handlers.
     if (window.__academixInitStarted) return;
@@ -1526,7 +1541,7 @@
       if (event.key === "Escape" && !$("#workflow-modal")?.classList.contains("hidden")) closeWorkflowModal();
     });
         $("#signout").addEventListener("click", signOut);
-        $("#mobile-signout")?.addEventListener("click", signOut);
+        $("#account-signout")?.addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#refresh-exam-registry")?.addEventListener("click", loadExamRegistry);
     $("#search-exam-registry")?.addEventListener("click", renderExamRegistry);
