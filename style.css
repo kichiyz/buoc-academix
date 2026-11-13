@@ -578,3 +578,180 @@ input,textarea,select{background:var(--panel2);border-color:var(--line);color:va
 @media(max-width:700px){
   #dashboard-view.role-admin>.main-area>.topbar{padding:16px}
 }
+
+
+/* Unified role banners + softer, low-glare light theme and smooth theme changes. */
+:root{
+  color-scheme:light;
+  --bg:#e8ebea;
+  --bg2:#e2e7e5;
+  --panel:#eef0ed;
+  --panel2:#e7ebe8;
+  --line:#cbd4d0;
+  --gold:#94612f;
+  --gold2:#a8743f;
+  --text:#26343a;
+  --muted:#637279;
+  --purple:#637d91;
+  --danger:#b94d54;
+  --success:#397c60;
+  --shadow:0 12px 30px rgba(37,54,58,.075);
+  --portal-blue:#54788b;
+  --portal-green:#71866a;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101a22;
+  --bg2:#172630;
+  --panel:#1a2a35;
+  --panel2:#213541;
+  --line:#344b57;
+  --gold:#e8b96c;
+  --gold2:#f2cc8c;
+  --text:#e9eff0;
+  --muted:#afbec1;
+  --purple:#9bb7c5;
+  --danger:#ef8588;
+  --success:#83c7a4;
+  --shadow:0 18px 44px rgba(0,0,0,.26);
+  --portal-blue:#78a8bd;
+  --portal-green:#93ad83;
+}
+html,body{
+  background-color:var(--bg);
+  color:var(--text);
+  transition:background-color .42s ease,color .42s ease;
+}
+body::before{
+  transition:opacity .42s ease,filter .42s ease;
+}
+#dashboard-view>.main-area>.topbar{
+  position:sticky;
+  z-index:15;
+  padding:18px 22px;
+  margin:0 0 28px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--panel) 90%,var(--bg));
+  box-shadow:var(--shadow);
+  transition:background-color .42s ease,border-color .42s ease,box-shadow .42s ease,color .42s ease;
+}
+#dashboard-view>.main-area>.topbar .eyebrow{
+  font-weight:800;
+  letter-spacing:.13em;
+}
+#dashboard-view>.main-area>.topbar h1{
+  color:var(--text);
+  letter-spacing:-.035em;
+  transition:color .42s ease;
+}
+#dashboard-view>.main-area>.topbar .environment-badge{
+  margin-top:9px;
+  background:color-mix(in srgb,var(--success) 12%,var(--panel));
+  border-color:color-mix(in srgb,var(--success) 48%,var(--line));
+  color:var(--success);
+  box-shadow:none;
+}
+/* Student: calm blue-sage identity. */
+#dashboard-view.role-student>.main-area>.topbar{
+  background:linear-gradient(115deg,color-mix(in srgb,#6f91a0 19%,var(--panel)),var(--panel));
+  border-color:color-mix(in srgb,#6f91a0 35%,var(--line));
+}
+#dashboard-view.role-student>.main-area>.topbar .eyebrow{color:color-mix(in srgb,#426d80,var(--text) 12%)}
+#dashboard-view.role-student .student-hero{
+  background:linear-gradient(115deg,color-mix(in srgb,#6f91a0 20%,var(--panel)),color-mix(in srgb,#829b8a 10%,var(--panel)))!important;
+  border-color:color-mix(in srgb,#6f91a0 35%,var(--line));
+}
+#dashboard-view.role-student .student-hero .eyebrow{color:color-mix(in srgb,#426d80,var(--text) 12%)}
+/* Teacher: calm teal identity, distinct from the student workspace. */
+#dashboard-view.role-teacher>.main-area>.topbar{
+  background:linear-gradient(115deg,color-mix(in srgb,#638f83 20%,var(--panel)),var(--panel));
+  border-color:color-mix(in srgb,#638f83 38%,var(--line));
+}
+#dashboard-view.role-teacher>.main-area>.topbar .eyebrow{color:color-mix(in srgb,#386f65,var(--text) 12%)}
+#dashboard-view.role-teacher .teacher-hero{
+  background:linear-gradient(115deg,color-mix(in srgb,#638f83 22%,var(--panel)),color-mix(in srgb,#73849b 12%,var(--panel)))!important;
+  border-color:color-mix(in srgb,#638f83 38%,var(--line));
+}
+#dashboard-view.role-teacher .teacher-hero .eyebrow{color:color-mix(in srgb,#386f65,var(--text) 12%)}
+/* Developer: restrained plum and antique-gold identity. */
+#dashboard-view.role-admin>.main-area>.topbar{
+  background:linear-gradient(118deg,color-mix(in srgb,#6b527f 27%,var(--panel)),color-mix(in srgb,#a27e46 9%,var(--panel)));
+  border-color:color-mix(in srgb,#9274a8 42%,var(--line));
+}
+#dashboard-view.role-admin>.main-area>.topbar .eyebrow{color:var(--gold)}
+#dashboard-view.role-admin>.main-area>.topbar h1{color:var(--text)}
+.role-hero{
+  transition:background-color .42s ease,border-color .42s ease,box-shadow .42s ease,color .42s ease;
+}
+.role-hero h2,.role-hero p,.role-hero .eyebrow{
+  transition:color .42s ease;
+}
+.panel,.metric-card,.exam-card,.dev-tool,.platform-card,.sidebar,.theme-toggle,
+input,textarea,select,.btn,.nav-item,.badge,.environment-badge{
+  transition:background-color .42s ease,color .42s ease,border-color .42s ease,box-shadow .42s ease;
+}
+:root:not([data-theme="dark"]) .btn-primary{
+  color:#fffaf3;
+  box-shadow:0 4px 12px rgba(102,76,39,.10);
+}
+:root:not([data-theme="dark"]) .btn-primary:hover{color:#fff}
+:root:not([data-theme="dark"]) .metric-card,
+:root:not([data-theme="dark"]) .panel,
+:root:not([data-theme="dark"]) .platform-card,
+:root:not([data-theme="dark"]) .dev-tool{
+  background-color:var(--panel);
+}
+:root:not([data-theme="dark"]) .dev-masthead{
+  background:linear-gradient(120deg,#e5e4e8,#e9e7df);
+  border-color:#d0cbd4;
+}
+:root:not([data-theme="dark"]) .dev-masthead h2{color:#30313a}
+:root:not([data-theme="dark"]) .dev-masthead p:not(.eyebrow){color:#62616a}
+:root:not([data-theme="dark"]) .dev-status-strip{
+  background:#e4e5e2;
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .dev-status-strip small{color:#637078}
+:root:not([data-theme="dark"]) .dev-status-strip b{color:#26343a}
+:root:not([data-theme="dark"]) .dev-tool,
+:root:not([data-theme="dark"]) .dev-info-panel{
+  background:linear-gradient(145deg,#eff0ed,#e8ebe8);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .dev-tool h3,
+:root:not([data-theme="dark"]) .dev-info-panel h3{color:#26343a}
+:root:not([data-theme="dark"]) .dev-tool p,
+:root:not([data-theme="dark"]) .dev-info-panel p:not(.eyebrow){color:#637279}
+:root[data-theme="dark"] #dashboard-view.role-student>.main-area>.topbar{
+  background:linear-gradient(115deg,#203746,#1a2a35);
+  border-color:#385466;
+}
+:root[data-theme="dark"] #dashboard-view.role-teacher>.main-area>.topbar{
+  background:linear-gradient(115deg,#203b3b,#1a2d36);
+  border-color:#3b5c58;
+}
+:root[data-theme="dark"] #dashboard-view.role-admin>.main-area>.topbar{
+  background:linear-gradient(118deg,#382c49,#292638);
+  border-color:#594967;
+}
+:root[data-theme="dark"] #dashboard-view.role-student .student-hero{
+  background:linear-gradient(115deg,#203746,#1a2a35)!important;
+  border-color:#385466;
+}
+:root[data-theme="dark"] #dashboard-view.role-teacher .teacher-hero{
+  background:linear-gradient(115deg,#203b3b,#1a2d36)!important;
+  border-color:#3b5c58;
+}
+:root[data-theme="dark"] #dashboard-view.role-student>.main-area>.topbar .eyebrow,
+:root[data-theme="dark"] #dashboard-view.role-teacher>.main-area>.topbar .eyebrow{color:var(--gold)}
+@media(max-width:700px){
+  #dashboard-view>.main-area>.topbar{padding:16px;margin-bottom:22px}
+}
+@media(prefers-reduced-motion:reduce){
+  html,body,body::before,#dashboard-view>.main-area>.topbar,
+  .role-hero,.panel,.metric-card,.exam-card,.dev-tool,.platform-card,
+  .sidebar,.theme-toggle,input,textarea,select,.btn,.nav-item,.badge,.environment-badge{
+    transition:none!important;
+  }
+}
