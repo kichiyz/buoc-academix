@@ -144,15 +144,17 @@
           <form id="generator-form" class="panel form-panel">
             <div class="form-grid">
               <label>Quiz title<input id="quiz-title" required maxlength="160" placeholder="e.g. Introduction to Object-Oriented Programming"></label>
-              <label>Question count<select id="quiz-count"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>25</option></select></label>
+              <label>Question count<select id="quiz-count"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>25</option><option>50</option></select></label>
               <label>Question type<select id="quiz-type"><option value="mixed">Mixed multiple choice and true/false</option><option value="multiple_choice">Multiple choice only</option><option value="true_false">True/false only</option></select></label>
               <label>Difficulty<select id="quiz-difficulty"><option>easy</option><option selected>medium</option><option>hard</option></select></label>
             </div>
-            <label>Study material<textarea id="quiz-material" required minlength="80" rows="9" maxlength="50000" placeholder="Paste your notes or learning objectives here. For documents/images, extract the text first or add a Storage upload workflow."></textarea></label>
+            <label>Mixed distribution<select id="quiz-mix-distribution"><option value="balanced" selected>Balanced (50% multiple choice, 50% true/false)</option><option value="flexible">AI-selected mix</option></select></label>
+              <label>Study material<textarea id="quiz-material" required minlength="80" rows="9" maxlength="50000" placeholder="Paste your notes or learning objectives here. For documents/images, extract the text first or add a Storage upload workflow."></textarea></label>
             <div class="notice" id="draft-mode-note">AI output is a draft. Review every question, option, answer, and explanation before publishing.</div>
-            <button class="btn btn-primary" type="submit" id="generate-button">✦ Generate draft</button>
+            <div class="authoring-tools"><button class="btn btn-primary" type="submit" id="generate-button">✦ Generate with AI</button><button class="btn btn-quiet" type="button" id="import-json-button">Import exam JSON</button><button class="btn btn-quiet" type="button" id="download-json-template">↓ JSON template</button><input id="import-json-file" type="file" accept=".json,application/json" hidden></div>
+            <p class="fine-print">Manual JSON import supports practical-exam question sets. Imported content is validated and remains a draft until published.</p>
           </form>
-          <div id="draft-panel" class="panel hidden"><div class="section-heading"><div><h2>Review generated questions</h2><p class="muted">Correct answers are visible to the teacher only.</p></div></div><div id="draft-questions"></div><div class="publish-row"><label>Duration (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label><button id="publish-quiz" class="btn btn-primary">Publish exam</button></div></div>
+          <div id="draft-panel" class="panel hidden"><div class="section-heading"><div><h2>Review generated questions</h2><p class="muted">Correct answers are visible to the teacher only.</p></div></div><div class="draft-export-tools"><button id="print-student-exam" class="btn btn-quiet" type="button">Print student exam</button><button id="print-answer-key" class="btn btn-quiet" type="button">Print teacher answer key</button><button id="export-draft-json" class="btn btn-quiet" type="button">Export JSON</button></div><div id="draft-questions"></div><div class="publish-row"><label>Duration (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label><button id="publish-quiz" class="btn btn-primary">Publish exam</button></div></div>
         </section>
 
         <section class="page-view hidden" id="view-grades">
