@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 Quiz title: ${title}
 Difficulty: ${difficulty}
 Question type selection: ${questionType} (mixed means multiple choice and true/false; multiple_choice means all multiple choice; true_false means all true/false).
-${questionType === "mixed" && mixDistribution === "balanced" ? `For a balanced mixed exam, produce exactly ${count / 2} multiple-choice and ${count / 2} true/false questions. Alternate the types where practical.` : ""}
+${questionType === "mixed" && mixDistribution === "balanced" ? `For a balanced mixed exam, produce exactly ${Math.ceil(count / 2)} multiple-choice and ${Math.floor(count / 2)} true/false questions. When count is even, the split is exactly 50/50. Alternate the types where practical.` : ""}
 Return only a JSON object matching the supplied schema. Each question must have a clear prompt, one unambiguous correct answer, and a brief explanation grounded in the material.
 For multiple_choice, provide exactly four distinct options and set correct_answer to exactly one option string.
 For true_false, provide options exactly ["True","False"] and correct_answer exactly "True" or "False".
@@ -189,7 +189,7 @@ ${material}`;
     if (questionType === "mixed" && mixDistribution === "balanced") {
       const mc = questions.filter(q => q.question_type === "multiple_choice").length;
       const tf = questions.filter(q => q.question_type === "true_false").length;
-      if (mc !== count / 2 || tf !== count / 2) return json({ error: "The AI did not follow the required balanced question distribution. Generate again." }, 502);
+      if (mc !== Math.ceil(count / 2) || tf !== Math.floor(count / 2)) return json({ error: "The AI did not follow the required balanced question distribution. Generate again." }, 502);
     }
     return json({ title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim().slice(0, 160) : title, questions });
   } catch (error) {
