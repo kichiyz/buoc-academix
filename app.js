@@ -117,6 +117,8 @@
     $$(".teacher-only.nav-item").forEach(el => el.classList.toggle("hidden", p.role !== "teacher"));
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
+    const roleNotice = $("#teacher-role-notice");
+    if (roleNotice) roleNotice.classList.toggle("hidden", p.role !== "student" || Boolean(p.verified_at));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
   }
   async function loadProfile() {
@@ -344,6 +346,23 @@
     const summary=document.createElement("p");summary.className="muted phase-three-summary";summary.textContent=`${questions.length} question(s) • Changes apply to this draft only until published.`;target.prepend(summary);
     panel.scrollIntoView({behavior:"smooth",block:"start"});
   }
+  function resetAssessmentAuthoring() {
+    state.draft = null;
+    state.previewQuestionIndex = 0;
+    $("#json-assessment-title").value = "";
+    $("#json-authoring-input").value = "";
+    $("#publish-duration").value = "30";
+    $("#exam-navigation-mode").value = "freeroam";
+    $("#assessment-category").value = "quiz";
+    $("#assessment-weight").value = "10";
+    $("#import-json-file").value = "";
+    $("#draft-questions").replaceChildren();
+    $("#draft-panel").classList.add("hidden");
+    $("#student-preview").innerHTML = '<div class="empty-state">Paste or import your next assessment to preview it.</div>';
+    $("#json-validation-status").textContent = "Ready for a new assessment. Nothing is published until you select Publish assessment.";
+    $("#json-validation-status").className = "notice";
+    $("#student-preview-panel").classList.remove("hidden");
+  }
   async function publishQuiz() {
     if (!state.draft?.questions?.length) return toast("Add at least one question before publishing.", "error");
     for (let i=0;i<state.draft.questions.length;i++) {
@@ -379,7 +398,7 @@
       // Publishing is a privileged workflow in a production deployment; teacher policy permits own exam updates.
       const { error: publishError } = await state.supabase.from("exams").update({ status: "published", published_at: new Date().toISOString() }).eq("id", exam.id);
       if (publishError) throw publishError;
-      state.draft = null; $("#draft-panel").classList.add("hidden"); toast("Exam published. Assign students from your course roster before use.", "success"); switchView("exams");
+      resetAssessmentAuthoring(); toast("Assessment published. The authoring form is ready for your next assessment.", "success"); switchView("exams");
     } catch (e) { toast(e.message || "Could not publish exam.", "error"); }
   }
   async function startExam(exam) {
@@ -751,9 +770,9 @@
       });
       if (error) throw error;
       showOnly("#dashboard-view");
-      const scoreMessage = result && result.score != null && result.max_score != null
-        ? `Exam submitted and graded: ${result.score} / ${result.max_score}.`
-        : "Exam submitted successfully.";
+      const percentage = result && Number(result.max_score) > 0 ? (Number(result.score) / Number(result.max_score)) * 100 : null;
+      const outcome = percentage == null ? "Submitted — awaiting grade" : percentage >= 75 ? "Passed" : "Failed";
+      const scoreMessage = percentage == null ? "Exam submitted successfully. Your result will appear after grading." : `Exam submitted: ${result.score} / ${result.max_score} (${percentage.toFixed(2)}%). ${outcome}.`;
       toast(scoreMessage, "success");
       switchView("grades");
     } catch (e) {
@@ -886,8 +905,11 @@
         const row = document.createElement("div"); row.className = "grade-row";
         const name = document.createElement("div"); const b = document.createElement("b"); b.textContent = g.exams?.title || "Assessment"; const small = document.createElement("small"); small.textContent = new Date(g.created_at).toLocaleString(); name.append(b, small);
         const score = document.createElement("div"); score.className = "score"; score.textContent = `${g.score} / ${g.max_score}`;
-        const feedback = document.createElement("div"); feedback.className = "grade-status muted"; feedback.textContent = g.feedback || "Graded";
-        row.append(name, score, feedback); target.append(row);
+        const percentage = Number(g.max_score) > 0 ? (Number(g.score) / Number(g.max_score)) * 100 : null;
+        const passed = percentage != null && percentage >= 75;
+        const feedback = document.createElement("span"); feedback.className = `result-status ${passed ? "status-passed" : "status-failed"}`; feedback.textContent = percentage == null ? "Awaiting grade" : passed ? "Passed" : "Failed";
+        const detail = document.createElement("small"); detail.className = "muted"; detail.textContent = `${percentage == null ? "" : percentage.toFixed(2) + "%"}${g.feedback ? " · " + g.feedback : ""}`;
+        name.append(detail); row.append(name, score, feedback); target.append(row);
       });
       await loadSemesterGwa();
     } catch (e) { target.innerHTML = '<div class="empty-state">Could not load grades. Check your Supabase policies.</div>'; toast(e.message, "error"); }
@@ -953,7 +975,10 @@
       const score=sub.score==null||sub.max_score==null?"Not scored":`${sub.score} / ${sub.max_score}`;
       meta.textContent=`Student: ${sub.student_id} • Attempt #${sub.attempt_number??"—"} (${sub.attempt_type||"—"}) • ${score} • Started: ${sub.started_at?new Date(sub.started_at).toLocaleString():"—"} • Submitted: ${sub.submitted_at?new Date(sub.submitted_at).toLocaleString():"—"}`;
       info.append(title,meta);
-      const badge=document.createElement("span");badge.className="badge";badge.textContent=sub.status||"unknown";
+      const pct=Number(sub.max_score)>0?(Number(sub.score)/Number(sub.max_score))*100:null;
+      const badge=document.createElement("span");
+      badge.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");
+      badge.textContent=pct==null?(sub.status||"Submitted"):(pct>=75?"Passed":"Failed");
       row.append(info,badge);frag.append(row);
     });
     target.append(frag);
@@ -1138,6 +1163,12 @@
       toast("Setup required: add your Supabase project URL and publishable/anon key in academix-config.js.", "error");
       return;
     }
+    const savedTheme = localStorage.getItem("academix-theme");
+    document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+    const themeButton = $("#theme-toggle");
+    const syncThemeButton = () => { if (themeButton) { const dark = document.documentElement.dataset.theme === "dark"; themeButton.textContent = dark ? "☀ Light mode" : "☾ Dark mode"; themeButton.setAttribute("aria-pressed", String(dark)); } };
+    syncThemeButton();
+    themeButton?.addEventListener("click", () => { const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; localStorage.setItem("academix-theme", next); syncThemeButton(); });
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));
     $("#auth-form").addEventListener("submit", authSubmit);
