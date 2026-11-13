@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="assets/buoc-favicon.svg?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=weighted-course-grading-ibu">
+  <link rel="stylesheet" href="style.css?v=phase9-academic-integrity">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -108,6 +108,21 @@
             <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">▥</span><span class="dev-tag">CURRENT VIEW</span></div><h3>Results Inspector</h3><p>Open results visible under current database policies. Database access errors remain visible for diagnosis.</p><button class="btn btn-quiet" data-go="grades">Open results →</button></article>
             <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">⚙</span><span class="dev-tag">AVAILABLE</span></div><h3>Platform Configuration</h3><p>Inspect service health, deployment metadata, browser-local UI preferences, and provider dashboards.</p><button class="btn btn-primary" id="jump-platform-configuration" type="button">Open platform operations ↓</button></article>
           </div>
+          <section class="dev-admin-panel phase-two-panel academic-placement-panel" id="academic-placement-admin">
+            <div class="dev-section-title"><div><p class="eyebrow">STUDENT ACADEMIC ASSIGNMENT</p><h2>Placement checker & force assignment</h2><p class="muted">Find student accounts without a complete placement and assign the correct campus, college, program, year, and block.</p></div><button id="refresh-academic-placement" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <div id="academic-placement-status" class="notice">Checking student placements…</div>
+            <div class="form-grid">
+              <label>Unassigned student<select id="placement-student"><option value="">Loading students…</option></select></label>
+              <label>Campus<select id="placement-campus" required><option value="">Choose campus</option></select></label>
+              <label>College / institute<select id="placement-college" required disabled><option value="">Choose campus first</option></select></label>
+              <label>Degree program / course<select id="placement-program" required disabled><option value="">Choose college first</option></select></label>
+              <label>Year level<select id="placement-year" required><option value="">Choose year</option><option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option><option value="5">5th Year</option><option value="6">6th Year</option><option value="7">7th Year</option></select></label>
+              <label>Block<input id="placement-block" maxlength="20" required placeholder="e.g. A"></label>
+            </div>
+            <button id="force-assign-student" class="btn btn-primary" type="button">Assign student to academic class</button>
+            <p class="fine-print">This administrative change records the acting administrator and timestamp. Existing grades and submissions are retained.</p>
+            <div id="unassigned-student-list" class="grade-directory-list"></div>
+          </section>
           <section class="dev-admin-panel phase-two-panel" id="platform-configuration">
             <div class="dev-section-title"><div><p class="eyebrow">PLATFORM CONFIGURATION</p><h2>Platform operations</h2><p class="muted">Read-only service diagnostics, deployment metadata, safe local UI flags, and provider shortcuts.</p></div><button id="refresh-platform-status" class="btn btn-quiet" type="button">↻ Refresh status</button></div>
             <div class="platform-grid">
@@ -142,7 +157,7 @@
               <div class="phase8-admin-grid">
                 <form id="phase8-term-form" class="platform-card"><h3>1. Academic term</h3><label>Academic year<input id="phase8-year" required maxlength="20" placeholder="2026–2027"></label><label>Semester<select id="phase8-semester"><option value="1st">1st Semester</option><option value="2nd">2nd Semester</option><option value="midyear">Midyear</option></select></label><label>Start date<input id="phase8-start" type="date" required></label><label>End date<input id="phase8-end" type="date" required></label><label class="phase8-inline-check"><input id="phase8-active" type="checkbox"> Set as active term</label><button class="btn btn-primary" type="submit">Save academic term</button></form>
                 <form id="phase8-course-form" class="platform-card"><h3>2. Course catalog</h3><label>Course code<input id="phase8-course-code" required maxlength="30" placeholder="CS 201"></label><label>Course title<input id="phase8-course-title" required maxlength="160" placeholder="Object-Oriented Programming"></label><label>Credit units<input id="phase8-course-units" type="number" min="0.5" max="12" step="0.5" required value="3"></label><button class="btn btn-primary" type="submit">Save course</button></form>
-                <form id="phase8-offering-form" class="platform-card"><h3>3. Class offering</h3><label>Academic term<select id="phase8-offering-term" required></select></label><label>Course<select id="phase8-offering-course" required></select></label><label>Verified instructor<select id="phase8-instructor-id" required></select></label><label>Section<input id="phase8-section" required maxlength="40" placeholder="BSCS 2A"></label><button class="btn btn-primary" type="submit">Create / update offering</button></form>
+                <form id="phase8-offering-form" class="platform-card"><h3>3. Scoped class offering</h3><label>Academic term<select id="phase8-offering-term" required></select></label><label>Subject / course<select id="phase8-offering-course" required></select></label><label>Verified instructor<select id="phase8-instructor-id" required></select></label><label>Campus<select id="phase8-offering-campus" required></select></label><label>College / institute<select id="phase8-offering-college" required disabled></select></label><label>Degree program<select id="phase8-offering-program" required disabled></select></label><label>Year level<select id="phase8-offering-year" required><option value="">Choose year</option><option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option><option value="5">5th Year</option><option value="6">6th Year</option><option value="7">7th Year</option></select></label><label>Section label<input id="phase8-section" required maxlength="40" placeholder="BSCS 2A"></label><label>Block<input id="phase8-offering-block" required maxlength="20" placeholder="A"></label><button class="btn btn-primary" type="submit">Create / update scoped offering</button></form>
                 <form id="phase8-enrollment-form" class="platform-card"><h3>4. Student enrollment</h3><label>Class offering<select id="phase8-enrollment-offering" required></select></label><label>Verified student<select id="phase8-student-id" required></select></label><button class="btn btn-primary" type="submit">Enroll student</button></form>
                 <form id="phase8-band-form" class="platform-card"><h3>5. GWA conversion band</h3><label>Academic term<select id="phase8-band-term" required></select></label><label>Band label<input id="phase8-band-label" required maxlength="60" placeholder="e.g. Excellent"></label><div class="phase8-two-fields"><label>Minimum %<input id="phase8-band-min" type="number" min="0" max="100" step="0.01" required></label><label>Maximum %<input id="phase8-band-max" type="number" min="0" max="100" step="0.01" required></label></div><label>Equivalent BU grade / GWA<input id="phase8-band-gwa" type="number" min="1" max="5" step="0.01" required placeholder="e.g. 1.00"></label><button class="btn btn-primary" type="submit">Save conversion band</button></form>
               </div>
@@ -197,6 +212,24 @@
         <section class="page-view hidden" id="view-grades">
           <div class="section-heading"><div><h2>Grades & results</h2><p class="muted">View assessed attempts or export results for offline review.</p></div><button id="export-grades" class="btn btn-primary teacher-only hidden">↓ Export CSV</button></div>
           <section id="phase8-gwa-panel" class="panel phase8-gwa-panel hidden" aria-live="polite"><div class="section-heading"><div><p class="eyebrow">SEMESTER RESULT</p><h2>Final General Weighted Average</h2><p class="muted">Your GWA is released after all required instructor evaluations and final course grades are complete.</p></div></div><div id="phase8-gwa-content"><div class="empty-state">Checking GWA eligibility…</div></div></section><section id="phase8-student-courses" class="panel student-course-panel student-only hidden"><div class="section-heading"><div><h2>My enrolled courses</h2><p class="muted">View your course standing or request a subject drop for teacher approval.</p></div><button id="refresh-student-courses" class="btn btn-quiet" type="button">↻ Refresh</button></div><div id="student-course-status" class="empty-state">Loading course records…</div><div id="student-course-list" class="phase8-record-list"></div></section><div id="grades-list" class="panel"><div class="empty-state">Loading grades…</div></div>
+          <section id="admin-grade-directory" class="panel grade-directory-panel developer-only hidden">
+            <div class="section-heading"><div><p class="eyebrow">ADMINISTRATOR / SCOPED RECORDS</p><h2>Academic grade directory</h2><p class="muted">Filter by campus, college, degree program, year, and block. Only the selected class is returned.</p></div><button id="admin-grade-refresh" class="btn btn-quiet" type="button">↻ Apply filters</button></div>
+            <div class="form-grid grade-filter-grid">
+              <label>Campus<select id="grade-filter-campus"><option value="">All campuses</option></select></label>
+              <label>College / institute<select id="grade-filter-college"><option value="">All colleges</option></select></label>
+              <label>Degree program<select id="grade-filter-program"><option value="">All programs</option></select></label>
+              <label>Year level<select id="grade-filter-year"><option value="">All year levels</option><option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option><option value="5">5th Year</option><option value="6">6th Year</option><option value="7">7th Year</option></select></label>
+              <label>Block<input id="grade-filter-block" maxlength="20" placeholder="e.g. A"></label>
+            </div>
+            <div id="admin-grade-directory-status" class="muted">Select the complete academic class, then apply.</div>
+            <div id="admin-grade-directory-list" class="grade-directory-list"></div>
+          </section>
+          <section id="teacher-grade-directory" class="panel grade-directory-panel teacher-only hidden">
+            <div class="section-heading"><div><p class="eyebrow">TEACHER / ASSIGNED CLASS ONLY</p><h2>Class grade records</h2><p class="muted">Select one of your assigned course offerings to see only that class.</p></div><button id="teacher-grade-refresh" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <label>Assigned course offering<select id="teacher-grade-offering"><option value="">Loading assigned classes…</option></select></label>
+            <div id="teacher-grade-directory-status" class="muted">Select an assigned class.</div>
+            <div id="teacher-grade-directory-list" class="grade-directory-list"></div>
+          </section>
         </section>
 
         <section class="page-view hidden" id="view-evaluations">
@@ -214,7 +247,7 @@
 
     <section id="exam-view" class="exam-screen hidden">
       <header class="exam-top"><button id="exit-exam" class="btn btn-quiet">← Back to exams</button><div><p class="eyebrow">ASSESSMENT IN PROGRESS</p><h1 id="taking-title">Exam</h1></div><div class="timer" id="exam-timer">--:--</div></header>
-      <div class="exam-instructions panel"><b>Before you begin</b><p>Read each question carefully. Use the question numbers to navigate. Your answers are submitted when you select Submit exam. The timer continues while this attempt is open.</p><small id="exam-attempt-label"></small></div><div class="exam-progress"><span id="progress-label">Question 1</span><div class="progress-track"><div id="progress-fill"></div></div></div><div class="question-navigator-wrap"><span class="muted">Question navigator</span><div id="question-navigator" class="question-navigator" aria-label="Question navigation"></div></div>
+      <div class="exam-instructions panel"><b>Before you begin</b><p>Read each question carefully. The timer continues while this attempt is open. AcademiX requests full-screen mode, disables text selection outside answer fields, and records tab visibility changes, window focus loss, and full-screen exits for instructor review. These browser signals are not proof of misconduct.</p><small id="exam-attempt-label"></small></div><div class="exam-progress"><span id="progress-label">Question 1</span><div class="progress-track"><div id="progress-fill"></div></div></div><div class="question-navigator-wrap"><span class="muted">Question navigator</span><div id="question-navigator" class="question-navigator" aria-label="Question navigation"></div></div>
       <form id="exam-form" class="panel exam-paper"><div id="question-container"></div><div class="exam-controls"><button class="btn btn-quiet" type="button" id="previous-question">← Previous</button><span id="question-count-label" class="muted"></span><button class="btn btn-primary" type="button" id="next-question">Next →</button><button class="btn btn-primary hidden" type="submit" id="submit-exam">Submit exam</button></div></form>
       <p class="fine-print centered">Your answers are saved only when submitted. Avoid refreshing or closing this page during an attempt.</p>
     </section>
@@ -237,6 +270,6 @@
   <script src="academix-config.js?v=launch-refresh1"></script>
   <script>if (["localhost", "127.0.0.1"].includes(location.hostname)) document.write('<script src="academix-config.local.js"><\/script>');</script>
   <script src="academix-build.js?v=phase6-build1"></script>
-  <script src="app.js?v=weighted-course-grading-ibu"></script>
+  <script src="app.js?v=phase9-academic-integrity"></script>
 </body>
 </html>

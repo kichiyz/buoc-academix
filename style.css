@@ -517,3 +517,33 @@ input,textarea,select{background:var(--panel2);border-color:var(--line);color:va
 @media(max-width:900px){.weighted-grade-breakdown{grid-template-columns:repeat(2,minmax(0,1fr))}.phase8-grade-row{grid-template-columns:1fr 1fr}.phase8-grade-row>div{grid-column:1/-1}}
 @media(max-width:600px){.weighted-grade-breakdown{grid-template-columns:1fr 1fr}.exam-card-actions .btn{width:100%}}
 @media(prefers-reduced-motion:no-preference){body::before{animation:portal-aura 24s ease-in-out infinite alternate}@keyframes portal-aura{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(0,-1.5%,0) scale(1.025)}}}
+
+
+/* Phase 9: accessible answer controls, academic directory and exam integrity UI. */
+.answer-option input[type="radio"]{
+  appearance:none;-webkit-appearance:none;flex:0 0 20px;width:20px;height:20px;min-width:20px;
+  aspect-ratio:1;border:2px solid var(--muted);border-radius:50%;background:transparent;
+  margin:2px 0 0;display:grid;place-content:center;cursor:pointer;
+}
+.answer-option input[type="radio"]::before{
+  content:"";width:10px;height:10px;border-radius:50%;transform:scale(0);
+  transition:transform .12s ease;background:var(--gold);
+}
+.answer-option input[type="radio"]:checked{border-color:var(--gold);background:transparent}
+.answer-option input[type="radio"]:checked::before{transform:scale(1)}
+.answer-option input[type="radio"]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.question-reference-image{display:block;max-width:min(100%,760px);max-height:420px;object-fit:contain;margin:18px 0;border:1px solid var(--line);border-radius:14px;background:#fff;padding:8px}
+.question-draft .question-image-preview{max-width:100%;max-height:180px;object-fit:contain;display:block;margin:10px 0;border-radius:10px}
+.grade-directory-panel{margin-top:22px;padding:clamp(18px,3vw,28px)}
+.grade-filter-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px}
+.grade-directory-list{display:grid;gap:8px;margin-top:14px}
+.grade-directory-row{display:grid;grid-template-columns:minmax(180px,1.2fr) repeat(3,minmax(90px,.7fr));gap:12px;align-items:center;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:#ffffff04}
+.grade-directory-row small{display:block;color:var(--muted);font-size:.72rem;margin-top:3px}
+.academic-placement-panel{margin-bottom:22px}
+.academic-placement-panel .form-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0 14px;margin-top:16px}
+#exam-view.exam-integrity-active{user-select:none;-webkit-user-select:none}
+#exam-view.exam-integrity-active input,#exam-view.exam-integrity-active textarea{
+  user-select:text;-webkit-user-select:text
+}
+.integrity-notice{font-size:.78rem;color:var(--muted);border-left:3px solid var(--gold);padding:9px 12px;margin:12px 0}
+@media(max-width:700px){.grade-directory-row{grid-template-columns:1fr 1fr}.grade-directory-row>div:first-child{grid-column:1/-1}}

@@ -85,7 +85,7 @@
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
     if (view === "evaluations" && role === "student") loadStudentEvaluations();
-    if (view === "developer" && role === "admin") loadPhase8Admin();
+    if (view === "developer" && role === "admin") { loadPhase8Admin(); loadAcademicDirectory(); loadUnassignedStudents(); }
     if (view === "teacher-home" && role === "teacher") loadTeacherPhase8Offerings();
     if (view === "developer") { loadAdminUsers(); loadExamRegistry(); loadResultsInspector(); }
     if (view === "generator") { const sandbox = role === "admin"; $("#publish-quiz").classList.toggle("hidden", sandbox); $("#draft-mode-note").textContent = sandbox ? "SANDBOX MODE — generated drafts stay in this browser and are never published to real exam tables." : "AI output is a draft. Review every question, option, answer, and explanation before publishing."; }
@@ -122,7 +122,7 @@
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
   }
   async function loadProfile() {
-    const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at").eq("id", state.user.id).single();
+    const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at,campus_id,college_id,program_id,year_level,block_code").eq("id", state.user.id).single();
     if (error) throw error;
     state.profile = data;
     renderProfile();
@@ -266,36 +266,42 @@
     }
   }
   function validateImportedExam(data) {
-    if (!data || typeof data !== "object" || !Array.isArray(data.questions)) throw new Error("JSON must contain a questions array.");
-    const title = String(data.title || data.exam_title || "").trim();
-    if (!title) throw new Error("JSON must include a title.");
-    if (!data.questions.length || data.questions.length > 50) throw new Error("An exam must contain between 1 and 50 questions.");
-    const questions = data.questions.map((raw, i) => {
-      const type = raw.question_type || raw.type;
-      const prompt = String(raw.prompt || raw.question || "").trim();
-      const options = Array.isArray(raw.options) ? raw.options.map(x => String(x).trim()) : [];
-      const answer = String(raw.correct_answer ?? raw.answer ?? "").trim();
-      const explanation = String(raw.explanation || "").trim();
-      if (!["multiple_choice","true_false"].includes(type)) throw new Error("Question "+(i+1)+": question_type must be multiple_choice or true_false.");
-      if (!prompt || !answer || !options.includes(answer)) throw new Error("Question "+(i+1)+": prompt and a correct_answer matching one option are required.");
-      if (type === "multiple_choice" && (options.length !== 4 || new Set(options).size !== 4)) throw new Error("Question "+(i+1)+": multiple choice requires four unique options.");
-      if (type === "true_false" && (options.length !== 2 || !options.includes("True") || !options.includes("False") || !["True","False"].includes(answer))) throw new Error("Question "+(i+1)+": true/false options must be exactly True and False.");
-      const points = Number(raw.points ?? 1);
-      if (!Number.isInteger(points) || points < 1 || points > 100) throw new Error("Question "+(i+1)+": points must be a whole number from 1 to 100.");
-      return {position:i+1,question_type:type,prompt,options,correct_answer:answer,explanation,points};
+    if(!data||typeof data!=="object"||!Array.isArray(data.questions))throw new Error("JSON must contain a questions array.");
+    const title=String(data.title||data.exam_title||"").trim();if(!title)throw new Error("JSON must include a title.");
+    if(!data.questions.length||data.questions.length>50)throw new Error("An exam must contain between 1 and 50 questions.");
+    const supported=["multiple_choice","true_false","identification","enumeration","short_answer","essay"];
+    const questions=data.questions.map((raw,i)=>{
+      const type=raw.question_type||raw.type,prompt=String(raw.prompt||raw.question||"").trim();
+      const options=Array.isArray(raw.options)?raw.options.map(x=>String(x).trim()).filter(Boolean):[];
+      let answer=raw.correct_answer??raw.answer??"",explanation=String(raw.explanation||"").trim();
+      if(!supported.includes(type))throw new Error("Question "+(i+1)+": unsupported question_type.");
+      if(!prompt)throw new Error("Question "+(i+1)+": prompt is required.");
+      if(type==="multiple_choice"&&(options.length!==4||new Set(options).size!==4||!options.includes(String(answer))))throw new Error("Question "+(i+1)+": multiple choice requires four unique options and a matching answer.");
+      if(type==="true_false"&&(options.length!==2||!options.includes("True")||!options.includes("False")||!["True","False"].includes(String(answer))))throw new Error("Question "+(i+1)+": true/false requires True and False with a matching answer.");
+      if(["identification","short_answer","enumeration"].includes(type)){
+        answer=Array.isArray(answer)?answer.map(v=>String(v).trim()).filter(Boolean):String(answer).split("\n").map(v=>v.trim()).filter(Boolean);
+        if(type==="enumeration"&&answer.length<2)throw new Error("Question "+(i+1)+": enumeration requires at least two expected items.");
+        if(type!=="enumeration"&&!answer.length)throw new Error("Question "+(i+1)+": provide at least one accepted answer.");
+        if(type!=="enumeration"&&answer.length===1)answer=answer[0];
+      }
+      if(type==="essay")answer=null;
+      const points=Number(raw.points??1);if(!Number.isInteger(points)||points<1||points>100)throw new Error("Question "+(i+1)+": points must be a whole number from 1 to 100.");
+      const image_url=String(raw.image_url||"").trim();if(image_url&&!/^https:\/\//i.test(image_url))throw new Error("Question "+(i+1)+": image_url must use HTTPS.");
+      return {position:i+1,question_type:type,prompt,options,correct_answer:answer,explanation,points,image_url};
     });
-    return {title,exam_mode: data.exam_mode === "sequential" ? "sequential" : "freeroam",questions};
+    return {title,exam_mode:data.exam_mode==="sequential"?"sequential":"freeroam",questions};
   }
   function downloadText(filename, text, type) {
     const url=URL.createObjectURL(new Blob([text],{type}));
     const a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   function printDraft(answerKey) {
-    if (!state.draft?.questions?.length) return toast("Create or import a draft first.","error");
+    if(!state.draft?.questions?.length)return toast("Create or import a draft first.","error");
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    const items=state.draft.questions.map((q,i)=>answerKey
-      ? '<section class="q"><b>'+ (i+1)+'. '+esc(q.prompt)+'</b><p><strong>Correct answer:</strong> '+esc(q.correct_answer)+'</p><p>'+esc(q.explanation||"")+'</p></section>'
-      : '<section class="q"><b>'+(i+1)+'. '+esc(q.prompt)+'</b><ol type="A">'+q.options.map(o=>'<li>'+esc(o)+'</li>').join("")+'</ol></section>').join("");
+    const items=state.draft.questions.map((q,i)=>{
+      const choices=(q.options||[]).length?'<ol type="A">'+q.options.map(o=>'<li>'+esc(o)+'</li>').join("")+'</ol>':'<p class="answer">Response: __________________________________________</p>';
+      return answerKey?'<section class="q"><b>'+(i+1)+'. '+esc(q.prompt)+'</b><p><strong>Correct answer:</strong> '+esc(Array.isArray(q.correct_answer)?q.correct_answer.join("; "):q.correct_answer||"Teacher-reviewed")+'</p><p>'+esc(q.explanation||"")+'</p></section>':'<section class="q"><b>'+(i+1)+'. '+esc(q.prompt)+'</b>'+choices+'</section>';
+    }).join("");
     const doc='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(state.draft.title)+'</title><style>body{font:12pt Arial,sans-serif;color:#111;max-width:800px;margin:36px auto;line-height:1.5}h1{text-align:center;font-size:20pt}.meta{display:flex;justify-content:space-between;border-bottom:1px solid #777;padding:12px 0;margin-bottom:24px}.q{break-inside:avoid;margin:0 0 22px}.q ol{margin-top:8px}.answer{font-weight:bold}@page{margin:18mm}</style></head><body><h1>'+esc(state.draft.title)+'</h1><div class="meta">'+(answerKey?'<b>TEACHER ANSWER KEY — CONFIDENTIAL</b>':'<span>Name: __________________________</span><span>Section: __________</span><span>Date: __________</span>')+'</div>'+items+'</body></html>';
     const w=window.open("","_blank");if(!w)return toast("Allow pop-ups to print this document.","error");w.document.open();w.document.write(doc);w.document.close();w.onload=()=>{w.focus();w.print();};
   }
@@ -317,49 +323,47 @@
     }
   }
   function renderStudentPreview() {
-    const target=$("#student-preview"),draft=state.draft;
-    if(!target||!draft?.questions?.length)return;
-    const safe=value=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-    const total=draft.questions.length;
-    state.previewQuestionIndex=Math.max(0,Math.min(state.previewQuestionIndex||0,total-1));
-    const index=state.previewQuestionIndex,q=draft.questions[index];
+    const target=$("#student-preview"),draft=state.draft;if(!target||!draft?.questions?.length)return;
+    const safe=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    const total=draft.questions.length;state.previewQuestionIndex=Math.max(0,Math.min(state.previewQuestionIndex||0,total-1));
+    const index=state.previewQuestionIndex,q=draft.questions[index],progress=(index+1)/total*100;
     if(window.MathJax?.typesetClear)window.MathJax.typesetClear([target]);
-    const progress=((index+1)/total)*100;
-    target.innerHTML='<div class="preview-exam-top"><span class="eyebrow">STUDENT ASSESSMENT PREVIEW</span><span class="preview-pill">'+(draft.exam_mode==="sequential"?"SEQUENTIAL":"FREE-ROAM")+'</span></div><h3>'+safe(draft.title)+'</h3><div class="preview-meta"><span>'+total+' questions</span><span>'+Number($("#publish-duration").value||30)+' minutes</span><span>Question '+(index+1)+' of '+total+'</span></div><div class="preview-progress" role="progressbar" aria-label="Preview question progress" aria-valuemin="1" aria-valuemax="'+total+'" aria-valuenow="'+(index+1)+'"><span style="width:'+progress+'%"></span></div><article class="preview-question" aria-live="polite"><p class="eyebrow">QUESTION '+String(index+1).padStart(2,"0")+' · '+Number(q.points||1)+' POINTS</p><h4>'+safe(q.prompt)+'</h4><div class="preview-options">'+(q.options||[]).map((o,i)=>'<div class="preview-option"><span>'+(i+1)+'</span><div>'+safe(o)+'</div></div>').join("")+'</div></article><div class="preview-controls"><button type="button" class="btn btn-quiet" data-preview-prev '+(index===0?"disabled":"")+' aria-label="Previous preview question">← Previous</button><span>Student view · answers hidden</span><button type="button" class="btn btn-quiet" data-preview-next '+(index===total-1?"disabled":"")+' aria-label="Next preview question">Next →</button></div>';
+    const opts=["multiple_choice","true_false"].includes(q.question_type)?'<div class="preview-options">'+(q.options||[]).map((o,i)=>'<div class="preview-option"><span>'+(i+1)+'</span><div>'+safe(o)+'</div></div>').join("")+'</div>':'<p class="muted">'+({identification:"Short written answer",enumeration:"One item per line",short_answer:"Short written answer",essay:"Long-form response · manually graded"}[q.question_type]||"Written response")+'</p>';
+    const image=q.image_preview_url||q.image_url;
+    target.innerHTML='<div class="preview-exam-top"><span class="eyebrow">STUDENT ASSESSMENT PREVIEW</span><span class="preview-pill">'+(draft.exam_mode==="sequential"?"SEQUENTIAL":"FREE-ROAM")+'</span></div><h3>'+safe(draft.title)+'</h3><div class="preview-meta"><span>'+total+' questions</span><span>'+Number($("#publish-duration").value||30)+' minutes</span><span>Question '+(index+1)+' of '+total+'</span></div><div class="preview-progress"><span style="width:'+progress+'%"></span></div><article class="preview-question"><p class="eyebrow">QUESTION '+String(index+1).padStart(2,"0")+' · '+Number(q.points||1)+' POINTS · '+safe(String(q.question_type).replaceAll("_"," ").toUpperCase())+'</p><h4>'+safe(q.prompt)+'</h4>'+(image?'<img class="question-reference-image" src="'+safe(image)+'" alt="Question reference image">':"")+opts+'</article><div class="preview-controls"><button type="button" class="btn btn-quiet" data-preview-prev '+(index===0?"disabled":"")+' aria-label="Previous preview question">← Previous</button><span>Student view · answers hidden</span><button type="button" class="btn btn-quiet" data-preview-next '+(index===total-1?"disabled":"")+' aria-label="Next preview question">Next →</button></div>';
     target.querySelector("[data-preview-prev]")?.addEventListener("click",()=>{state.previewQuestionIndex=Math.max(0,index-1);renderStudentPreview();});
     target.querySelector("[data-preview-next]")?.addEventListener("click",()=>{state.previewQuestionIndex=Math.min(total-1,index+1);renderStudentPreview();});
     if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
   }
   function renderDraft() {
-    const panel=$("#draft-panel"), target=$("#draft-questions");
-    target.replaceChildren();panel.classList.remove("hidden");
-    if(!state.draft?.questions?.length){target.innerHTML='<div class="empty-state">No questions in this draft. Generate a new draft to continue.</div>';panel.scrollIntoView({behavior:"smooth",block:"start"});return;}
-    const questions=state.draft.questions;
-    questions.forEach((q,i)=>{
+    const panel=$("#draft-panel"),target=$("#draft-questions");target.replaceChildren();panel.classList.remove("hidden");
+    if(!state.draft?.questions?.length){target.innerHTML='<div class="empty-state">No questions in this draft.</div>';return;}
+    const label=(text,control)=>{const el=document.createElement("label");el.textContent=text;el.append(control);return el;};
+    state.draft.questions.forEach((q,i)=>{
       const block=document.createElement("article");block.className="question-draft phase-three-question";
-      const heading=document.createElement("div");heading.className="phase-three-question-heading";
-      const h=document.createElement("h3");h.textContent=`Question ${i+1}`;
-      const remove=document.createElement("button");remove.type="button";remove.className="btn btn-quiet";remove.textContent="Remove";
-      remove.addEventListener("click",()=>{if(!confirm(`Remove question ${i+1} from this draft?`))return;state.draft.questions.splice(i,1);state.draft.questions.forEach((item,index)=>item.position=index+1);renderDraft();});
-      heading.append(h,remove);block.append(heading);
-      const promptLabel=document.createElement("label");promptLabel.textContent="Question prompt";
-      const prompt=document.createElement("textarea");prompt.rows=3;prompt.maxLength=3000;prompt.required=true;prompt.value=q.prompt||"";
-      prompt.addEventListener("input",()=>{q.prompt=prompt.value;});promptLabel.append(prompt);block.append(promptLabel);
-      const optionsLabel=document.createElement("label");optionsLabel.textContent="Answer options (one per line)";
-      const options=document.createElement("textarea");options.rows=Math.max(3,Math.min(6,(q.options||[]).length));options.maxLength=6000;options.required=true;options.value=(q.options||[]).join("\n");
-      options.addEventListener("input",()=>{q.options=options.value.split("\n").map(v=>v.trim()).filter(Boolean);renderAnswerSelect(answer,q);});optionsLabel.append(options);block.append(optionsLabel);
-      const answerLabel=document.createElement("label");answerLabel.textContent="Correct answer";
-      const answer=document.createElement("select");answer.required=true;answerLabel.append(answer);block.append(answerLabel);
-      const renderAnswerSelect=(select,question)=>{const previous=question.correct_answer;select.replaceChildren();(question.options||[]).forEach(option=>{const opt=document.createElement("option");opt.value=option;opt.textContent=option;select.append(opt);});if((question.options||[]).includes(previous))select.value=previous;else {select.selectedIndex=0;question.correct_answer=select.value||"";}};
-      renderAnswerSelect(answer,q);answer.addEventListener("change",()=>{q.correct_answer=answer.value;});
-      const explanationLabel=document.createElement("label");explanationLabel.textContent="Explanation (optional)";
-      const explanation=document.createElement("textarea");explanation.rows=2;explanation.maxLength=3000;explanation.value=q.explanation||"";explanation.addEventListener("input",()=>{q.explanation=explanation.value;});explanationLabel.append(explanation);block.append(explanationLabel);
-      const pointsLabel=document.createElement("label");pointsLabel.textContent="Points";
-      const points=document.createElement("input");points.type="number";points.min="1";points.max="100";points.step="1";points.required=true;points.value=Number(q.points)||1;points.addEventListener("input",()=>{q.points=Number(points.value);});pointsLabel.append(points);block.append(pointsLabel);
+      const head=document.createElement("div");head.className="phase-three-question-heading";const title=document.createElement("h3");title.textContent="Question "+(i+1)+" · "+q.question_type.replaceAll("_"," ");
+      const remove=document.createElement("button");remove.type="button";remove.className="btn btn-quiet";remove.textContent="Remove";remove.addEventListener("click",()=>{if(confirm("Remove question "+(i+1)+"?")){state.draft.questions.splice(i,1);renderDraft();}});head.append(title,remove);block.append(head);
+      const prompt=document.createElement("textarea");prompt.rows=3;prompt.maxLength=3000;prompt.value=q.prompt||"";prompt.addEventListener("input",()=>{q.prompt=prompt.value;renderStudentPreview();});block.append(label("Question prompt",prompt));
+      const url=document.createElement("input");url.type="url";url.placeholder="Optional HTTPS image URL";url.value=q.image_url||"";url.addEventListener("change",()=>{q.image_url=url.value.trim();q.image_preview_url=q.image_url;renderStudentPreview();});block.append(label("Reference image URL (optional)",url));
+      const file=document.createElement("input");file.type="file";file.accept="image/png,image/jpeg,image/webp,image/gif";
+      file.addEventListener("change",()=>{const f=file.files?.[0];if(!f)return;if(f.size>5*1024*1024){toast("Images must be 5 MB or smaller.","error");file.value="";return;}q.image_file=f;q.image_preview_url=URL.createObjectURL(f);renderStudentPreview();const img=block.querySelector(".question-image-preview");if(img)img.src=q.image_preview_url;else{const p=document.createElement("img");p.className="question-image-preview";p.src=q.image_preview_url;p.alt="Question image preview";block.append(p);}});
+      block.append(label("Upload reference image · PNG/JPG/WEBP/GIF · max 5 MB",file));
+      if(q.image_preview_url||q.image_url){const img=document.createElement("img");img.className="question-image-preview";img.src=q.image_preview_url||q.image_url;img.alt="Question image preview";block.append(img);}
+      if(["multiple_choice","true_false"].includes(q.question_type)){
+        const options=document.createElement("textarea");options.rows=4;options.value=(q.options||[]).join("\n");
+        const answer=document.createElement("select");const draw=()=>{const old=q.correct_answer;answer.replaceChildren();(q.options||[]).forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;answer.append(o);});if((q.options||[]).includes(old))answer.value=old;else{answer.selectedIndex=0;q.correct_answer=answer.value||"";}};
+        options.addEventListener("input",()=>{q.options=options.value.split("\n").map(v=>v.trim()).filter(Boolean);draw();});draw();answer.addEventListener("change",()=>q.correct_answer=answer.value);
+        block.append(label("Answer options (one per line)",options),label("Correct answer",answer));
+      }else if(["identification","short_answer","enumeration"].includes(q.question_type)){
+        const answers=document.createElement("textarea");answers.rows=3;answers.placeholder=q.question_type==="enumeration"?"One expected item per line":"One accepted answer per line";answers.value=Array.isArray(q.correct_answer)?q.correct_answer.join("\n"):(q.correct_answer||"");
+        answers.addEventListener("input",()=>{const v=answers.value.split("\n").map(x=>x.trim()).filter(Boolean);q.correct_answer=q.question_type==="enumeration"?v:(v.length>1?v:v[0]||"");});
+        block.append(label(q.question_type==="enumeration"?"Expected items (one per line)":"Accepted answer(s), one per line",answers));
+      }else{const note=document.createElement("p");note.className="notice";note.textContent="Essay answers are sent to the teacher for manual grading.";block.append(note);}
+      const explanation=document.createElement("textarea");explanation.rows=2;explanation.value=q.explanation||"";explanation.addEventListener("input",()=>q.explanation=explanation.value);block.append(label("Explanation / marking notes",explanation));
+      const points=document.createElement("input");points.type="number";points.min="1";points.max="100";points.value=q.points||1;points.addEventListener("input",()=>q.points=Number(points.value));block.append(label("Points",points));
       target.append(block);
     });
-    const summary=document.createElement("p");summary.className="muted phase-three-summary";summary.textContent=`${questions.length} question(s) • Changes apply to this draft only until published.`;target.prepend(summary);
-    panel.scrollIntoView({behavior:"smooth",block:"start"});
+    const summary=document.createElement("p");summary.className="muted phase-three-summary";summary.textContent=state.draft.questions.length+" question(s) · Changes are saved when published.";target.prepend(summary);
   }
   function resetAssessmentAuthoring() {
     state.draft = null;
@@ -384,16 +388,22 @@
   }
   async function publishQuiz() {
     if (!state.draft?.questions?.length) return toast("Add at least one question before publishing.", "error");
-    for (let i=0;i<state.draft.questions.length;i++) {
-      const q=state.draft.questions[i]; q.position=i+1;
-      q.prompt=String(q.prompt||"").trim();
-      q.options=Array.isArray(q.options)?q.options.map(v=>String(v).trim()).filter(Boolean):[];
-      q.correct_answer=String(q.correct_answer||"").trim(); q.points=Number(q.points)||1;
+    for(let i=0;i<state.draft.questions.length;i++){
+      const q=state.draft.questions[i];q.position=i+1;q.prompt=String(q.prompt||"").trim();q.options=Array.isArray(q.options)?q.options.map(v=>String(v).trim()).filter(Boolean):[];q.points=Number(q.points)||1;
       if(!q.prompt)return toast("Question "+(i+1)+" needs a prompt.","error");
-      if(q.options.length<2)return toast("Question "+(i+1)+" needs at least two answer options.","error");
-      if(new Set(q.options).size!==q.options.length)return toast("Question "+(i+1)+" has duplicate options.","error");
-      if(!q.options.includes(q.correct_answer))return toast("Choose a valid correct answer for question "+(i+1)+".","error");
-      if(!Number.isInteger(q.points)||q.points<1||q.points>100)return toast("Question "+(i+1)+" must have 1–100 points.","error");
+      if(["multiple_choice","true_false"].includes(q.question_type)){
+        if(q.question_type==="multiple_choice"&&(q.options.length!==4||new Set(q.options).size!==4))return toast("Multiple choice requires four unique options.","error");
+        if(q.question_type==="true_false"&&(q.options.length!==2||!q.options.includes("True")||!q.options.includes("False")))return toast("True/false requires True and False.","error");
+        if(!q.options.includes(String(q.correct_answer||"")))return toast("Choose a valid correct answer.","error");
+      }else if(["identification","short_answer"].includes(q.question_type)){
+        const accepted=Array.isArray(q.correct_answer)?q.correct_answer:[String(q.correct_answer||"").trim()];q.correct_answer=accepted.map(x=>String(x).trim()).filter(Boolean);
+        if(!q.correct_answer.length)return toast("Provide an accepted answer.","error");if(q.correct_answer.length===1)q.correct_answer=q.correct_answer[0];
+      }else if(q.question_type==="enumeration"){
+        q.correct_answer=(Array.isArray(q.correct_answer)?q.correct_answer:String(q.correct_answer||"").split("\n")).map(x=>String(x).trim()).filter(Boolean);
+        if(q.correct_answer.length<2)return toast("Enumeration requires at least two expected items.","error");
+      }else if(q.question_type==="essay")q.correct_answer=null;
+      if(!Number.isInteger(q.points)||q.points<1||q.points>100)return toast("Points must be a whole number from 1 to 100.","error");
+      if(q.image_file&&(!/^image\/(png|jpeg|webp|gif)$/.test(q.image_file.type)||q.image_file.size>5*1024*1024))return toast("Question image must be PNG/JPG/WEBP/GIF and no larger than 5 MB.","error");
     }
     const category=$("#assessment-category").value;
     const offeringId=$("#assessment-course-offering")?.value;
@@ -423,8 +433,18 @@
         assessment_category:category,grade_weight_percent:weight,status:"draft"
       }).select("id").single();
       if(error)throw error;
-      const rows=state.draft.questions.map(q=>({exam_id:exam.id,position:q.position,question_type:q.question_type,
-        prompt:q.prompt,options:q.options,correct_answer:q.correct_answer,explanation:q.explanation,points:q.points||1}));
+      const rows=[];
+      for(const q of state.draft.questions){
+        if(q.image_file){
+          const ext={"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif"}[q.image_file.type];
+          const path=state.user.id+"/"+crypto.randomUUID()+"."+ext;
+          const {error:uploadError}=await state.supabase.storage.from("assessment-question-images").upload(path,q.image_file,{upsert:false,contentType:q.image_file.type});
+          if(uploadError)throw new Error("Question image upload failed: "+uploadError.message);
+          q.image_url=state.supabase.storage.from("assessment-question-images").getPublicUrl(path).data.publicUrl;
+        }
+        rows.push({exam_id:exam.id,position:q.position,question_type:q.question_type,prompt:q.prompt,options:q.options||[],
+          correct_answer:q.correct_answer??'',explanation:q.explanation,image_url:q.image_url||null,points:q.points||1});
+      }
       const {error:questionError}=await state.supabase.from("questions").insert(rows);
       if(questionError){await state.supabase.from("exams").delete().eq("id",exam.id);throw questionError;}
       const {error:publishError}=await state.supabase.rpc("academix_teacher_publish_course_assessment",{p_exam_id:exam.id});
@@ -437,6 +457,8 @@
   async function startExam(exam) {
     if (state.profile?.role !== "student") return toast("Only student accounts can take assessments.", "error");
     if (!state.profile.verified_at) return toast("Your account is awaiting institutional verification.", "error");
+    let fullscreenRequest=null;try{if(document.fullscreenEnabled&&document.documentElement.requestFullscreen)fullscreenRequest=document.documentElement.requestFullscreen();}catch(_){}
+    state.integrityFullscreenRequested=true;
     try {
       // Load questions before creating a new attempt. Otherwise question-fetch latency is
       // deducted from the student's allotted time before the timer is even visible.
@@ -456,6 +478,8 @@
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
 
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
+      document.body.classList.add("exam-active");$("#exam-view").classList.add("exam-integrity-active");installIntegrityMonitoring();
+      if(fullscreenRequest)Promise.resolve(fullscreenRequest).catch(()=>toast("Full-screen mode was blocked by your browser. The attempt will still be monitored.","error"));else toast("Your browser does not support full-screen mode. The attempt will still be monitored.","error");
       state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
       const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
       const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(submission.started_at).getTime()) / 1000));
@@ -471,7 +495,7 @@
       if (attempt.attempt_number > 1) {
         toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attempt_number}.`, "success");
       }
-    } catch (e) { toast(e.message || "Could not start exam.", "error"); }
+    } catch (e) { if(!state.currentExam&&document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}} state.integrityFullscreenRequested=false; toast(e.message || "Could not start exam.", "error"); }
   }
 
   let workflowReturnFocus = null;
@@ -749,31 +773,49 @@
       body.append(message);
     }
   }
+  function logIntegrityEvent(type,details={}) {
+    const id=state.currentExam?.submissionId;if(!id||!state.supabase)return;
+    const now=Date.now();state.integrityLastEvents=state.integrityLastEvents||{};
+    if(now-(state.integrityLastEvents[type]||0)<1800)return;state.integrityLastEvents[type]=now;
+    state.supabase.rpc("academix_log_exam_integrity_event",{p_submission_id:id,p_event_type:type,p_details:details})
+      .then(({error})=>{if(error)console.warn("Exam integrity event could not be saved:",error.message);});
+  }
+  function installIntegrityMonitoring() {
+    if(state.integrityHandlersInstalled)return;state.integrityHandlersInstalled=true;
+    document.addEventListener("visibilitychange",()=>{if(state.currentExam&&document.hidden)logIntegrityEvent("tab_hidden",{visibility_state:document.visibilityState});});
+    document.addEventListener("fullscreenchange",()=>{if(state.currentExam&&state.integrityFullscreenRequested&&!document.fullscreenElement)logIntegrityEvent("fullscreen_exit",{reason:"fullscreen element exited"});});
+    window.addEventListener("blur",()=>{if(state.currentExam)logIntegrityEvent("window_blur",{reason:"window lost focus"});});
+  }
+  async function stopIntegrityMonitoring() {
+    document.body.classList.remove("exam-active");$("#exam-view")?.classList.remove("exam-integrity-active");
+    state.integrityFullscreenRequested=false;state.currentExam=null;
+    if(document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}}
+  }
+
   function renderQuestion() {
-    const q = state.currentQuestions[state.questionIndex], i = state.questionIndex, total = state.currentQuestions.length;
-    if (!q) return;
-    $("#progress-label").textContent = `Question ${i + 1} of ${total}`;
-    $("#progress-fill").style.width = `${((i + 1) / total) * 100}%`;
-    $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`;
-    const sequential=state.currentExam?.exam_mode==="sequential";
-    $("#previous-question").disabled = i === 0;
-    $("#previous-question").classList.toggle("hidden",sequential);
-    $("#question-navigator").parentElement.classList.toggle("hidden",sequential);
-    $("#next-question").disabled = sequential && state.answers[q.id] === undefined;
-    $("#next-question").classList.toggle("hidden", i === total - 1);
-    $("#submit-exam").classList.toggle("hidden", i !== total - 1);
-    const target = $("#question-container"); target.innerHTML = "";
-    const num = document.createElement("p"); num.className = "question-number"; num.textContent = `QUESTION ${String(i + 1).padStart(2, "0")}`; target.append(num);
-    const title = document.createElement("h2"); title.className = "question-title"; title.textContent = q.prompt; target.append(title);
-    const list = document.createElement("div"); list.className = "answer-list";
-    (q.options || []).forEach(option => {
-      const label = document.createElement("label"); label.className = "answer-option";
-      const input = document.createElement("input"); input.type = "radio"; input.name = `answer-${q.id}`; input.value = option; input.checked = state.answers[q.id] === option;
-      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = Object.keys(state.answers).length + " of " + total + " answered"; $("#next-question").disabled = state.currentExam?.exam_mode === "sequential" && state.answers[q.id] === undefined; renderQuestionNavigator(); });
-      const text = document.createElement("span"); text.textContent = option; label.append(input, text); list.append(label);
-    });
-    target.append(list); renderQuestionNavigator();
-    if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
+    const q=state.currentQuestions[state.questionIndex],i=state.questionIndex,total=state.currentQuestions.length;if(!q)return;
+    $("#progress-label").textContent="Question "+(i+1)+" of "+total;$("#progress-fill").style.width=((i+1)/total*100)+"%";
+    $("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";
+    const sequential=state.currentExam?.exam_mode==="sequential";$("#previous-question").disabled=i===0;
+    $("#previous-question").classList.toggle("hidden",sequential);$("#question-navigator").parentElement.classList.toggle("hidden",sequential);
+    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1);
+    const target=$("#question-container");target.replaceChildren();
+    const num=document.createElement("p");num.className="question-number";num.textContent="QUESTION "+String(i+1).padStart(2,"0");target.append(num);
+    const type=document.createElement("p");type.className="eyebrow";type.textContent=String(q.question_type).replaceAll("_"," ").toUpperCase()+" · "+Number(q.points||1)+" POINTS";target.append(type);
+    const title=document.createElement("h2");title.className="question-title";title.textContent=q.prompt;target.append(title);
+    if(q.image_url){const img=document.createElement("img");img.className="question-reference-image";img.src=q.image_url;img.alt="Reference image for question "+(i+1);img.loading="lazy";target.append(img);}
+    const setAnswer=value=>{if(value===undefined||value===null)delete state.answers[q.id];else state.answers[q.id]=value;$("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";$("#next-question").disabled=sequential&&state.answers[q.id]===undefined;renderQuestionNavigator();};
+    if(["multiple_choice","true_false"].includes(q.question_type)){
+      const list=document.createElement("div");list.className="answer-list";(q.options||[]).forEach(option=>{const label=document.createElement("label");label.className="answer-option";const input=document.createElement("input");input.type="radio";input.name="answer-"+q.id;input.value=option;input.checked=state.answers[q.id]===option;input.addEventListener("change",()=>setAnswer(option));const span=document.createElement("span");span.textContent=option;label.append(input,span);list.append(label);});target.append(list);
+    }else if(["identification","short_answer"].includes(q.question_type)){
+      const input=document.createElement("input");input.type="text";input.maxLength=2000;input.placeholder="Type your answer";input.value=String(state.answers[q.id]??"");input.addEventListener("input",()=>setAnswer(input.value.trim()?input.value:undefined));target.append(input);
+    }else if(q.question_type==="enumeration"){
+      const area=document.createElement("textarea");area.rows=5;area.placeholder="Enter one item per line";area.value=Array.isArray(state.answers[q.id])?state.answers[q.id].join("\n"):String(state.answers[q.id]??"");area.addEventListener("input",()=>{const values=area.value.split("\n").map(x=>x.trim()).filter(Boolean);setAnswer(values.length?values:undefined);});target.append(area);
+    }else if(q.question_type==="essay"){
+      const area=document.createElement("textarea");area.rows=10;area.maxLength=10000;area.placeholder="Write your response here";area.value=String(state.answers[q.id]??"");area.addEventListener("input",()=>setAnswer(area.value.trim()?area.value:undefined));target.append(area);
+      const note=document.createElement("p");note.className="muted";note.textContent="Your essay will be reviewed and graded by your teacher.";target.append(note);
+    }
+    renderQuestionNavigator();if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
   }
   function renderQuestionNavigator() {
     const nav = $("#question-navigator"); if (!nav) return;
@@ -802,10 +844,11 @@
         p_answers: state.answers
       });
       if (error) throw error;
+      await stopIntegrityMonitoring();
       showOnly("#dashboard-view");
       const percentage = result && Number(result.max_score) > 0 ? (Number(result.score) / Number(result.max_score)) * 100 : null;
       const outcome = percentage == null ? "Submitted — awaiting grade" : percentage >= 75 ? "Passed" : "Failed";
-      const scoreMessage = percentage == null ? "Exam submitted successfully. Your result will appear after grading." : `Exam submitted: ${result.score} / ${result.max_score} (${percentage.toFixed(2)}%). ${outcome}.`;
+      const scoreMessage = result?.requires_manual_grading ? "Exam submitted successfully. Your essay response is awaiting teacher review." : percentage == null ? "Exam submitted successfully. Your result will appear after grading." : `Exam submitted: ${result.score} / ${result.max_score} (${percentage.toFixed(2)}%). ${outcome}.`;
       toast(scoreMessage, "success");
       switchView("grades");
     } catch (e) {
@@ -815,20 +858,108 @@
     }
   }
 
+  let academicDirectory={campuses:[],colleges:[],programs:[]};
+  function fillAcademicSelect(selector,rows,label,placeholder){const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);rows.forEach(row=>{const o=document.createElement("option");o.value=row.id;o.textContent=label(row);el.append(o);});}
+  async function loadAcademicDirectory(){
+    if(state.profile?.role!=="admin")return;
+    const [ca,co,pr]=await Promise.all([state.supabase.from("academic_campuses").select("id,campus_code,campus_name").eq("is_active",true).order("display_order"),state.supabase.from("academic_colleges").select("id,campus_id,college_code,college_name").eq("is_active",true).order("college_name"),state.supabase.from("academic_programs").select("id,college_id,program_code,program_name").eq("is_active",true).order("program_name")]);
+    for(const r of [ca,co,pr])if(r.error)throw r.error;academicDirectory={campuses:ca.data||[],colleges:co.data||[],programs:pr.data||[]};
+    fillAcademicSelect("#placement-campus",academicDirectory.campuses,x=>x.campus_name,"Choose campus");
+    fillAcademicSelect("#grade-filter-campus",academicDirectory.campuses,x=>x.campus_name,"All campuses");
+    fillAcademicSelect("#grade-filter-college",academicDirectory.colleges,x=>x.college_name,"All colleges");
+    fillAcademicSelect("#grade-filter-program",academicDirectory.programs,x=>x.program_name+" ("+x.program_code+")","All programs");
+    populatePlacementColleges();
+  }
+  function populatePlacementColleges(){const id=$("#placement-campus")?.value,rows=academicDirectory.colleges.filter(x=>!id||x.campus_id===id);fillAcademicSelect("#placement-college",rows,x=>x.college_name,"Choose college");$("#placement-college").disabled=!id;populatePlacementPrograms();}
+  function populatePlacementPrograms(){const id=$("#placement-college")?.value,rows=academicDirectory.programs.filter(x=>!id||x.college_id===id);fillAcademicSelect("#placement-program",rows,x=>x.program_name+" ("+x.program_code+")","Choose program");$("#placement-program").disabled=!id;}
+  async function loadUnassignedStudents(){
+    if(state.profile?.role!=="admin")return;const status=$("#academic-placement-status"),list=$("#unassigned-student-list");if(!status||!list)return;
+    status.textContent="Checking student accounts for missing academic placement…";
+    try{const {data,error}=await state.supabase.rpc("academix_admin_list_unassigned_students");if(error)throw error;
+      fillAcademicSelect("#placement-student",(data||[]).map(x=>({...x,id:x.student_id})),x=>(x.full_name||"Student")+" · "+(x.bu_id||x.email||x.student_id.slice(0,8)),"Choose unassigned student");
+      status.textContent=(data||[]).length+" student account(s) need placement.";list.replaceChildren();
+      (data||[]).slice(0,50).forEach(x=>{const row=document.createElement("div");row.className="grade-directory-row";const n=document.createElement("strong");n.textContent=x.full_name||"Student";const m=document.createElement("small");m.textContent=(x.bu_id||"No BU ID")+" · "+(x.email||"");row.append(n,m);list.append(row);});
+      if(!(data||[]).length)list.textContent="All verified student accounts have complete academic placement.";
+    }catch(e){status.textContent="Placement checker failed: "+e.message;}
+  }
+  async function forceAssignStudent(){
+    const student=$("#placement-student").value,campus=$("#placement-campus").value,college=$("#placement-college").value,program=$("#placement-program").value,year=Number($("#placement-year").value),block=$("#placement-block").value.trim();
+    if(!student||!campus||!college||!program||!year||!block)return toast("Complete all placement fields.","error");
+    if(!confirm("Force-assign this student to the selected campus, college, course, year, and block? Existing grades and submissions are retained."))return;
+    try{const {data,error}=await state.supabase.rpc("academix_admin_force_assign_student",{p_student_id:student,p_campus_id:campus,p_college_id:college,p_program_id:program,p_year_level:year,p_block_code:block});if(error)throw error;
+      toast("Academic placement saved. "+Number(data?.enrollments_created||0)+" matching active course offering(s) enrolled.","success");$("#placement-student").value="";$("#placement-year").value="";$("#placement-block").value="";await loadUnassignedStudents();
+    }catch(e){toast(e.message||"Could not assign student.","error");}
+  }
+  function renderGradeDirectory(target,rows,admin=false){
+    target.replaceChildren();if(!rows?.length){target.innerHTML='<div class="empty-state">No grade records match this class filter.</div>';return;}
+    rows.forEach(x=>{const row=document.createElement("article");row.className="grade-directory-row";const who=document.createElement("div"),name=document.createElement("strong"),meta=document.createElement("small");
+      name.textContent=x.full_name||"Student";meta.textContent=(x.bu_id||"No BU ID")+(admin?" · "+[x.campus_name,x.college_name,x.program_name,x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" / "):" · "+[x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" "));
+      who.append(name,meta);const course=document.createElement("div");course.textContent=(x.course_code||"Course")+" · "+(x.course_title||"");const exam=document.createElement("div");exam.textContent=x.record_type==="course_final"?"Final course grade":(x.exam_title||"Assessment");
+      const score=document.createElement("div");score.textContent=Number(x.score).toFixed(2)+" / "+Number(x.max_score).toFixed(2)+" ("+Number(x.percentage).toFixed(2)+"%)"+(x.gwa_value==null?"":" · GWA "+Number(x.gwa_value).toFixed(2));row.append(who,course,exam,score);target.append(row);});
+  }
+  async function loadAdminGradeDirectory(){
+    const status=$("#admin-grade-directory-status"),list=$("#admin-grade-directory-list");if(!status||!list||state.profile?.role!=="admin")return;
+    const campus=$("#grade-filter-campus").value,college=$("#grade-filter-college").value,program=$("#grade-filter-program").value,year=$("#grade-filter-year").value,block=$("#grade-filter-block").value.trim();
+    if(!campus||!college||!program||!year||!block){status.textContent="Select a campus, college, degree program, year level, and block before viewing grade records.";list.replaceChildren();return;}
+    status.textContent="Loading grade records for this academic scope…";
+    try{const {data,error}=await state.supabase.rpc("academix_admin_grade_directory",{p_campus_id:campus,p_college_id:college,p_program_id:program,p_year_level:Number(year),p_block_code:block,p_term_id:null});if(error)throw error;
+      status.textContent=(data||[]).length+" grade record(s) found.";renderGradeDirectory(list,data||[],true);
+    }catch(e){status.textContent="Could not load scoped grades: "+e.message;list.replaceChildren();}
+  }
+  async function loadTeacherGradeOfferings(){
+    if(state.profile?.role!=="teacher")return;const select=$("#teacher-grade-offering");if(!select)return;
+    try{const {data,error}=await state.supabase.from("course_offerings").select("id,section,year_level,block_code,academic_terms(academic_year,semester),academic_courses(course_code,course_title),academic_campuses(campus_name),academic_colleges(college_name),academic_programs(program_name)").eq("instructor_id",state.user.id);if(error)throw error;
+      fillAcademicSelect("#teacher-grade-offering",data||[],x=>(x.academic_courses?.course_code||"Course")+" — "+(x.academic_courses?.course_title||"")+" · "+(x.academic_campuses?.campus_name||"Campus not set")+" · "+(x.academic_programs?.program_name||"Program not set")+" · "+(x.year_level?x.year_level+" Year":"Year not set")+" / "+(x.block_code||"Block not set")+" · "+x.section+" · "+(x.academic_terms?.academic_year||"")+" "+(x.academic_terms?.semester||""),"Choose assigned class");
+      if(data?.length){select.value=data[0].id;await loadTeacherGradeDirectory();}
+    }catch(e){$("#teacher-grade-directory-status").textContent="Could not load assigned classes: "+e.message;}
+  }
+  async function loadTeacherGradeDirectory(){
+    const id=$("#teacher-grade-offering")?.value,status=$("#teacher-grade-directory-status"),list=$("#teacher-grade-directory-list");if(!id||!status||!list)return;
+    status.textContent="Loading grades for your assigned class…";
+    try{const [{data,error},{data:events,error:eventError},{data:reviews,error:reviewError}]=await Promise.all([state.supabase.rpc("academix_teacher_grade_directory",{p_offering_id:id}),state.supabase.rpc("academix_teacher_integrity_events",{p_offering_id:id}),state.supabase.rpc("academix_teacher_pending_manual_reviews",{p_offering_id:id})]);if(error)throw error;
+      status.textContent=(data||[]).length+" grade record(s) in this class.";renderGradeDirectory(list,data||[]);
+      const panel=document.createElement("section"),h=document.createElement("h3"),note=document.createElement("p");panel.className="integrity-events-panel";h.textContent="Exam integrity activity";note.className="muted";note.textContent="Tab changes, focus loss, and full-screen exits are review signals, not proof of misconduct.";panel.append(h,note);
+      if(eventError){const e=document.createElement("p");e.textContent="Integrity events unavailable: "+eventError.message;panel.append(e);}
+      else if(!(events||[]).length){const e=document.createElement("p");e.className="muted";e.textContent="No integrity events recorded for this class.";panel.append(e);}
+      else (events||[]).forEach(v=>{const e=document.createElement("p");e.textContent=v.student_name+" · "+v.event_type.replaceAll("_"," ")+" · "+new Date(v.occurred_at).toLocaleString();panel.append(e);});list.append(panel);
+      const reviewsPanel=document.createElement("section");reviewsPanel.className="integrity-events-panel";const rh=document.createElement("h3");rh.textContent="Essay responses awaiting review";reviewsPanel.append(rh);
+      if(reviewError){const e=document.createElement("p");e.textContent="Manual review queue unavailable: "+reviewError.message;reviewsPanel.append(e);}
+      else if(!(reviews||[]).length){const e=document.createElement("p");e.className="muted";e.textContent="No essay submissions are awaiting review.";reviewsPanel.append(e);}
+      else (reviews||[]).forEach(review=>{const card=document.createElement("article");card.className="question-draft";const title=document.createElement("h4");title.textContent=review.student_name+" · "+review.exam_title;card.append(title);
+        (review.questions||[]).filter(q=>q.question_type==="essay").forEach(q=>{const prompt=document.createElement("p");prompt.textContent=q.prompt;const answer=document.createElement("blockquote");answer.textContent=String(review.answers?.[q.id]||"No response");card.append(prompt,answer);});
+        const score=document.createElement("input");score.type="number";score.min="0";score.max=String(review.max_score);score.step="0.01";score.value=String(review.auto_score||0);
+        const feedback=document.createElement("textarea");feedback.rows=2;feedback.maxLength=1000;feedback.placeholder="Feedback (optional)";
+        const label=document.createElement("label");label.textContent="Final score including objective answers · max "+review.max_score;label.append(score);
+        const feedbackLabel=document.createElement("label");feedbackLabel.textContent="Feedback";feedbackLabel.append(feedback);
+        const save=document.createElement("button");save.type="button";save.className="btn btn-primary";save.textContent="Save final grade";
+        save.addEventListener("click",async()=>{const n=Number(score.value);if(!Number.isFinite(n)||n<0||n>Number(review.max_score))return toast("Score must be within the maximum points.","error");save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_grade_submission",{p_submission_id:review.submission_id,p_score:n,p_feedback:feedback.value.trim()});if(error)throw error;toast("Essay response graded.","success");await loadTeacherGradeDirectory();}catch(e){toast(e.message,"error");save.disabled=false;}});
+        card.append(label,feedbackLabel,save);reviewsPanel.append(card);});list.append(reviewsPanel);
+    }catch(e){status.textContent="Could not load class grades: "+e.message;}
+  }
+
   async function loadPhase8Admin() {
     const status=$("#phase8-admin-status"), records=$("#phase8-admin-records");
     if(!status||!records)return;
     status.textContent="Loading academic configuration…";
     try {
-      const [termsR,coursesR,offeringsR,bandsR,peopleR]=await Promise.all([
+      const [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR]=await Promise.all([
         state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
         state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
         state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false}),
         state.supabase.from("term_grade_bands").select("term_id,label,min_percentage,max_percentage,gwa_value").order("min_percentage"),
-        state.supabase.rpc("academix_admin_list_people")
+        state.supabase.rpc("academix_admin_list_people"),
+        state.supabase.from("academic_campuses").select("id,campus_code,campus_name").eq("is_active",true).order("display_order"),
+        state.supabase.from("academic_colleges").select("id,campus_id,college_name").eq("is_active",true).order("college_name"),
+        state.supabase.from("academic_programs").select("id,college_id,program_name,program_code").eq("is_active",true).order("program_name")
       ]);
-      for(const r of [termsR,coursesR,offeringsR,bandsR,peopleR])if(r.error)throw r.error;
+      for(const r of [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR])if(r.error)throw r.error;
       const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[],people=peopleR.data||[];
+      const campusRows=campusesR.data||[],collegeRows=collegesR.data||[],programRows=programsR.data||[];
+      academicDirectory={campuses:campusRows,colleges:collegeRows,programs:programRows};
+      fill("#phase8-offering-campus",campusRows,x=>x.campus_name,"Select campus");
+      fill("#phase8-offering-college",collegeRows,x=>x.college_name,"Select college");
+      fill("#phase8-offering-program",programRows,x=>x.program_name+" ("+x.program_code+")","Select program");
+      $("#phase8-offering-college").disabled=true;$("#phase8-offering-program").disabled=true;
       const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
       fill("#phase8-offering-term",terms,t=>t.academic_year+" / "+t.semester+(t.is_active?" (active)":""),"Select academic term");
       fill("#phase8-band-term",terms,t=>t.academic_year+" / "+t.semester,"Select academic term");
@@ -1005,36 +1136,31 @@
   }
 
   async function loadGrades() {
-    const target = $("#grades-list"); target.innerHTML = '<div class="empty-state">Loading grades…</div>';
-    try {
-      const { data, error } = await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at", { ascending: false });
-      if (error) throw error;
-      target.innerHTML = "";
-      if (!data?.length) target.innerHTML = '<div class="empty-state">No graded assessment submissions yet.</div>';
-      (data||[]).forEach(g => {
-        const row = document.createElement("div"); row.className = "grade-row";
-        const name = document.createElement("div"); const b = document.createElement("b"); b.textContent = g.exams?.title || "Assessment"; const small = document.createElement("small"); small.textContent = new Date(g.created_at).toLocaleString(); name.append(b, small);
-        const score = document.createElement("div"); score.className = "score"; score.textContent = `${g.score} / ${g.max_score}`;
-        const percentage = Number(g.max_score) > 0 ? (Number(g.score) / Number(g.max_score)) * 100 : null;
-        const passed = percentage != null && percentage >= 75;
-        const feedback = document.createElement("span"); feedback.className = `result-status ${percentage == null ? "status-pending" : passed ? "status-passed" : "status-failed"}`; feedback.textContent = percentage == null ? "Awaiting grade" : passed ? "Passed" : "Failed";
-        const detail = document.createElement("small"); detail.className = "muted"; detail.textContent = `${percentage == null ? "" : percentage.toFixed(2) + "%"}${g.feedback ? " · " + g.feedback : ""}`;
-        name.append(detail); row.append(name, score, feedback); target.append(row);
-      });
-      await loadStudentCourseOutcomes();
-      await loadSemesterGwa();
-    } catch (e) { target.innerHTML = '<div class="empty-state">Could not load grades. Check your Supabase policies.</div>'; toast(e.message, "error"); }
+    const target=$("#grades-list");
+    if(state.profile?.role==="admin"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.remove("hidden");$("#teacher-grade-directory")?.classList.add("hidden");await loadAcademicDirectory();await loadAdminGradeDirectory();return;}
+    if(state.profile?.role==="teacher"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.remove("hidden");await loadTeacherGradeOfferings();return;}
+    $("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.add("hidden");target.classList.remove("hidden");target.innerHTML='<div class="empty-state">Loading grades…</div>';
+    try{const {data,error}=await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at",{ascending:false});if(error)throw error;target.innerHTML="";
+      if(!data?.length)target.innerHTML='<div class="empty-state">No graded assessment submissions yet.</div>';
+      (data||[]).forEach(g=>{const row=document.createElement("div");row.className="grade-row";const name=document.createElement("div"),b=document.createElement("b"),small=document.createElement("small");b.textContent=g.exams?.title||"Assessment";small.textContent=new Date(g.created_at).toLocaleString();name.append(b,small);
+        const score=document.createElement("div");score.className="score";score.textContent=g.score+" / "+g.max_score;const pct=Number(g.max_score)>0?Number(g.score)/Number(g.max_score)*100:null;
+        const status=document.createElement("span");status.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");status.textContent=pct==null?"Awaiting grade":pct>=75?"Passed":"Failed";
+        const detail=document.createElement("small");detail.className="muted";detail.textContent=(pct==null?"":pct.toFixed(2)+"%")+(g.feedback?" · "+g.feedback:"");name.append(detail);row.append(name,score,status);target.append(row);});
+      await loadStudentCourseOutcomes();await loadSemesterGwa();
+    }catch(e){target.innerHTML='<div class="empty-state">Could not load grades. Check your Supabase policies.</div>';toast(e.message,"error");}
   }
   async function exportGrades() {
     try {
-      const { data, error } = await state.supabase.from("grades").select("student_id,exam_id,score,max_score,feedback,created_at,exams(title),profiles!grades_student_id_fkey(full_name,bu_id)").order("created_at", { ascending: false });
-      if (error) throw error;
-      const cols = ["student_id","student_name","bu_id","exam_title","score","max_score","feedback","graded_at"];
-      const esc = v => `"${String(v ?? "").replaceAll('"','""')}"`;
-      const lines = [cols.join(","), ...(data || []).map(g => [g.student_id,g.profiles?.full_name,g.profiles?.bu_id,g.exams?.title,g.score,g.max_score,g.feedback,g.created_at].map(esc).join(","))];
-      const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = `academix-grades-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
-    } catch (e) { toast(e.message || "Could not export grades.", "error"); }
+      const offeringId=$("#teacher-grade-offering")?.value;
+      if(!offeringId)return toast("Select one assigned class before exporting its grades.","error");
+      const {data,error}=await state.supabase.rpc("academix_teacher_grade_directory",{p_offering_id:offeringId});
+      if(error)throw error;
+      const cols=["student_id","student_name","bu_id","year_level","block","course_code","course_title","grade_type","assessment","score","max_score","percentage","gwa","graded_at"];
+      const esc=v=>'"'+String(v??"").replaceAll('"','""')+'"';
+      const lines=[cols.join(","),...(data||[]).map(g=>[g.student_id,g.full_name,g.bu_id,g.year_level,g.block_code,g.course_code,g.course_title,g.record_type,g.exam_title,g.score,g.max_score,g.percentage,g.gwa_value,g.graded_at].map(esc).join(","))];
+      const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="academix-grades-"+String(offeringId).slice(0,8)+"-"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(url);
+    }catch(e){toast(e.message||"Could not export grades.","error");}
   }
 
   // Phase 2: read-only diagnostic views. Queries deliberately use ordinary
@@ -1354,16 +1480,24 @@
 
     $("#import-json-button").addEventListener("click", () => $("#import-json-file").click());
     $("#import-json-file").addEventListener("change", e => { if(e.target.files?.[0]) importExamJson(e.target.files[0]); e.target.value=""; });
-    $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",exam_mode:"freeroam",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",explanation:"Explain why A is correct.",points:1},{question_type:"true_false",prompt:"Sample statement.",options:["True","False"],correct_answer:"True",explanation:"Explain the statement.",points:1}]},null,2),"application/json"));
+    $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",exam_mode:"freeroam",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",points:1},{question_type:"identification",prompt:"Identify the term.",correct_answer:["Accepted answer","Alternative"],points:2},{question_type:"enumeration",prompt:"List three items.",correct_answer:["First","Second","Third"],points:3},{question_type:"essay",prompt:"Explain your answer.",points:5}]},null,2),"application/json"));
     $("#export-draft-json").addEventListener("click", () => { if(state.draft) downloadText("academix-exam.json",JSON.stringify({schema_version:1,...state.draft},null,2),"application/json"); });
     $("#print-student-exam").addEventListener("click", () => printDraft(false));
     $("#print-answer-key").addEventListener("click", () => printDraft(true));
     $("#publish-quiz").addEventListener("click", publishQuiz);
     $("#export-grades").addEventListener("click", exportGrades);
+    $("#refresh-academic-placement")?.addEventListener("click",async()=>{try{await loadAcademicDirectory();await loadUnassignedStudents();}catch(e){toast(e.message,"error");}});
+    $("#placement-campus")?.addEventListener("change",populatePlacementColleges);$("#placement-college")?.addEventListener("change",populatePlacementPrograms);
+    $("#force-assign-student")?.addEventListener("click",forceAssignStudent);$("#admin-grade-refresh")?.addEventListener("click",loadAdminGradeDirectory);
+    $("#grade-filter-campus")?.addEventListener("change",()=>{const id=$("#grade-filter-campus").value,cols=academicDirectory.colleges.filter(x=>!id||x.campus_id===id);fillAcademicSelect("#grade-filter-college",cols,x=>x.college_name,"All colleges");const ids=new Set(cols.map(x=>x.id));fillAcademicSelect("#grade-filter-program",academicDirectory.programs.filter(x=>!id||ids.has(x.college_id)),x=>x.program_name+" ("+x.program_code+")","All programs");});
+    $("#grade-filter-college")?.addEventListener("change",()=>{const id=$("#grade-filter-college").value;fillAcademicSelect("#grade-filter-program",academicDirectory.programs.filter(x=>!id||x.college_id===id),x=>x.program_name+" ("+x.program_code+")","All programs");});
+    $("#teacher-grade-offering")?.addEventListener("change",loadTeacherGradeDirectory);$("#teacher-grade-refresh")?.addEventListener("click",loadTeacherGradeOfferings);
     $("#phase8-admin-refresh")?.addEventListener("click",loadPhase8Admin);
     $("#phase8-term-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_term",{p_academic_year:$("#phase8-year").value.trim(),p_semester:$("#phase8-semester").value,p_starts_on:$("#phase8-start").value,p_ends_on:$("#phase8-end").value,p_is_active:$("#phase8-active").checked},"Academic term saved.");}catch(err){toast(err.message,"error");}});
     $("#phase8-course-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_course",{p_course_code:$("#phase8-course-code").value.trim(),p_course_title:$("#phase8-course-title").value.trim(),p_units:Number($("#phase8-course-units").value)},"Course saved.");}catch(err){toast(err.message,"error");}});
-    $("#phase8-offering-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_offering",{p_term_id:$("#phase8-offering-term").value,p_course_id:$("#phase8-offering-course").value,p_instructor_id:$("#phase8-instructor-id").value.trim(),p_section:$("#phase8-section").value.trim()},"Class offering saved.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-offering-campus")?.addEventListener("change",()=>{const campus=$("#phase8-offering-campus").value,rows=academicDirectory.colleges.filter(x=>!campus||x.campus_id===campus);fillAcademicSelect("#phase8-offering-college",rows,x=>x.college_name,"Select college");$("#phase8-offering-college").disabled=!campus;fillAcademicSelect("#phase8-offering-program",[],x=>x.program_name,"Select program");$("#phase8-offering-program").disabled=true;});
+    $("#phase8-offering-college")?.addEventListener("change",()=>{const college=$("#phase8-offering-college").value,rows=academicDirectory.programs.filter(x=>!college||x.college_id===college);fillAcademicSelect("#phase8-offering-program",rows,x=>x.program_name+" ("+x.program_code+")","Select program");$("#phase8-offering-program").disabled=!college;});
+    $("#phase8-offering-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_scoped_offering",{p_term_id:$("#phase8-offering-term").value,p_course_id:$("#phase8-offering-course").value,p_instructor_id:$("#phase8-instructor-id").value.trim(),p_campus_id:$("#phase8-offering-campus").value,p_college_id:$("#phase8-offering-college").value,p_program_id:$("#phase8-offering-program").value,p_year_level:Number($("#phase8-offering-year").value),p_section:$("#phase8-section").value.trim(),p_block_code:$("#phase8-offering-block").value.trim()},"Scoped class offering saved and matching students enrolled.");}catch(err){toast(err.message,"error");}});
     $("#phase8-enrollment-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_enroll_student",{p_offering_id:$("#phase8-enrollment-offering").value,p_student_id:$("#phase8-student-id").value.trim()},"Student enrolled.");}catch(err){toast(err.message,"error");}});
     $("#phase8-band-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_grade_band",{p_term_id:$("#phase8-band-term").value,p_label:$("#phase8-band-label").value.trim(),p_min_percentage:Number($("#phase8-band-min").value),p_max_percentage:Number($("#phase8-band-max").value),p_gwa_value:Number($("#phase8-band-gwa").value)},"GWA conversion band saved.");}catch(err){toast(err.message,"error");}});
     $("#phase8-teacher-offering")?.addEventListener("change",loadTeacherPhase8Roster);
@@ -1372,7 +1506,7 @@
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
-    $("#exit-exam").addEventListener("click", () => { if (confirm("Leave this attempt? Your answers may not be submitted.")) { clearInterval(state.timerId); showOnly("#dashboard-view"); switchView("exams"); } });
+    $("#exit-exam").addEventListener("click", () => { toast("This assessment is in progress. Submit your answers before leaving; the timer continues and integrity events are recorded.", "error"); });
     state.supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         showOnly("#auth-view");

@@ -84,3 +84,38 @@ The final launch interface uses the supplied circular BUOC favicon asset through
 ## Institutional affiliation
 
 BUOC AcademiX is an independent project unless and until the relevant university offices formally authorize its use or endorsement.
+
+
+## Phase 9 — academic identity, scoped grades, and exam integrity
+
+Phase 9 adds a normalized Bicol University academic directory and binds every student to one **campus → college/institute → degree program → year level → block**. The seed directory contains the seven BU campuses and the academic units/program entries curated from BU's official public program listing. The catalog is maintained in `academic_campuses`, `academic_colleges`, and `academic_programs`; the registrar's current curriculum remains the final authority for active offerings.
+
+- Official BU program directory: https://bicol-u.edu.ph/programs/
+- BU campus and academic-unit profile: https://bicol-u.edu.ph/about-us/
+- BU 2025 COPC program update: https://bicol-u.edu.ph/14-acad-units-in-bu-100-copc-compliant/
+
+### Applying the Phase 9 migration
+
+Apply `supabase/migrations/20261117000000_phase9_academic_identity_assessment_integrity.sql` in the Supabase SQL Editor after the existing weighted-grading migration. The migration is additive: existing profiles, courses, exams, submissions, and grades are retained.
+
+Administrators must:
+1. Review the seeded campus, college, and program directory against the Registrar's current AY curriculum.
+2. Open Developer Center → Placement checker and assign each unassigned student to a campus, college, degree program, year, and block.
+3. Update/create each class offering with its exact existing section label plus its campus, college, degree program, year, and block. Reusing the exact term/course/section label updates an existing offering and keeps its exam/grade history attached.
+4. Confirm the student roster for each class before teachers publish new assessments.
+
+The placement checker includes active student accounts that have incomplete placement. Force assignment is restricted to administrators, validates the campus/college/program relationship, and records who made the change and when. Matching students are enrolled in active scoped course offerings. Historical grades and submissions are not deleted.
+
+### Grade visibility and access control
+
+Administrators must select the exact campus, college, degree program, year level, and block before the grade directory returns records. Teachers choose one of their assigned class offerings. The directory includes individual assessment scores and finalized course grades with the active term's GWA conversion. The same academic-scope match is enforced by protected database functions and row-level policies; the frontend filters are not the security boundary.
+
+### Question types, images, and manual grading
+
+Teachers can author multiple choice, true/false, identification, enumeration, short-answer, and essay questions. Question images can be uploaded as PNG, JPEG, WEBP, or GIF (maximum 5 MB) for diagrams, graphs, and identification references. Identification and short-answer responses are compared against accepted answers; enumeration is checked without regard to item order. Essay submissions remain pending until the assigned teacher enters the final score and feedback.
+
+### Exam integrity monitoring
+
+During an active attempt, AcademiX requests browser full-screen mode, disables text selection outside answer inputs, and records tab visibility changes, window focus loss, and full-screen exits. Students are informed before starting. Teachers can review recorded events and essay responses for their assigned class.
+
+Browser monitoring is an integrity aid, not a guaranteed lockdown: browsers cannot prove intent, prevent a second device, or reliably detect every bypass. A recorded event must not be treated as proof of cheating without human review and the institution's due-process rules.
