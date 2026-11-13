@@ -105,6 +105,15 @@ $$;
 revoke all on function public.academix_is_active_admin() from public, anon;
 grant execute on function public.academix_is_active_admin() to authenticated;
 
+create or replace function public.academix_can_read_offering(p_offering_id uuid,p_instructor_id uuid)
+returns boolean language sql stable security definer set search_path=public,pg_temp as $
+  select public.academix_is_active_admin()
+    or p_instructor_id=auth.uid()
+    or exists(select 1 from public.course_enrollments e where e.offering_id=p_offering_id and e.student_id=auth.uid())
+$;
+revoke all on function public.academix_can_read_offering(uuid,uuid) from public,anon;
+grant execute on function public.academix_can_read_offering(uuid,uuid) to authenticated;
+
 alter table public.academic_terms enable row level security;
 alter table public.academic_courses enable row level security;
 alter table public.course_offerings enable row level security;
@@ -126,7 +135,9 @@ create policy "Verified users read academic terms" on public.academic_terms for 
 drop policy if exists "Verified users read course catalog" on public.academic_courses;
 create policy "Verified users read course catalog" on public.academic_courses for select to authenticated using (public.is_verified());
 drop policy if exists "Verified users read course offerings" on public.course_offerings;
-create policy "Verified users read course offerings" on public.course_offerings for select to authenticated using (public.is_verified());
+create policy "Assigned users read course offerings" on public.course_offerings for select to authenticated using (
+  public.is_verified() and public.academix_can_read_offering(id,instructor_id)
+);
 drop policy if exists "Students instructors and admins read enrollments" on public.course_enrollments;
 create policy "Students instructors and admins read enrollments" on public.course_enrollments for select to authenticated using (
   student_id=auth.uid() or public.academix_is_active_admin() or exists (
