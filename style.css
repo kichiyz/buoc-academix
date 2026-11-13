@@ -1060,3 +1060,74 @@ select option { color:var(--text); background:var(--panel); }
   border-color:#655080;
   color:#fff!important;
 }
+
+
+/* ACCOUNT-WIDE THEME-AWARE HERO AND LEARNING BANNER COLORS */
+/* These shared banners appear in student, teacher and other account views.
+   Their surfaces and every text element follow the active theme. */
+:root:not([data-theme="dark"]) :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) {
+  color:var(--text)!important;
+  background:linear-gradient(118deg,#e8edf0 0%,#f7f9fa 100%)!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow);
+}
+:root[data-theme="dark"] :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) {
+  color:var(--text)!important;
+  background:linear-gradient(118deg,#1b2b38 0%,#14212c 100%)!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow);
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) :where(h1,h2,h3,h4,strong,b) {
+  color:var(--text)!important;
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) :where(p:not(.eyebrow),small,.muted,.description,.subtitle) {
+  color:var(--muted)!important;
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) .eyebrow {
+  color:var(--gold)!important;
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) .banner-icon,
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) .hero-emblem {
+  color:var(--gold)!important;
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) .btn-primary {
+  color:#fff!important;
+}
+:root :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,
+  .dev-masthead,#dashboard-view .role-hero
+) .btn-quiet {
+  color:var(--text)!important;
+  background:var(--panel2)!important;
+  border-color:var(--line)!important;
+}
+:root:not([data-theme="dark"]) .welcome-banner :where(h1,h2,h3,p,span) {
+  text-shadow:none;
+}
+:root[data-theme="dark"] .welcome-banner :where(h1,h2,h3,p,span) {
+  text-shadow:none;
+}
