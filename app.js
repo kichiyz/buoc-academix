@@ -100,7 +100,7 @@
     document.body.classList.toggle("role-student", p.role === "student");
     $("#profile-name").textContent = p.full_name || u.email;
     $("#profile-role").textContent = p.role;
-    $("#role-label").textContent = `${p.role.toUpperCase()} WORKSPACE`;
+    $("#role-label").textContent = p.role === "admin" ? "PLATFORM OPERATIONS / DEVELOPER" : `${p.role.toUpperCase()} WORKSPACE`;
     $("#avatar").textContent = initials(p.full_name || u.email);
     $("#account-avatar").textContent = initials(p.full_name || u.email);
     $("#account-name").textContent = p.full_name || "AcademiX user";
