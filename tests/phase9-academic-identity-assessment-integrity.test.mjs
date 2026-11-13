@@ -2,10 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [html,app,css,migration,readme]=await Promise.all([
+const [html,app,css,migration,readme,placementFix]=await Promise.all([
   readFile("index.html","utf8"),readFile("app.js","utf8"),readFile("style.css","utf8"),
   readFile("supabase/migrations/20261117000000_phase9_academic_identity_assessment_integrity.sql","utf8"),
-  readFile("README.md","utf8")
+  readFile("README.md","utf8"),
+  readFile("supabase/migrations/20261117000001_fix_placement_checker_result_types.sql","utf8")
 ]);
 
 test("BU academic directory seeds all seven official campuses, academic units, and a broad program catalog",()=>{
@@ -22,6 +23,9 @@ test("student placement is complete, validated, admin-only, and automatically en
   for(const col of ["campus_id","college_id","program_id","year_level","block_code"])assert.match(migration,new RegExp("ADD COLUMN IF NOT EXISTS "+col));
   assert.match(migration,/profiles_academic_assignment_complete/);
   assert.match(migration,/academix_admin_list_unassigned_students/);
+  assert.match(placementFix,/RETURNS TABLE\([\s\S]*?created_at timestamptz[\s\S]*?\)/);
+  for(const cast of ["p.id::uuid","p.full_name::text","p.bu_id::text","u.email::text","p.created_at::timestamptz"])assert.ok(placementFix.includes(cast),cast);
+  assert.match(placementFix,/GRANT EXECUTE ON FUNCTION public\.academix_admin_list_unassigned_students\(\)\s+TO authenticated/);
   assert.match(migration,/academix_admin_force_assign_student/);
   assert.match(migration,/academix_admin_save_scoped_offering/);
   assert.match(migration,/CREATE OR REPLACE FUNCTION public\.academix_admin_save_scoped_offering\([\s\S]*?p_program_id uuid,p_year_level smallint,p_section text,p_block_code text\s*\) RETURNS uuid/);
