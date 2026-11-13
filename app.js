@@ -908,8 +908,8 @@
   }
   async function loadTeacherGradeOfferings(){
     if(state.profile?.role!=="teacher")return;const select=$("#teacher-grade-offering");if(!select)return;
-    try{const {data,error}=await state.supabase.from("course_offerings").select("id,section,academic_terms(academic_year,semester),academic_courses(course_code,course_title)").eq("instructor_id",state.user.id);if(error)throw error;
-      fillAcademicSelect("#teacher-grade-offering",data||[],x=>(x.academic_courses?.course_code||"Course")+" — "+(x.academic_courses?.course_title||"")+" · "+(x.academic_terms?.academic_year||"")+" "+(x.academic_terms?.semester||"")+" · "+x.section,"Choose assigned class");
+    try{const {data,error}=await state.supabase.from("course_offerings").select("id,section,year_level,block_code,academic_terms(academic_year,semester),academic_courses(course_code,course_title),academic_campuses(campus_name),academic_colleges(college_name),academic_programs(program_name)").eq("instructor_id",state.user.id);if(error)throw error;
+      fillAcademicSelect("#teacher-grade-offering",data||[],x=>(x.academic_courses?.course_code||"Course")+" — "+(x.academic_courses?.course_title||"")+" · "+(x.academic_campuses?.campus_name||"Campus not set")+" · "+(x.academic_programs?.program_name||"Program not set")+" · "+(x.year_level?x.year_level+" Year":"Year not set")+" / "+(x.block_code||"Block not set")+" · "+x.section+" · "+(x.academic_terms?.academic_year||"")+" "+(x.academic_terms?.semester||""),"Choose assigned class");
       if(data?.length){select.value=data[0].id;await loadTeacherGradeDirectory();}
     }catch(e){$("#teacher-grade-directory-status").textContent="Could not load assigned classes: "+e.message;}
   }

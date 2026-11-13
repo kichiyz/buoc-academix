@@ -44,6 +44,10 @@ test("administrators and teachers can only retrieve grades inside the selected a
   assert.match(app,/map\(x=>\(\{\.\.\.x,id:x\.student_id\}\)\)/);
   assert.match(migration,/Teachers read grades only in scoped classes/);
   assert.match(migration,/Teachers read submissions only in scoped classes/);
+  assert.match(migration,/course_offerings_scoped_class_unique/);
+  assert.match(migration,/academix_can_read_offering/);
+  assert.match(migration,/Students instructors and admins read enrollments/);
+  assert.match(migration,/Students instructors and admins read final course grades/);
   assert.match(migration,/student\.campus_id=offering\.campus_id/);
   assert.match(migration,/academix_teacher_roster/);
   assert.doesNotMatch(migration,/\bAS \$(?!\$)|^\s*\$;/im);

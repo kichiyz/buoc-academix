@@ -238,6 +238,13 @@ ALTER TABLE public.course_offerings
   ADD COLUMN IF NOT EXISTS block_code text;
 
 
+ALTER TABLE public.course_offerings DROP CONSTRAINT IF EXISTS course_offerings_term_id_course_id_section_key;
+CREATE UNIQUE INDEX IF NOT EXISTS course_offerings_legacy_section_unique
+  ON public.course_offerings(term_id,course_id,section) WHERE campus_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS course_offerings_scoped_class_unique
+  ON public.course_offerings(term_id,course_id,campus_id,college_id,program_id,year_level,block_code)
+  WHERE campus_id IS NOT NULL;
+
 ALTER TABLE public.course_offerings DROP CONSTRAINT IF EXISTS course_offerings_academic_scope_complete;
 ALTER TABLE public.course_offerings ADD CONSTRAINT course_offerings_academic_scope_complete CHECK (
   (campus_id IS NULL AND college_id IS NULL AND program_id IS NULL AND year_level IS NULL AND block_code IS NULL)
@@ -365,12 +372,22 @@ BEGIN
     OR char_length(trim(coalesce(p_section,''))) NOT BETWEEN 1 AND 40 THEN
     RAISE EXCEPTION 'A valid year level, block, and section label are required.' USING errcode='22023';
   END IF;
-  INSERT INTO public.course_offerings(term_id,course_id,instructor_id,section,campus_id,college_id,program_id,year_level,block_code)
-  VALUES(p_term_id,p_course_id,p_instructor_id,trim(p_section),p_campus_id,p_college_id,p_program_id,p_year_level,upper(trim(p_block_code)))
-  ON CONFLICT(term_id,course_id,section) DO UPDATE SET instructor_id=excluded.instructor_id,
-    campus_id=excluded.campus_id,college_id=excluded.college_id,program_id=excluded.program_id,
-    year_level=excluded.year_level,block_code=excluded.block_code
-  RETURNING id INTO v_id;
+  SELECT id INTO v_id FROM public.course_offerings
+  WHERE term_id=p_term_id AND course_id=p_course_id AND section=trim(p_section) AND campus_id IS NULL
+  FOR UPDATE;
+  IF FOUND THEN
+    UPDATE public.course_offerings SET instructor_id=p_instructor_id,campus_id=p_campus_id,
+      college_id=p_college_id,program_id=p_program_id,year_level=p_year_level,
+      block_code=upper(trim(p_block_code))
+    WHERE id=v_id;
+  ELSE
+    INSERT INTO public.course_offerings(term_id,course_id,instructor_id,section,campus_id,college_id,program_id,year_level,block_code)
+    VALUES(p_term_id,p_course_id,p_instructor_id,trim(p_section),p_campus_id,p_college_id,p_program_id,p_year_level,upper(trim(p_block_code)))
+    ON CONFLICT(term_id,course_id,campus_id,college_id,program_id,year_level,block_code)
+      WHERE campus_id IS NOT NULL
+    DO UPDATE SET instructor_id=excluded.instructor_id,section=excluded.section
+    RETURNING id INTO v_id;
+  END IF;
   INSERT INTO public.course_enrollments(offering_id,student_id)
   SELECT v_id,p.id FROM public.profiles p WHERE p.role='student'::public.app_role
     AND p.campus_id=p_campus_id AND p.college_id=p_college_id AND p.program_id=p_program_id
@@ -1027,6 +1044,59 @@ begin
 end;
 $$;
 
+
+
+CREATE OR REPLACE FUNCTION public.academix_can_read_offering(p_offering_id uuid,p_instructor_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+  SELECT public.academix_is_active_admin()
+    OR (p_instructor_id=auth.uid() AND EXISTS(
+      SELECT 1 FROM public.profiles actor WHERE actor.id=auth.uid()
+        AND actor.role='teacher'::public.app_role AND actor.verified_at IS NOT NULL AND actor.suspended_at IS NULL
+    ))
+    OR EXISTS(
+      SELECT 1 FROM public.course_enrollments e
+      JOIN public.course_offerings o ON o.id=e.offering_id
+      JOIN public.profiles student ON student.id=e.student_id
+      WHERE e.offering_id=p_offering_id AND e.student_id=auth.uid()
+        AND student.role='student'::public.app_role AND student.verified_at IS NOT NULL AND student.suspended_at IS NULL
+        AND student.campus_id=o.campus_id AND student.college_id=o.college_id
+        AND student.program_id=o.program_id AND student.year_level=o.year_level
+        AND upper(student.block_code)=upper(o.block_code)
+    )
+$$;
+REVOKE ALL ON FUNCTION public.academix_can_read_offering(uuid,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.academix_can_read_offering(uuid,uuid) TO authenticated;
+
+DROP POLICY IF EXISTS "Students instructors and admins read enrollments" ON public.course_enrollments;
+CREATE POLICY "Students instructors and admins read enrollments" ON public.course_enrollments
+FOR SELECT TO authenticated USING (
+  student_id=auth.uid() OR public.academix_is_active_admin() OR EXISTS (
+    SELECT 1 FROM public.course_offerings o JOIN public.profiles student ON student.id=course_enrollments.student_id
+    JOIN public.profiles actor ON actor.id=auth.uid()
+    WHERE o.id=offering_id AND o.instructor_id=auth.uid()
+      AND actor.role='teacher'::public.app_role AND actor.verified_at IS NOT NULL AND actor.suspended_at IS NULL
+      AND student.campus_id=o.campus_id AND student.college_id=o.college_id
+      AND student.program_id=o.program_id AND student.year_level=o.year_level
+      AND upper(student.block_code)=upper(o.block_code)
+  )
+);
+
+DROP POLICY IF EXISTS "Students instructors and admins read final course grades" ON public.course_final_grades;
+CREATE POLICY "Students instructors and admins read final course grades" ON public.course_final_grades
+FOR SELECT TO authenticated USING (
+  public.academix_is_active_admin() OR EXISTS (
+    SELECT 1 FROM public.course_enrollments e
+    JOIN public.course_offerings o ON o.id=e.offering_id
+    JOIN public.profiles student ON student.id=e.student_id
+    WHERE e.id=enrollment_id
+      AND student.campus_id=o.campus_id AND student.college_id=o.college_id
+      AND student.program_id=o.program_id AND student.year_level=o.year_level
+      AND upper(student.block_code)=upper(o.block_code)
+      AND (e.student_id=auth.uid() OR (o.instructor_id=auth.uid() AND public.is_verified()
+        AND EXISTS(SELECT 1 FROM public.profiles actor WHERE actor.id=auth.uid()
+          AND actor.role='teacher'::public.app_role AND actor.suspended_at IS NULL)))
+  )
+);
 
 -- Enforce academic class boundaries at the database layer, not only in the interface.
 DROP POLICY IF EXISTS "teachers manage assignments for own exams" ON public.exam_assignments;
