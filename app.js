@@ -188,7 +188,7 @@
   async function loadExams() {
     const target = $("#exam-list"); target.innerHTML = '<div class="empty-state">Loading assessments…</div>';
     try {
-      const { data, error } = await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id").eq("status", "published").order("published_at", { ascending: false });
+      const { data, error } = await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id,exam_mode,assessment_category,grade_weight_percent").eq("status", "published").order("published_at", { ascending: false });
       if (error) throw error;
       // RLS limits students to assigned exams. Teachers only see their own via the policies.
       if (!data?.length) { target.innerHTML = '<div class="empty-state">No published assessments found for this account.</div>'; return; }
@@ -378,6 +378,8 @@
     }
     const duration=Number($("#publish-duration").value);
     if(!Number.isInteger(duration)||duration<1||duration>300)return toast("Exam duration must be between 1 and 300 whole minutes.","error");
+    const weight=Number($("#assessment-weight").value);
+    if(!Number.isFinite(weight)||weight<0||weight>100)return toast("Final-grade weight must be between 0 and 100 percent.","error");
 
     if (state.profile?.role === "admin") return toast("Developer sandbox cannot publish to live exam tables.", "error");
     if (!state.draft) return toast("Generate a draft first.", "error");
