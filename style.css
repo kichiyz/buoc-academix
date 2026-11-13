@@ -843,3 +843,208 @@ select option { color:var(--text); background:var(--panel); }
 :root[data-theme="dark"] .dashboard.role-teacher .eyebrow { color:#83d5ca; }
 :root[data-theme="dark"] .dashboard.role-admin .nav-item.active,
 :root[data-theme="dark"] .dashboard.role-admin .eyebrow { color:#d4bcff; }
+
+
+/* COMPLETE LIGHT-MODE TYPOGRAPHY AND COMPONENT CONTRAST PASS */
+:root:not([data-theme="dark"]) {
+  color-scheme: light;
+  --bg:#f4f6f8;
+  --bg2:#e9eef1;
+  --panel:#ffffff;
+  --panel2:#f5f7f8;
+  --line:#d3dce1;
+  --text:#202d35;
+  --muted:#536570;
+  --gold:#8b5b12;
+  --gold2:#70470d;
+  --purple:#65518a;
+  --danger:#a92f3d;
+  --success:#236b4c;
+}
+
+/* Make every ordinary text node inherit the readable light-mode foreground.
+   Semantic accents and inverse controls are restored explicitly below. */
+:root:not([data-theme="dark"]) body,
+:root:not([data-theme="dark"]) body :where(h1,h2,h3,h4,h5,h6,p,span,div,
+  small,strong,b,em,i,label,legend,li,dt,dd,th,td,figcaption,summary,
+  a,button,output,time,blockquote,cite,caption) {
+  color:var(--text);
+}
+:root:not([data-theme="dark"]) body :where(input,textarea,select,option) {
+  color:var(--text);
+  background-color:var(--panel);
+}
+:root:not([data-theme="dark"]) input::placeholder,
+:root:not([data-theme="dark"]) textarea::placeholder {
+  color:var(--muted);
+  opacity:1;
+}
+
+/* Shared subdued text: descriptions, metadata, helper copy and labels. */
+:root:not([data-theme="dark"]) body :where(
+  .muted,.fine-print,.form-hint,.help-text,.field-hint,.exam-meta,
+  .grade-row small,.phase-two-row small,.phase8-grade-row small,
+  .weighted-grade-item span,.weighted-grade-item small,
+  .profile-chip small,.brand-row small,.sidebar-label,.sidebar-bottom,
+  .dev-readout,.dev-status-strip small,.dev-seal small,
+  .platform-health-detail,.platform-metadata dt,.platform-flag span small,
+  .workflow-student-identity small,.integrity-notice,.empty-state,
+  .metric-card p,.metric-card small,.role-hero p,.dev-tool p,
+  .dev-info-panel p,.dev-masthead p,.checklist-panel small,
+  .account-details p,.grade-row small,.student-course-row small
+) {
+  color:var(--muted);
+}
+
+/* Keep headings and key data consistently dark and readable. */
+:root:not([data-theme="dark"]) body :where(
+  h1,h2,h3,h4,h5,h6,.topbar h1,.exam-top h1,.question-title,
+  .grade-row b,.grade-directory-row strong,.weighted-grade-item strong,
+  .platform-flag span b,.dev-status-strip b,.admin-audit-label,
+  .admin-user-identity strong,.account-details h2,.section-heading h2
+) { color:var(--text); }
+
+/* Light surfaces throughout student, teacher, exam and developer workspaces. */
+:root:not([data-theme="dark"]) :where(
+  .panel,.auth-card,.form-panel,.metric-card,.exam-card,.platform-card,
+  .dev-tool,.dev-info-panel,.dev-admin-panel,.sidebar,.tool-card,
+  .account-panel,.exam-paper,.phase8-grade-row,.phase8-evaluation-card,
+  .admin-user-card,.admin-audit-row,.exam-instructions,
+  .question-navigator-wrap,.answer-option,.question-jump,
+  .student-course-row,.checklist-panel,.workflow-modal,.workflow-modal-card
+) {
+  color:var(--text);
+  background-color:var(--panel);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .role-hero,
+:root:not([data-theme="dark"]) .welcome-banner,
+:root:not([data-theme="dark"]) .student-hero,
+:root:not([data-theme="dark"]) .teacher-hero {
+  color:var(--text);
+  background:linear-gradient(120deg,#e8edf0,#f7f8f8)!important;
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .dev-masthead,
+:root:not([data-theme="dark"]) .dev-status-strip {
+  color:var(--text);
+  background:linear-gradient(120deg,#edf0f1,#f8f9f9);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .dev-tool-primary {
+  background:linear-gradient(145deg,#f0edf5,#faf9fb);
+  border-color:#c9bdd9;
+}
+:root:not([data-theme="dark"]) .ai-locked-panel,
+:root:not([data-theme="dark"]) .notice,
+:root:not([data-theme="dark"]) .notice-success,
+:root:not([data-theme="dark"]) .notice-error {
+  color:var(--text);
+  background:var(--panel2);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .toast {
+  color:var(--text);
+  background:var(--panel);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .draft-option,
+:root:not([data-theme="dark"]) .question-jump,
+:root:not([data-theme="dark"]) .answer-option,
+:root:not([data-theme="dark"]) .question-navigator-wrap {
+  color:var(--text);
+  background:var(--panel2);
+}
+
+/* Preserve deliberate dark editor/JSON surfaces with their matching light text. */
+:root:not([data-theme="dark"]) .json-code-editor,
+:root:not([data-theme="dark"]) .json-example {
+  color:#f4f6f8;
+  background:#26343d;
+  border-color:#465761;
+}
+:root:not([data-theme="dark"]) .student-preview-canvas {
+  color:#202d35;
+  background:#fff;
+}
+:root:not([data-theme="dark"]) .student-preview-canvas :where(h3,h4,p,span,label,small,div) {
+  color:inherit;
+}
+
+/* Links, selected navigation, role accents and informative states. */
+:root:not([data-theme="dark"]) .eyebrow,
+:root:not([data-theme="dark"]) .score,
+:root:not([data-theme="dark"]) .timer,
+:root:not([data-theme="dark"]) .question-number,
+:root:not([data-theme="dark"]) .workflow-selection-summary,
+:root:not([data-theme="dark"]) .banner-icon,
+:root:not([data-theme="dark"]) .hero-emblem,
+:root:not([data-theme="dark"]) .metric-icon,
+:root:not([data-theme="dark"]) .tool-icon,
+:root:not([data-theme="dark"]) .text-link,
+:root:not([data-theme="dark"]) .text-button,
+:root:not([data-theme="dark"]) .platform-provider-links a,
+:root:not([data-theme="dark"]) .json-guide summary {
+  color:var(--gold);
+}
+:root:not([data-theme="dark"]) .dashboard.role-teacher .eyebrow,
+:root:not([data-theme="dark"]) .dashboard.role-teacher .nav-item.active,
+:root:not([data-theme="dark"]) .dashboard.role-teacher .text-link {
+  color:#28685d;
+}
+:root:not([data-theme="dark"]) .dashboard.role-admin .eyebrow,
+:root:not([data-theme="dark"]) .dashboard.role-admin .nav-item.active,
+:root:not([data-theme="dark"]) .dashboard.role-admin .text-link {
+  color:#655080;
+}
+:root:not([data-theme="dark"]) .nav-item { color:var(--muted); }
+:root:not([data-theme="dark"]) .nav-item:hover,
+:root:not([data-theme="dark"]) .nav-item.active {
+  color:var(--gold);
+}
+:root:not([data-theme="dark"]) .tab,
+:root:not([data-theme="dark"]) .text-button { color:var(--muted); }
+:root:not([data-theme="dark"]) .tab.active { color:var(--gold); }
+:root:not([data-theme="dark"]) .badge { color:#76500f; }
+:root:not([data-theme="dark"]) .badge-warning { color:#80500c; }
+:root:not([data-theme="dark"]) .badge-success,
+:root:not([data-theme="dark"]) .status-passed,
+:root:not([data-theme="dark"]) .state-available { color:#236b4c; }
+:root:not([data-theme="dark"]) .status-failed,
+:root:not([data-theme="dark"]) .state-degraded { color:#a92f3d; }
+:root:not([data-theme="dark"]) .status-inc { color:#795600; }
+:root:not([data-theme="dark"]) .status-drp { color:#87410a; }
+:root:not([data-theme="dark"]) .status-pending,
+:root:not([data-theme="dark"]) .state-unknown { color:var(--muted); }
+:root:not([data-theme="dark"]) .environment-badge[data-environment="TEST"] { color:#80500c; }
+:root:not([data-theme="dark"]) .environment-badge[data-environment="PRODUCTION"] { color:#236b4c; }
+:root:not([data-theme="dark"]) .environment-badge[data-environment="UNCONFIGURED"] { color:#a92f3d; }
+:root:not([data-theme="dark"]) .dev-tag,
+:root:not([data-theme="dark"]) .dev-seal span,
+:root:not([data-theme="dark"]) .dev-seal small,
+:root:not([data-theme="dark"]) .dev-readout { color:#514267; }
+:root:not([data-theme="dark"]) .dev-tag-pending { color:#80500c; }
+:root:not([data-theme="dark"]) .draft-option.correct { color:#236b4c; }
+:root:not([data-theme="dark"]) .question-jump.current { color:#76500f; }
+:root:not([data-theme="dark"]) .question-jump.answered { color:#236b4c; }
+
+/* Button foregrounds are paired with their actual light-mode backgrounds. */
+:root:not([data-theme="dark"]) .btn-primary,
+:root:not([data-theme="dark"]) .dashboard.role-teacher .btn-primary,
+:root:not([data-theme="dark"]) .dashboard.role-admin .btn-primary {
+  color:#fff!important;
+}
+:root:not([data-theme="dark"]) .btn-quiet,
+:root:not([data-theme="dark"]) .theme-toggle,
+:root:not([data-theme="dark"]) .text-button {
+  color:var(--text);
+  background:var(--panel2);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .btn-danger { color:#fff; }
+:root:not([data-theme="dark"]) .avatar,
+:root:not([data-theme="dark"]) .brand-mark { color:#fff; }
+:root:not([data-theme="dark"]) ::selection {
+  color:#202d35;
+  background:#e8c879;
+}
