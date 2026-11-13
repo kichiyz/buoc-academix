@@ -951,7 +951,7 @@
         const score = document.createElement("div"); score.className = "score"; score.textContent = `${g.score} / ${g.max_score}`;
         const percentage = Number(g.max_score) > 0 ? (Number(g.score) / Number(g.max_score)) * 100 : null;
         const passed = percentage != null && percentage >= 75;
-        const feedback = document.createElement("span"); feedback.className = `result-status ${passed ? "status-passed" : "status-failed"}`; feedback.textContent = percentage == null ? "Awaiting grade" : passed ? "Passed" : "Failed";
+        const feedback = document.createElement("span"); feedback.className = `result-status ${percentage == null ? "status-pending" : passed ? "status-passed" : "status-failed"}`; feedback.textContent = percentage == null ? "Awaiting grade" : passed ? "Passed" : "Failed";
         const detail = document.createElement("small"); detail.className = "muted"; detail.textContent = `${percentage == null ? "" : percentage.toFixed(2) + "%"}${g.feedback ? " · " + g.feedback : ""}`;
         name.append(detail); row.append(name, score, feedback); target.append(row);
       });
