@@ -119,7 +119,7 @@ ${material}`;
           return json({ error: "Gemini authentication failed. Verify that GEMINI_API_KEY is valid and has access to the Gemini API." }, 502);
         }
         if (response.status === 404) {
-          return json({ error: "Gemini model not found or unavailable: " + model + ". Set GEMINI_MODEL to a model available to your API key. Provider detail: " + (providerMessage || "no detail returned"), 502);
+          return json({ error: "Gemini model not found or unavailable: " + model + ". Set GEMINI_MODEL to a model available to your API key. Provider detail: " + (providerMessage || "no detail returned") }, 502);
         }
         if (response.status === 503 || response.status === 504) {
           return json({ error: "Gemini is temporarily unavailable or overloaded. Wait briefly and retry; this is not necessarily a key problem." }, 503);
