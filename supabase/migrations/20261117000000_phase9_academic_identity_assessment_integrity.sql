@@ -29,7 +29,7 @@ COMMENT ON COLUMN public.questions.image_url IS
 DROP FUNCTION IF EXISTS public.get_exam_questions(uuid);
 
 CREATE FUNCTION public.get_exam_questions(p_exam_id uuid)
-RETURNS TABLE(id uuid,position integer,question_type text,prompt text,options jsonb,points numeric,image_url text)
+RETURNS TABLE(id uuid,"position" integer,question_type text,prompt text,options jsonb,points numeric,image_url text)
 LANGUAGE sql
 STABLE
 SECURITY INVOKER
