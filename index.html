@@ -140,21 +140,36 @@
         </section>
 
         <section class="page-view hidden" id="view-generator">
-          <div class="section-heading"><div><h2>AI Quiz Studio</h2><p class="muted">Generate a draft from material you have permission to use.</p></div></div>
-          <form id="generator-form" class="panel form-panel">
+          <div class="section-heading"><div><h2>Assessment Studio</h2><p class="muted">Build an exam from JSON, validate it, and preview the student experience.</p></div></div>
+          <section class="panel ai-locked-panel"><div class="ai-lock-icon">⌑</div><div><p class="eyebrow">TEMPORARILY DISABLED</p><h3>AI quiz generation is locked</h3><p class="muted">The feature is preserved in the project but unavailable while provider reliability is being addressed. Manual JSON authoring remains available.</p></div><span class="badge badge-warning">Locked · not deleted</span></section>
+          <section class="panel json-authoring-panel">
+            <div class="section-heading"><div><p class="eyebrow">MANUAL AUTHORING</p><h2>Create from JSON</h2><p class="muted">Paste JSON, import a .json file, or start with the guided template.</p></div><button id="download-json-template" class="btn btn-quiet" type="button">↓ Download template</button></div>
             <div class="form-grid">
-              <label>Quiz title<input id="quiz-title" required maxlength="160" placeholder="e.g. Introduction to Object-Oriented Programming"></label>
-              <label>Question count<select id="quiz-count"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>25</option><option>50</option></select></label>
-              <label>Question type<select id="quiz-type"><option value="mixed">Mixed multiple choice and true/false</option><option value="multiple_choice">Multiple choice only</option><option value="true_false">True/false only</option></select></label>
-              <label>Difficulty<select id="quiz-difficulty"><option>easy</option><option selected>medium</option><option>hard</option></select></label>
+              <label>Assessment title<input id="json-assessment-title" maxlength="160" placeholder="e.g. Linear Algebra — Midterm Examination"></label>
+              <label>Time limit (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label>
+              <label>Question navigation<select id="exam-navigation-mode"><option value="freeroam">Free-roam — revisit any question</option><option value="sequential">Sequential — answer, then continue</option></select></label>
+              <label>Assessment type<select id="assessment-category"><option value="quiz">Quiz</option><option value="long_test">Long test</option><option value="midterm">Midterm examination</option><option value="final">Final examination</option><option value="other">Other</option></select></label>
+              <label>Final-grade weight (%)<input id="assessment-weight" type="number" min="0" max="100" step="0.25" value="10"></label>
             </div>
-            <label>Mixed distribution<select id="quiz-mix-distribution"><option value="balanced" selected>Balanced (50% multiple choice, 50% true/false)</option><option value="flexible">AI-selected mix</option></select></label>
-              <label>Study material<textarea id="quiz-material" required minlength="80" rows="9" maxlength="50000" placeholder="Paste your notes or learning objectives here. For documents/images, extract the text first or add a Storage upload workflow."></textarea></label>
-            <div class="notice" id="draft-mode-note">AI output is a draft. Review every question, option, answer, and explanation before publishing.</div>
-            <div class="authoring-tools"><button class="btn btn-primary" type="submit" id="generate-button">✦ Generate with AI</button><button class="btn btn-quiet" type="button" id="import-json-button">Import exam JSON</button><button class="btn btn-quiet" type="button" id="download-json-template">↓ JSON template</button><input id="import-json-file" type="file" accept=".json,application/json" hidden></div>
-            <p class="fine-print">Manual JSON import supports practical-exam question sets. Imported content is validated and remains a draft until published.</p>
-          </form>
-          <div id="draft-panel" class="panel hidden"><div class="section-heading"><div><h2>Review generated questions</h2><p class="muted">Correct answers are visible to the teacher only.</p></div></div><div class="draft-export-tools"><button id="print-student-exam" class="btn btn-quiet" type="button">Print student exam</button><button id="print-answer-key" class="btn btn-quiet" type="button">Print teacher answer key</button><button id="export-draft-json" class="btn btn-quiet" type="button">Export JSON</button></div><div id="draft-questions"></div><div class="publish-row"><label>Duration (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label><button id="publish-quiz" class="btn btn-primary">Publish exam</button></div></div>
+            <label for="json-authoring-input">JSON code editor</label><textarea id="json-authoring-input" class="json-code-editor" spellcheck="false" rows="20" placeholder="Paste your exam JSON here…"></textarea>
+            <div class="authoring-tools"><button id="validate-json-authoring" class="btn btn-primary" type="button">Validate & preview</button><button id="import-json-button" class="btn btn-quiet" type="button">Import .JSON file</button><input id="import-json-file" type="file" accept=".json,application/json" hidden><button id="export-draft-json" class="btn btn-quiet" type="button">Export JSON</button></div>
+            <p id="json-validation-status" class="notice" role="status">Waiting for JSON input. Nothing is published until you select Publish assessment.</p>
+            <details class="json-guide"><summary>New to JSON? Open the step-by-step guide</summary><ol><li>Download the template and open it in Notepad or a code editor.</li><li>Change the assessment title.</li><li>Write each question prompt and its options. Multiple choice needs four unique options.</li><li>Set correct_answer to exactly match one option. True/false options must be True and False.</li><li>Set points to a whole number from 1 to 100 and add an explanation.</li><li>Save as UTF-8 with a .json extension, then import it or paste the code above.</li><li>Select Validate & preview, fix errors, inspect the student preview, then publish.</li></ol><p class="muted">JSON uses double quotes, commas between items, and square brackets for lists. Do not add a comma after the last item.</p><pre class="json-example"><code>{
+  "schema_version": 1,
+  "title": "Sample Mathematics Quiz",
+  "exam_mode": "freeroam",
+  "questions": [{
+    "question_type": "multiple_choice",
+    "prompt": "Evaluate \\(2^3 + 4\\).",
+    "options": ["8", "10", "12", "16"],
+    "correct_answer": "12",
+    "explanation": "2 cubed is 8; 8 + 4 = 12.",
+    "points": 2
+  }]
+}</code></pre></details>
+          </section>
+          <section id="student-preview-panel" class="panel student-preview-panel"><div class="section-heading"><div><p class="eyebrow">LIVE STUDENT VIEW</p><h2>What students will see</h2><p class="muted">Preview updates after validation. Correct answers are never shown.</p></div><span class="badge">Preview only</span></div><div id="student-preview" class="student-preview-canvas"><div class="empty-state">Validate your JSON to see the student-facing preview.</div></div></section>
+          <div id="draft-panel" class="panel hidden"><div class="section-heading"><div><h2>Review assessment</h2><p class="muted">Teacher-only answer details.</p></div></div><div class="draft-export-tools"><button id="print-student-exam" class="btn btn-quiet" type="button">Print student exam</button><button id="print-answer-key" class="btn btn-quiet" type="button">Print teacher answer key</button></div><div id="draft-questions"></div><div class="publish-row"><button id="publish-quiz" class="btn btn-primary">Publish assessment</button></div></div>
         </section>
 
         <section class="page-view hidden" id="view-grades">
@@ -188,6 +203,8 @@
     </div>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
+  <script>window.MathJax={tex:{inlineMath:[['\\\\(','\\\\)']],displayMath:[['\\\\[','\\\\]']]},svg:{fontCache:'global'}};</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="academix-config.js?v=launch-refresh1"></script>
   <script>if (["localhost", "127.0.0.1"].includes(location.hostname)) document.write('<script src="academix-config.local.js"><\/script>');</script>

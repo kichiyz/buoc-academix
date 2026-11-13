@@ -188,7 +188,7 @@
   async function loadExams() {
     const target = $("#exam-list"); target.innerHTML = '<div class="empty-state">Loading assessments…</div>';
     try {
-      const { data, error } = await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id").eq("status", "published").order("published_at", { ascending: false });
+      const { data, error } = await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id,exam_mode,assessment_category,grade_weight_percent").eq("status", "published").order("published_at", { ascending: false });
       if (error) throw error;
       // RLS limits students to assigned exams. Teachers only see their own via the policies.
       if (!data?.length) { target.innerHTML = '<div class="empty-state">No published assessments found for this account.</div>'; return; }
@@ -292,7 +292,7 @@
       if (!Number.isInteger(points) || points < 1 || points > 100) throw new Error("Question "+(i+1)+": points must be a whole number from 1 to 100.");
       return {position:i+1,question_type:type,prompt,options,correct_answer:answer,explanation,points};
     });
-    return {title,questions};
+    return {title,exam_mode: data.exam_mode === "sequential" ? "sequential" : "freeroam",questions};
   }
   function downloadText(filename, text, type) {
     const url=URL.createObjectURL(new Blob([text],{type}));
@@ -308,7 +308,27 @@
     const w=window.open("","_blank");if(!w)return toast("Allow pop-ups to print this document.","error");w.document.open();w.document.write(doc);w.document.close();w.onload=()=>{w.focus();w.print();};
   }
   function importExamJson(file) {
-    const reader=new FileReader();reader.onload=()=>{try{state.draft=validateImportedExam(JSON.parse(String(reader.result)));renderDraft();toast("JSON exam imported as a draft. Review it before publishing.","success");}catch(e){toast("JSON import failed: "+e.message,"error");}};reader.onerror=()=>toast("Could not read the selected JSON file.","error");reader.readAsText(file);
+    const reader=new FileReader();reader.onload=()=>{try{$("#json-authoring-input").value=JSON.stringify(JSON.parse(String(reader.result)),null,2);validateJsonAuthoring();toast("JSON loaded into the editor. Review the preview before publishing.","success");}catch(e){toast("JSON import failed: "+e.message,"error");}};reader.onerror=()=>toast("Could not read the selected JSON file.","error");reader.readAsText(file);
+  }
+  function validateJsonAuthoring() {
+    const status=$("#json-validation-status"), preview=$("#student-preview");
+    try {
+      const raw=JSON.parse($("#json-authoring-input").value);
+      raw.exam_mode=$("#exam-navigation-mode").value;
+      const draft=validateImportedExam(raw);
+      const title=$("#json-assessment-title").value.trim();if(title)draft.title=title;
+      state.draft=draft;status.textContent="Valid JSON — "+draft.questions.length+" question(s). Student preview is ready.";status.className="notice notice-success";
+      renderStudentPreview();renderDraft();return true;
+    } catch(error) {
+      state.draft=null;status.textContent="JSON needs attention: "+error.message;status.className="notice notice-error";
+      preview.innerHTML='<div class="empty-state">Fix the JSON error, then validate again. No exam has been published.</div>';$("#draft-panel").classList.add("hidden");return false;
+    }
+  }
+  function renderStudentPreview() {
+    const target=$("#student-preview"),draft=state.draft;if(!draft?.questions?.length)return;
+    const q=draft.questions[0],safe=value=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    target.innerHTML='<div class="preview-exam-top"><span class="eyebrow">STUDENT ASSESSMENT PREVIEW</span><span class="preview-pill">'+(draft.exam_mode==="sequential"?"SEQUENTIAL":"FREE-ROAM")+'</span></div><h3>'+safe(draft.title)+'</h3><div class="preview-meta"><span>'+draft.questions.length+' questions</span><span>'+Number($("#publish-duration").value||30)+' minutes</span><span>Question 1 of '+draft.questions.length+'</span></div><div class="preview-progress"><span></span></div><article class="preview-question"><p class="eyebrow">QUESTION 01 · '+q.points+' POINTS</p><h4>'+safe(q.prompt)+'</h4><div class="preview-options">'+q.options.map((o,i)=>'<label><span>'+(i+1)+'</span>'+safe(o)+'</label>').join("")+'</div></article><div class="preview-controls"><button type="button" disabled>← Previous</button><span>Student view · answers hidden</span><button type="button" disabled>Next →</button></div>';
+    if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
   }
   function renderDraft() {
     const panel=$("#draft-panel"), target=$("#draft-questions");
@@ -358,13 +378,15 @@
     }
     const duration=Number($("#publish-duration").value);
     if(!Number.isInteger(duration)||duration<1||duration>300)return toast("Exam duration must be between 1 and 300 whole minutes.","error");
+    const weight=Number($("#assessment-weight").value);
+    if(!Number.isFinite(weight)||weight<0||weight>100)return toast("Final-grade weight must be between 0 and 100 percent.","error");
 
     if (state.profile?.role === "admin") return toast("Developer sandbox cannot publish to live exam tables.", "error");
     if (!state.draft) return toast("Generate a draft first.", "error");
     try {
       const { data: exam, error } = await state.supabase.from("exams").insert({
-        teacher_id: state.user.id, title: state.draft.title || $("#quiz-title").value.trim(),
-        duration_minutes: Number($("#publish-duration").value), status: "draft"
+        teacher_id: state.user.id, title: state.draft.title || $("#json-assessment-title").value.trim(),
+        duration_minutes: Number($("#publish-duration").value), exam_mode: state.draft.exam_mode || $("#exam-navigation-mode").value, assessment_category: $("#assessment-category").value, grade_weight_percent: Number($("#assessment-weight").value), status: "draft"
       }).select("id").single();
       if (error) throw error;
       const rows = state.draft.questions.map(q => ({ exam_id: exam.id, position: q.position, question_type: q.question_type,
@@ -698,7 +720,11 @@
     $("#progress-label").textContent = `Question ${i + 1} of ${total}`;
     $("#progress-fill").style.width = `${((i + 1) / total) * 100}%`;
     $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`;
+    const sequential=state.currentExam?.exam_mode==="sequential";
     $("#previous-question").disabled = i === 0;
+    $("#previous-question").classList.toggle("hidden",sequential);
+    $("#question-navigator").parentElement.classList.toggle("hidden",sequential);
+    $("#next-question").disabled = sequential && state.answers[q.id] === undefined;
     $("#next-question").classList.toggle("hidden", i === total - 1);
     $("#submit-exam").classList.toggle("hidden", i !== total - 1);
     const target = $("#question-container"); target.innerHTML = "";
@@ -708,10 +734,11 @@
     (q.options || []).forEach(option => {
       const label = document.createElement("label"); label.className = "answer-option";
       const input = document.createElement("input"); input.type = "radio"; input.name = `answer-${q.id}`; input.value = option; input.checked = state.answers[q.id] === option;
-      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`; renderQuestionNavigator(); });
+      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = Object.keys(state.answers).length + " of " + total + " answered"; $("#next-question").disabled = state.currentExam?.exam_mode === "sequential" && state.answers[q.id] === undefined; renderQuestionNavigator(); });
       const text = document.createElement("span"); text.textContent = option; label.append(input, text); list.append(label);
     });
     target.append(list); renderQuestionNavigator();
+    if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
   }
   function renderQuestionNavigator() {
     const nav = $("#question-navigator"); if (!nav) return;
@@ -721,7 +748,7 @@
       b.setAttribute("aria-label", `Go to question ${i + 1}`);
       if (state.answers[q.id] !== undefined) b.classList.add("answered");
       if (i === state.questionIndex) { b.classList.add("current"); b.setAttribute("aria-current", "step"); }
-      b.addEventListener("click", () => { state.questionIndex = i; renderQuestion(); }); nav.append(b);
+      b.addEventListener("click", () => { if(state.currentExam?.exam_mode==="sequential")return;state.questionIndex = i; renderQuestion(); }); nav.append(b);
     });
   }
   function startTimer() {
@@ -1082,17 +1109,22 @@
     initPlatformFlags();
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
-    $("#generator-form").addEventListener("submit", generateQuiz);
+    // AI generation is intentionally locked in the UI; retain generateQuiz() and the Edge Function for future reactivation.
+    $("#validate-json-authoring").addEventListener("click", validateJsonAuthoring);
+    $("#json-authoring-input").addEventListener("input", () => {const s=$("#json-validation-status");s.textContent="JSON changed — validate to refresh the student preview.";s.className="notice";});
+    $("#json-assessment-title").addEventListener("input",()=>{if(state.draft){state.draft.title=$("#json-assessment-title").value.trim()||state.draft.title;renderStudentPreview();}});
+    $("#exam-navigation-mode").addEventListener("change",()=>{if(state.draft){state.draft.exam_mode=$("#exam-navigation-mode").value;renderStudentPreview();}});
+    $("#publish-duration").addEventListener("input",()=>{if(state.draft)renderStudentPreview();});
     $("#import-json-button").addEventListener("click", () => $("#import-json-file").click());
     $("#import-json-file").addEventListener("change", e => { if(e.target.files?.[0]) importExamJson(e.target.files[0]); e.target.value=""; });
-    $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",explanation:"Explain why A is correct.",points:1},{question_type:"true_false",prompt:"Sample statement.",options:["True","False"],correct_answer:"True",explanation:"Explain the statement.",points:1}]},null,2),"application/json"));
+    $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",exam_mode:"freeroam",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",explanation:"Explain why A is correct.",points:1},{question_type:"true_false",prompt:"Sample statement.",options:["True","False"],correct_answer:"True",explanation:"Explain the statement.",points:1}]},null,2),"application/json"));
     $("#export-draft-json").addEventListener("click", () => { if(state.draft) downloadText("academix-exam.json",JSON.stringify({schema_version:1,...state.draft},null,2),"application/json"); });
     $("#print-student-exam").addEventListener("click", () => printDraft(false));
     $("#print-answer-key").addEventListener("click", () => printDraft(true));
     $("#publish-quiz").addEventListener("click", publishQuiz);
     $("#export-grades").addEventListener("click", exportGrades);
-    $("#previous-question").addEventListener("click", () => { if (state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
-    $("#next-question").addEventListener("click", () => { if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
+    $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
+    $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
     $("#exit-exam").addEventListener("click", () => { if (confirm("Leave this attempt? Your answers may not be submitted.")) { clearInterval(state.timerId); showOnly("#dashboard-view"); switchView("exams"); } });
     state.supabase.auth.onAuthStateChange(async (event, session) => {
