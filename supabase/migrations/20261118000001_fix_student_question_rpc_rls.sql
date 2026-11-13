@@ -12,7 +12,7 @@ BEGIN;
 CREATE OR REPLACE FUNCTION public.get_exam_questions(p_exam_id uuid)
 RETURNS TABLE(
   id uuid,
-  position integer,
+  "position" integer,
   question_type text,
   prompt text,
   options jsonb,
