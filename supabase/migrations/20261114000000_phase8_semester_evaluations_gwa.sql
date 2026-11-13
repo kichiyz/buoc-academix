@@ -350,3 +350,24 @@ grant execute on function public.academix_student_semester_gwa(uuid) to authenti
 comment on table public.instructor_evaluations is 'Confidential student-to-instructor evaluation submissions. Raw ratings are visible only to the submitting student through RLS; no instructor/admin raw-response policy is provided.';
 comment on table public.term_grade_bands is 'Administrator-configured percentage-to-GWA conversion bands for an academic term; no BU conversion values are hard-coded.';
 comment on function public.academix_student_semester_gwa(uuid) is 'Returns final GWA only after all instructors are evaluated, all course grades are finalized, and every grade maps to the active term conversion table.';
+
+
+create or replace function public.academix_teacher_roster(p_offering_id uuid)
+returns table(enrollment_id uuid,student_id uuid,student_name text,bu_id text,percentage numeric,remarks text)
+language plpgsql stable security definer set search_path=public,pg_temp as $$
+begin
+  if auth.uid() is null or not public.is_verified()
+    or (select role from public.profiles where id=auth.uid()) is distinct from 'teacher'::public.app_role then
+    raise exception 'Verified Teacher access required.' using errcode='42501';
+  end if;
+  if not exists(select 1 from public.course_offerings where id=p_offering_id and instructor_id=auth.uid()) then
+    raise exception 'This course offering is not assigned to your account.' using errcode='42501';
+  end if;
+  return query
+  select e.id,e.student_id,coalesce(p.full_name,'Student'),p.bu_id,fg.percentage,fg.remarks
+  from public.course_enrollments e join public.profiles p on p.id=e.student_id
+  left join public.course_final_grades fg on fg.enrollment_id=e.id
+  where e.offering_id=p_offering_id order by p.full_name;
+end $$;
+revoke all on function public.academix_teacher_roster(uuid) from public,anon;
+grant execute on function public.academix_teacher_roster(uuid) to authenticated;
