@@ -994,6 +994,54 @@
       const list=document.createElement("div");list.className="phase8-record-list";
       offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id),teacher=people.find(p=>p.id===o.instructor_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Instructor: "+(teacher?.full_name||"Assigned teacher");list.append(row);});
       records.append(list);
+
+      // The catalog-level delete action intentionally removes every offering
+      // for this subject across all terms, including linked exams and grades.
+      const subjectRecords=$("#phase8-course-records");
+      if(subjectRecords){
+        subjectRecords.replaceChildren();
+        if(!courses.length){
+          subjectRecords.textContent="No subjects are currently configured.";
+        }else{
+          courses.forEach(course=>{
+            const courseOfferings=offerings.filter(o=>o.course_id===course.id);
+            const row=document.createElement("article");
+            row.className="phase8-record-row phase8-subject-record";
+            const details=document.createElement("div");
+            const name=document.createElement("strong");
+            name.textContent=course.course_code+" — "+course.course_title;
+            const meta=document.createElement("small");
+            meta.textContent=Number(course.units).toFixed(1)+" credit units · "+courseOfferings.length+" class offering(s) across all terms";
+            details.append(name,meta);
+            const del=document.createElement("button");
+            del.type="button";
+            del.className="btn btn-danger phase8-subject-delete";
+            del.textContent="Delete subject";
+            del.addEventListener("click",async()=>{
+              const warning="PERMANENT SUBJECT DELETION\n\n"+
+                course.course_code+" — "+course.course_title+"\n\n"+
+                "This removes the subject from the catalog and permanently deletes ALL its class offerings across every academic term, student enrollments, course final grades, linked exams, exam submissions, assessment grades, questions, assignments, retake authorizations, and integrity records.\n\n"+
+                "This cannot be undone. Continue?";
+              if(!window.confirm(warning))return;
+              const typed=window.prompt("To confirm permanent deletion, type DELETE exactly.\n\nSubject: "+course.course_code);
+              if(typed!=="DELETE"){if(typed!==null)toast("Deletion cancelled: confirmation did not match.","error");return;}
+              del.disabled=true;del.textContent="Deleting…";
+              try{
+                const {data,error}=await state.supabase.rpc("academix_admin_delete_subject",{
+                  p_course_id:course.id,p_confirmation:"DELETE"
+                });
+                if(error)throw error;
+                toast("Subject deleted. Removed "+(data.offerings_deleted||0)+" offering(s), "+(data.enrollments_deleted||0)+" enrollment(s), "+(data.exams_deleted||0)+" exam(s), "+(data.assessment_grades_deleted||0)+" assessment grade(s), and "+(data.final_course_grades_deleted||0)+" final course grade(s).","success");
+                await loadPhase8Admin();
+              }catch(error){
+                del.disabled=false;del.textContent="Delete subject";
+                toast("Subject was not deleted: "+(error.message||"Database operation failed."),"error");
+              }
+            });
+            row.append(details,del);subjectRecords.append(row);
+          });
+        }
+      }
       const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
       const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
