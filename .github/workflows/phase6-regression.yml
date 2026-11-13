@@ -15,7 +15,6 @@ on:
       - "tests/phase8-semester-evaluations.test.mjs"
       - "tests/final-launch-overhaul.test.mjs"
       - "tests/weighted-course-grading.test.mjs"
-      - "tests/weighted-course-grading.test.mjs"
       - "supabase/migrations/**"
   pull_request:
     branches: [main]
