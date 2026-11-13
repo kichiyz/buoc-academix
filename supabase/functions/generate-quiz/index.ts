@@ -119,20 +119,32 @@ ${material}`;
       });
       let response: Response | undefined;
       let result: any;
-      // Retry one transient provider timeout or overload response. Never retry
-      // authentication, model, or quota errors, which require configuration/action.
+      // Keep the two-attempt provider window bounded below the Supabase
+      // Edge Function wall-clock limit, and log each attempt for diagnosis.
       for (let attempt = 1; attempt <= 2; attempt++) {
+        const attemptStartedAt = Date.now();
         try {
           response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(38000),
+            signal: AbortSignal.timeout(50000),
             body: requestBody,
+          });
+          console.log("Gemini attempt completed:", {
+            attempt,
+            duration_ms: Date.now() - attemptStartedAt,
+            status: response.status,
           });
           result = await response.json();
         } catch (error) {
           const timeoutError = error instanceof Error
             && (error.name === "TimeoutError" || /signal timed out|timed out/i.test(error.message));
+          console.error("Gemini attempt failed:", {
+            attempt,
+            duration_ms: Date.now() - attemptStartedAt,
+            name: error instanceof Error ? error.name : "UnknownError",
+            message: error instanceof Error ? error.message : String(error),
+          });
           if (!timeoutError || attempt === 2) throw error;
           console.warn("Gemini request timed out; retrying once after backoff.");
           await new Promise(resolve => setTimeout(resolve, 1200));
@@ -142,7 +154,7 @@ ${material}`;
         console.warn("Gemini temporarily unavailable; retrying once after backoff. HTTP", response.status);
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
-      console.log("Gemini request duration_ms:", Date.now() - aiStartedAt, "status:", response?.status ?? "timeout");
+      console.log("Gemini total request duration_ms:", Date.now() - aiStartedAt, "status:", response?.status ?? "timeout");
       if (!response) throw new Error("Gemini request timed out after one automatic retry.");
       if (!response.ok) {
         console.error("Gemini request failed:", response.status, JSON.stringify(result).slice(0, 1000));
