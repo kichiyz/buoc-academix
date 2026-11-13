@@ -768,19 +768,22 @@
     if(!status||!records)return;
     status.textContent="Loading academic configuration…";
     try {
-      const [termsR,coursesR,offeringsR,bandsR]=await Promise.all([
+      const [termsR,coursesR,offeringsR,bandsR,peopleR]=await Promise.all([
         state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
         state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
         state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false}),
-        state.supabase.from("term_grade_bands").select("term_id,label,min_percentage,max_percentage,gwa_value").order("min_percentage")
+        state.supabase.from("term_grade_bands").select("term_id,label,min_percentage,max_percentage,gwa_value").order("min_percentage"),
+        state.supabase.rpc("academix_admin_list_people")
       ]);
-      for(const r of [termsR,coursesR,offeringsR,bandsR])if(r.error)throw r.error;
-      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[];
+      for(const r of [termsR,coursesR,offeringsR,bandsR,peopleR])if(r.error)throw r.error;
+      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[],people=peopleR.data||[];
       const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
       fill("#phase8-offering-term",terms,t=>t.academic_year+" / "+t.semester+(t.is_active?" (active)":""),"Select academic term");
       fill("#phase8-band-term",terms,t=>t.academic_year+" / "+t.semester,"Select academic term");
       fill("#phase8-offering-course",courses,c=>c.course_code+" — "+c.course_title,"Select course");
       fill("#phase8-enrollment-offering",offerings,o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);return (c?.course_code||"Course")+" / "+(t?.academic_year||"Term")+" / "+o.section+" / "+o.id.slice(0,8);},"Select offering");
+      fill("#phase8-instructor-id",people.filter(p=>p.role==="teacher"),p=>(p.full_name||"Teacher")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified instructor");
+      fill("#phase8-student-id",people.filter(p=>p.role==="student"),p=>(p.full_name||"Student")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified student");
       records.replaceChildren();
       const summary=document.createElement("p");summary.textContent=terms.length+" term(s), "+courses.length+" course(s), "+offerings.length+" offering(s) configured.";records.append(summary);
       const list=document.createElement("div");list.className="phase8-record-list";
