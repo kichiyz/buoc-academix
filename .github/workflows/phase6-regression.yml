@@ -10,6 +10,8 @@ on:
       - "academix-config.js"
       - "tests/phase6-platform-configuration.test.mjs"
       - ".github/workflows/phase6-regression.yml"
+      - "supabase/functions/generate-quiz/index.ts"
+      - "tests/gemini-retry-resilience.test.mjs"
   pull_request:
     branches: [main]
     paths:
@@ -19,6 +21,8 @@ on:
       - "academix-config.js"
       - "tests/phase6-platform-configuration.test.mjs"
       - ".github/workflows/phase6-regression.yml"
+      - "supabase/functions/generate-quiz/index.ts"
+      - "tests/gemini-retry-resilience.test.mjs"
   workflow_dispatch:
 
 permissions:
@@ -37,3 +41,5 @@ jobs:
           node-version: 20
       - name: Run Phase 6 regression tests
         run: node --test tests/phase6-platform-configuration.test.mjs
+      - name: Run Gemini retry resilience tests
+        run: node --test tests/gemini-retry-resilience.test.mjs

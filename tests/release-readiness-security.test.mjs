@@ -31,15 +31,20 @@ test("canonical schema uses valid dollar quoting for secure exam submission", ()
 });
 
 
-test("Gemini quiz generation retries one transient timeout and 503/504 response", () => {
-  assert.match(generateQuiz, /attempt <= 2/);
+test("Gemini quiz generation uses bounded retries for transient provider failures", () => {
+  assert.match(generateQuiz, /const maxAttempts = 3/);
   assert.match(generateQuiz, /\[503, 504\]\.includes\(response\.status\)/);
-  assert.match(generateQuiz, /AbortSignal\.timeout\(50000\)/);
+  assert.match(generateQuiz, /const totalRequestBudgetMs = 110000/);
+  assert.match(generateQuiz, /AbortSignal\.timeout\(attemptTimeoutMs\)/);
   assert.match(generateQuiz, /error\.name === "TimeoutError"/);
   assert.match(generateQuiz, /signal timed out\|timed out/i);
-  assert.match(generateQuiz, /Gemini request timed out; retrying once after backoff/);
-  assert.match(generateQuiz, /setTimeout\(resolve, 1200\)/);
-  assert.match(generateQuiz, /Gemini remained temporarily unavailable after one automatic retry/);
+  assert.match(generateQuiz, /const retryDelaysMs = \[1500, 3000\]/);
+  assert.match(generateQuiz, /response\.headers\.get\("retry-after"\)/);
+  assert.match(generateQuiz, /retryAfterMs > 5000/);
+  assert.match(generateQuiz, /let timeoutRetryUsed = false/);
+  assert.match(generateQuiz, /Gemini is temporarily overloaded or unavailable after bounded retries/);
+  assert.match(generateQuiz, /retryable: true/);
+  assert.match(generateQuiz, /provider_status: response\.status/);
   assert.match(generateQuiz, /GEMINI_DIAGNOSTIC_PROBE/);
   assert.match(generateQuiz, /Gemini diagnostic probe:/);
   assert.match(generateQuiz, /AbortSignal\.timeout\(15000\)/);
