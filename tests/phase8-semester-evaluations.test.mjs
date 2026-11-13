@@ -45,7 +45,7 @@ test("administrators can configure terms, courses, offerings, enrollments, and g
   assert.match(html, /id="phase8-course-form"/);
   assert.match(html, /id="phase8-offering-form"/);
   assert.match(html, /id="phase8-enrollment-form"/);
-  assert.match(html, /id="phase8-band-form"/);
+  assert.match(html, /id="phase8-band-form"/);\n  assert.match(migration, /academix_admin_list_people/);
 });
 
 test("teachers can finalize only grades in their own offerings", () => {
@@ -62,7 +62,7 @@ test("final GWA is server-gated until evaluations, grades, and conversion bands 
   assert.match(migration, /ungraded_courses/);
   assert.match(migration, /unmapped_grades/);
   assert.match(migration, /sum\(b\.gwa_value\*c\.units\)\/nullif\(sum\(c\.units\),0\)/);
-  assert.match(migration, /BU grading conversion bands/);
+  assert.match(migration, /no BU conversion values are hard-coded/);
 });
 
 test("individual assessment grades remain visible separately from the locked final GWA", () => {
