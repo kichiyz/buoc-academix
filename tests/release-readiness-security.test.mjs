@@ -29,3 +29,19 @@ test("canonical schema uses valid dollar quoting for secure exam submission", ()
   assert.match(submitExam, /\n\$\$;\s*$/);
   assert.doesNotMatch(submitExam, /\nAS \$\s*DECLARE/i);
 });
+
+
+test("Gemini quiz generation retries only transient 503/504 responses once", () => {
+  assert.match(generateQuiz, /attempt <= 2/);
+  assert.match(generateQuiz, /\[503, 504\]\.includes\(response\.status\)/);
+  assert.match(generateQuiz, /AbortSignal\.timeout\(38000\)/);
+  assert.match(generateQuiz, /setTimeout\(resolve, 1200\)/);
+  assert.match(generateQuiz, /Gemini remained temporarily unavailable after one automatic retry/);
+  assert.match(generateQuiz, /select\("role,suspended_at"\)/);
+});
+
+test("quiz-generation client timeout allows the bounded backend retry window", async () => {
+  const app = await readFile("app.js", "utf8");
+  assert.match(app, /Quiz generation timed out after 90 seconds/);
+  assert.match(app, /\}\), 90000\)/);
+});
