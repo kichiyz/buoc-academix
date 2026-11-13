@@ -811,7 +811,7 @@
       const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
       const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
-    } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="The Phase 8 migration is installed. Check administrator verification, table permissions, RLS policies, and the error above; then refresh.";}
+    } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="Check administrator verification, table permissions, RLS policies, and the database error above; then refresh.";}
   }
   async function savePhase8Rpc(fn,args,success) {
     const {data,error}=await state.supabase.rpc(fn,args);if(error)throw error;
@@ -1210,10 +1210,10 @@
     }
     const savedTheme = localStorage.getItem("academix-theme");
     document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
-    const themeButton = $("#theme-toggle");
-    const syncThemeButton = () => { if (themeButton) { const dark = document.documentElement.dataset.theme === "dark"; themeButton.textContent = dark ? "☀ Light mode" : "☾ Dark mode"; themeButton.setAttribute("aria-pressed", String(dark)); } };
-    syncThemeButton();
-    themeButton?.addEventListener("click", () => { const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; localStorage.setItem("academix-theme", next); syncThemeButton(); });
+    const themeButtons = [$("#theme-toggle"), $("#theme-toggle-auth")].filter(Boolean);
+    const syncThemeButtons = () => { const dark = document.documentElement.dataset.theme === "dark"; themeButtons.forEach(button => { button.textContent = dark ? "☀ Light mode" : "☾ Dark mode"; button.setAttribute("aria-pressed", String(dark)); }); };
+    syncThemeButtons();
+    themeButtons.forEach(button => button.addEventListener("click", () => { const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; localStorage.setItem("academix-theme", next); syncThemeButtons(); }));
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));
     $("#auth-form").addEventListener("submit", authSubmit);
