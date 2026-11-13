@@ -47,10 +47,11 @@ Deno.serve(async (req) => {
     const count = Number(body.count);
     const questionType = body.questionType;
     const difficulty = body.difficulty;
+    const mixDistribution = body.mixDistribution === "balanced" ? "balanced" : "flexible";
 
     if (!title) return json({ error: "Enter a quiz title." }, 400);
     if (material.length < 20) return json({ error: "Add at least 20 characters of study material so the questions can be based on it." }, 400);
-    if (![5, 10, 15, 20, 25].includes(count)) return json({ error: "Choose a question count of 5, 10, 15, 20, or 25." }, 400);
+    if (![5, 10, 15, 20, 25, 50].includes(count)) return json({ error: "Choose a question count of 5, 10, 15, 20, 25, or 50." }, 400);
     if (!["mixed", "multiple_choice", "true_false"].includes(questionType)) return json({ error: "Choose a supported question type." }, 400);
     if (!["easy", "medium", "hard"].includes(difficulty)) return json({ error: "Choose easy, medium, or hard difficulty." }, 400);
 
@@ -81,7 +82,8 @@ Deno.serve(async (req) => {
     const prompt = `Create exactly ${count} original quiz questions based only on the study material below.
 Quiz title: ${title}
 Difficulty: ${difficulty}
-Question type selection: ${questionType} (mixed means a useful mix of multiple choice and true/false; multiple_choice means all multiple choice; true_false means all true/false).
+Question type selection: ${questionType} (mixed means multiple choice and true/false; multiple_choice means all multiple choice; true_false means all true/false).
+${questionType === "mixed" && mixDistribution === "balanced" ? `For a balanced mixed exam, produce exactly ${count / 2} multiple-choice and ${count / 2} true/false questions. Alternate the types where practical.` : ""}
 Return only a JSON object matching the supplied schema. Each question must have a clear prompt, one unambiguous correct answer, and a brief explanation grounded in the material.
 For multiple_choice, provide exactly four distinct options and set correct_answer to exactly one option string.
 For true_false, provide options exactly ["True","False"] and correct_answer exactly "True" or "False".
@@ -178,12 +180,17 @@ ${material}`;
       const answer = typeof q.correct_answer === "string" ? q.correct_answer.trim() : "";
       const explanation = typeof q.explanation === "string" ? q.explanation.trim() : "";
       if (!promptText || !answer || !options.includes(answer) || !explanation) throw new Error(`Question ${index + 1} has invalid fields.`);
-      if (type === "multiple_choice" && options.length !== 4) throw new Error(`Question ${index + 1} must have four answer choices.`);
+      if (type === "multiple_choice" && (options.length !== 4 || new Set(options).size !== 4)) throw new Error(`Question ${index + 1} must have four answer choices.`);
       if (type === "true_false" && (options.length !== 2 || !options.includes("True") || !options.includes("False"))) throw new Error(`Question ${index + 1} has invalid true/false choices.`);
       if ((questionType === "multiple_choice" && type !== "multiple_choice") || (questionType === "true_false" && type !== "true_false")) throw new Error("The AI returned a question type that does not match your selection.");
       if (type !== "multiple_choice" && type !== "true_false") throw new Error(`Question ${index + 1} has an unsupported type.`);
       return { position: index + 1, question_type: type, prompt: promptText, options, correct_answer: answer, explanation, points: 1 };
     });
+    if (questionType === "mixed" && mixDistribution === "balanced") {
+      const mc = questions.filter(q => q.question_type === "multiple_choice").length;
+      const tf = questions.filter(q => q.question_type === "true_false").length;
+      if (mc !== count / 2 || tf !== count / 2) return json({ error: "The AI did not follow the required balanced question distribution. Generate again." }, 502);
+    }
     return json({ title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim().slice(0, 160) : title, questions });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
