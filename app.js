@@ -876,7 +876,7 @@
     if(state.profile?.role!=="admin")return;const status=$("#academic-placement-status"),list=$("#unassigned-student-list");if(!status||!list)return;
     status.textContent="Checking student accounts for missing academic placement…";
     try{const {data,error}=await state.supabase.rpc("academix_admin_list_unassigned_students");if(error)throw error;
-      fillAcademicSelect("#placement-student",data||[],x=>(x.full_name||"Student")+" · "+(x.bu_id||x.email||x.student_id.slice(0,8)),"Choose unassigned student");
+      fillAcademicSelect("#placement-student",(data||[]).map(x=>({...x,id:x.student_id})),x=>(x.full_name||"Student")+" · "+(x.bu_id||x.email||x.student_id.slice(0,8)),"Choose unassigned student");
       status.textContent=(data||[]).length+" student account(s) need placement.";list.replaceChildren();
       (data||[]).slice(0,50).forEach(x=>{const row=document.createElement("div");row.className="grade-directory-row";const n=document.createElement("strong");n.textContent=x.full_name||"Student";const m=document.createElement("small");m.textContent=(x.bu_id||"No BU ID")+" · "+(x.email||"");row.append(n,m);list.append(row);});
       if(!(data||[]).length)list.textContent="All verified student accounts have complete academic placement.";
@@ -894,8 +894,8 @@
     target.replaceChildren();if(!rows?.length){target.innerHTML='<div class="empty-state">No grade records match this class filter.</div>';return;}
     rows.forEach(x=>{const row=document.createElement("article");row.className="grade-directory-row";const who=document.createElement("div"),name=document.createElement("strong"),meta=document.createElement("small");
       name.textContent=x.full_name||"Student";meta.textContent=(x.bu_id||"No BU ID")+(admin?" · "+[x.campus_name,x.college_name,x.program_name,x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" / "):" · "+[x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" "));
-      who.append(name,meta);const course=document.createElement("div");course.textContent=(x.course_code||"Course")+" · "+(x.course_title||"");const exam=document.createElement("div");exam.textContent=x.exam_title||"Assessment";
-      const score=document.createElement("div");score.textContent=Number(x.score).toFixed(2)+" / "+Number(x.max_score).toFixed(2)+" ("+Number(x.percentage).toFixed(2)+"%)";row.append(who,course,exam,score);target.append(row);});
+      who.append(name,meta);const course=document.createElement("div");course.textContent=(x.course_code||"Course")+" · "+(x.course_title||"");const exam=document.createElement("div");exam.textContent=x.record_type==="course_final"?"Final course grade":(x.exam_title||"Assessment");
+      const score=document.createElement("div");score.textContent=Number(x.score).toFixed(2)+" / "+Number(x.max_score).toFixed(2)+" ("+Number(x.percentage).toFixed(2)+"%)"+(x.gwa_value==null?"":" · GWA "+Number(x.gwa_value).toFixed(2));row.append(who,course,exam,score);target.append(row);});
   }
   async function loadAdminGradeDirectory(){
     const status=$("#admin-grade-directory-status"),list=$("#admin-grade-directory-list");if(!status||!list||state.profile?.role!=="admin")return;
