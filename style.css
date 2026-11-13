@@ -471,3 +471,5 @@ button,.btn{line-height:1.35}
 .phase8-gwa-result strong{font-size:clamp(2rem,5vw,3rem);color:var(--gold,#efbe4d)}
 @media(max-width:760px){.phase8-grade-row{grid-template-columns:1fr 1fr}.phase8-grade-row>div{grid-column:1/-1}.phase8-grade-row button{width:100%}.phase8-two-fields{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.phase8-grade-row{grid-template-columns:1fr}.phase8-grade-row>div{grid-column:auto}.phase8-gwa-result{align-items:flex-start;flex-direction:column}}
+
+.phase8-admin-data{min-width:0}.phase8-admin-data>h3{margin-bottom:8px}.phase8-record-row{line-height:1.5}
