@@ -746,7 +746,7 @@ REVOKE ALL ON FUNCTION public.academix_log_exam_integrity_event(uuid,text,jsonb)
 REVOKE ALL ON FUNCTION public.academix_teacher_integrity_events(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.academix_admin_list_unassigned_students() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_admin_force_assign_student(uuid,uuid,uuid,uuid,smallint,text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.academix_admin_save_scoped_offering(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.academix_admin_save_scoped_offering(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_admin_grade_directory(uuid,uuid,uuid,smallint,text,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_teacher_grade_directory(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_teacher_grade_submission(uuid,numeric,text) TO authenticated;
