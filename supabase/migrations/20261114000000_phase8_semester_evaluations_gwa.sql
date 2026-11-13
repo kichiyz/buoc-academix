@@ -115,7 +115,7 @@ alter table public.course_final_grades enable row level security;
 
 revoke all on public.academic_terms, public.academic_courses, public.course_offerings,
   public.course_enrollments, public.instructor_evaluations, public.term_grade_bands,
-  public.course_final_grades from anon;
+  public.course_final_grades from anon, authenticated;
 grant select on public.academic_terms, public.academic_courses, public.course_offerings,
   public.course_enrollments, public.term_grade_bands, public.course_final_grades to authenticated;
 -- Evaluation rows are deliberately not directly selectable by instructors or administrators.
@@ -217,7 +217,10 @@ create or replace function public.academix_teacher_set_final_grade(
 ) returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
 declare v_id uuid;
 begin
-  if auth.uid() is null or not public.is_verified() then raise exception 'Verified account required.' using errcode='42501'; end if;
+  if auth.uid() is null or not public.is_verified()
+    or (select role from public.profiles where id=auth.uid()) is distinct from 'teacher'::public.app_role then
+    raise exception 'Verified Teacher account required.' using errcode='42501';
+  end if;
   if not exists(select 1 from public.course_enrollments e join public.course_offerings o on o.id=e.offering_id
     where e.id=p_enrollment_id and o.instructor_id=auth.uid()) then
     raise exception 'You may only finalize grades for students in your assigned course offerings.' using errcode='42501';
