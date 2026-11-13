@@ -40,6 +40,10 @@ test("Gemini quiz generation retries one transient timeout and 503/504 response"
   assert.match(generateQuiz, /Gemini request timed out; retrying once after backoff/);
   assert.match(generateQuiz, /setTimeout\(resolve, 1200\)/);
   assert.match(generateQuiz, /Gemini remained temporarily unavailable after one automatic retry/);
+  assert.match(generateQuiz, /GEMINI_DIAGNOSTIC_PROBE/);
+  assert.match(generateQuiz, /Gemini diagnostic probe:/);
+  assert.match(generateQuiz, /AbortSignal\.timeout\(15000\)/);
+  assert.match(generateQuiz, /Gemini quiz request configuration:/);
   assert.match(generateQuiz, /select\("role,suspended_at"\)/);
 });
 
