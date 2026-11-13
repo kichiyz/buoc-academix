@@ -9,7 +9,9 @@ BEGIN;
 -- caller, verification, published status, and assignment, and returns only
 -- student-safe question columns (never correct_answer or explanation).
 
-CREATE OR REPLACE FUNCTION public.get_exam_questions(p_exam_id uuid)
+DROP FUNCTION IF EXISTS public.get_exam_questions(uuid);
+
+CREATE FUNCTION public.get_exam_questions(p_exam_id uuid)
 RETURNS TABLE(
   id uuid,
   "position" integer,
