@@ -1245,3 +1245,79 @@ select option { color:var(--text); background:var(--panel); }
 )::placeholder {
   color:#aaa0ba!important;
 }
+
+
+/* FINAL LIGHT-MODE AUTH AND LOCKED-FEATURE CONTRAST */
+:root:not([data-theme="dark"]) #auth-view .tabs {
+  background:#e9edf0!important;
+  border:1px solid #d2dbe0;
+  box-shadow:none;
+}
+:root:not([data-theme="dark"]) #auth-view .tabs .tab {
+  color:#52636d!important;
+  background:transparent!important;
+}
+:root:not([data-theme="dark"]) #auth-view .tabs .tab.active {
+  color:#fff!important;
+  background:#392b4b!important;
+  box-shadow:0 2px 7px rgba(32,29,43,.16);
+}
+:root:not([data-theme="dark"]) .ai-locked-panel {
+  background:#f2f5f7!important;
+  border:1px solid #d1dce2!important;
+  color:#24343d!important;
+}
+:root:not([data-theme="dark"]) .ai-locked-panel h3 {
+  color:#24343d!important;
+}
+:root:not([data-theme="dark"]) .ai-locked-panel p:not(.eyebrow) {
+  color:#5b707c!important;
+}
+:root:not([data-theme="dark"]) .ai-locked-panel .eyebrow {
+  color:#655080!important;
+}
+.ai-lock-icon {
+  width:48px;
+  height:48px;
+  min-width:48px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  font:700 .82rem "Space Grotesk",sans-serif;
+  letter-spacing:.08em;
+  color:#fff;
+  background:#4a365c;
+  border:1px solid #5b466d;
+}
+:root:not([data-theme="dark"]) .ai-lock-icon {
+  color:#fff!important;
+  background:#4a365c!important;
+  border-color:#4a365c!important;
+}
+.phase8-subject-catalog { margin-top:18px; }
+.phase8-subject-record {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:13px 15px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  margin:8px 0;
+}
+.phase8-subject-record>div { min-width:0; }
+.phase8-subject-record strong,
+.phase8-subject-record small { display:block; }
+.phase8-subject-record small { margin-top:5px; color:var(--muted); }
+.phase8-subject-delete {
+  flex:none;
+  color:#fff!important;
+  background:#a33340!important;
+  border-color:#a33340!important;
+}
+.phase8-subject-delete:hover { background:#852632!important; }
+.phase8-subject-delete:disabled { opacity:.65; cursor:wait; }
+@media(max-width:600px) {
+  .phase8-subject-record { align-items:stretch; flex-direction:column; }
+  .phase8-subject-delete { width:100%; }
+}
