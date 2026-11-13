@@ -834,18 +834,62 @@
     target.textContent="Loading enrolled students…";
     try{
       const {data,error}=await state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering});if(error)throw error;
+      const ids=(data||[]).map(x=>x.enrollment_id);
+      let statusRows=[];
+      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error)throw sr.error;statusRows=sr.data||[];}
+      const statuses=new Map(statusRows.map(x=>[x.enrollment_id,x]));
       target.replaceChildren();
       if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
       data.forEach(student=>{
+        const current=statuses.get(student.enrollment_id)||{outcome:"active",drop_requested_at:null};
         const row=document.createElement("form");row.className="phase8-grade-row";
         const info=document.createElement("div"),name=document.createElement("strong"),id=document.createElement("small");
         name.textContent=student.student_name;id.textContent=(student.bu_id||"No BU ID")+" · "+student.student_id;info.append(name,id);
         const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final %";grade.value=student.percentage??"";
         const remarks=document.createElement("input");remarks.type="text";remarks.maxLength=1000;remarks.placeholder="Remarks (optional)";remarks.value=student.remarks||"";
-        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save grade";
-        row.append(info,grade,remarks,save);row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast("Final course grade saved.","success");}catch(err){toast(err.message,"error");}finally{save.disabled=false;}});target.append(row);
+        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save final grade";
+        const tools=document.createElement("div");tools.className="course-outcome-tools";
+        const badge=document.createElement("span");badge.className="result-status "+(current.outcome==="inc"?"status-inc":current.outcome==="drp"?"status-drp":current.outcome==="passed"?"status-passed":current.outcome==="failed"?"status-failed":"status-pending");badge.textContent=current.outcome==="inc"?"INC":current.outcome==="drp"?"DRP":current.outcome==="passed"?"Passed":current.outcome==="failed"?"Failed":"In progress";
+        const request=document.createElement("small");request.className="muted";request.textContent=current.drop_requested_at&&current.outcome!=="drp"?"Student requested DRP — approval pending":current.outcome==="drp"?"Drop approved": " ";
+        const outcome=document.createElement("select");outcome.setAttribute("aria-label","Course outcome for "+student.student_name);
+        [["active","In progress"],["inc","INC — Allow compliance"],["drp","DRP — Approve drop"]].forEach(([v,label])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=label;outcome.append(opt);});
+        outcome.value=["active","inc","drp"].includes(current.outcome)?current.outcome:"active";
+        const apply=document.createElement("button");apply.type="button";apply.className="btn btn-quiet";apply.textContent="Apply outcome";apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;
+        outcome.addEventListener("change",()=>{apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;});
+        apply.addEventListener("click",async()=>{apply.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_course_outcome",{p_enrollment_id:student.enrollment_id,p_outcome:outcome.value});if(error)throw error;toast(outcome.value==="inc"?"Student marked INC.":outcome.value==="drp"?"Student drop approved.":"Course returned to in progress.","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");apply.disabled=false;}});
+        tools.append(badge,request,outcome,apply);
+        row.append(info,grade,remarks,save,tools);
+        row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast(Number(grade.value)>=75?"Final grade saved — Passed (75% or above).":"Final grade saved — Failed (below 75%).","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");save.disabled=false;}});
+        target.append(row);
       });
     }catch(e){target.textContent="Could not load roster: "+e.message;}
+  }
+  async function loadStudentCourseOutcomes(){
+    const status=$("#student-course-status"),target=$("#student-course-list");if(!status||!target||state.profile?.role!=="student")return;
+    status.textContent="Loading your enrolled courses…";target.replaceChildren();
+    try{
+      const {data,error}=await state.supabase.rpc("academix_student_course_outcomes");if(error)throw error;
+      if(!data?.length){status.textContent="No enrolled courses were found for the active academic term.";return;}
+      status.textContent=data.length+" enrolled course(s) in the active term.";
+      data.forEach(course=>{
+        const row=document.createElement("article");row.className="student-course-row";
+        const info=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("small");
+        title.textContent=course.course_code+" — "+course.course_title;meta.textContent="Section "+course.section;info.append(title,meta);
+        const actions=document.createElement("div");actions.style.display="flex";actions.style.alignItems="center";actions.style.gap="10px";actions.style.flexWrap="wrap";
+        const outcome=course.outcome||"active";
+        const badge=document.createElement("span");badge.className="result-status "+(outcome==="inc"?"status-inc":outcome==="drp"?"status-drp":outcome==="passed"?"status-passed":outcome==="failed"?"status-failed":"status-pending");badge.textContent=outcome==="inc"?"INC":outcome==="drp"?"DRP":outcome==="passed"?"Passed":outcome==="failed"?"Failed":"In progress";
+        actions.append(badge);
+        if(outcome!=="drp"){
+          if(course.drop_requested){const pending=document.createElement("small");pending.className="muted";pending.textContent="DRP request pending teacher approval";actions.append(pending);}
+          else{
+            const request=document.createElement("button");request.type="button";request.className="btn btn-quiet";request.textContent="Request to drop";
+            request.addEventListener("click",async()=>{if(!confirm("Send a request to drop "+course.course_code+"? Your teacher must approve it before the status becomes DRP."))return;request.disabled=true;try{const {error}=await state.supabase.rpc("academix_student_request_course_drop",{p_enrollment_id:course.enrollment_id});if(error)throw error;toast("Drop request sent to your instructor.","success");await loadStudentCourseOutcomes();}catch(err){toast(err.message,"error");request.disabled=false;}});
+            actions.append(request);
+          }
+        }else{const approved=document.createElement("small");approved.className="muted";approved.textContent="Drop approved by instructor";actions.append(approved);}
+        row.append(info,actions);target.append(row);
+      });
+    }catch(e){status.textContent="Course outcomes are unavailable. Apply the final launch database migration, then refresh. "+e.message;}
   }
   async function loadStudentEvaluations(){
     const status=$("#phase8-evaluation-status"),target=$("#phase8-evaluation-list");if(!status||!target)return;
@@ -911,6 +955,7 @@
         const detail = document.createElement("small"); detail.className = "muted"; detail.textContent = `${percentage == null ? "" : percentage.toFixed(2) + "%"}${g.feedback ? " · " + g.feedback : ""}`;
         name.append(detail); row.append(name, score, feedback); target.append(row);
       });
+      await loadStudentCourseOutcomes();
       await loadSemesterGwa();
     } catch (e) { target.innerHTML = '<div class="empty-state">Could not load grades. Check your Supabase policies.</div>'; toast(e.message, "error"); }
   }
@@ -1251,6 +1296,7 @@
     $("#phase8-band-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_grade_band",{p_term_id:$("#phase8-band-term").value,p_label:$("#phase8-band-label").value.trim(),p_min_percentage:Number($("#phase8-band-min").value),p_max_percentage:Number($("#phase8-band-max").value),p_gwa_value:Number($("#phase8-band-gwa").value)},"GWA conversion band saved.");}catch(err){toast(err.message,"error");}});
     $("#phase8-teacher-offering")?.addEventListener("change",loadTeacherPhase8Roster);
     $("#phase8-teacher-refresh")?.addEventListener("click",loadTeacherPhase8Offerings);
+    $("#refresh-student-courses")?.addEventListener("click",loadStudentCourseOutcomes);
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
