@@ -14,7 +14,7 @@ GitHub Pages serves the frontend from the repository root:
 - `academix-config.js` — public Supabase URL, publishable key, and environment label
 - `academix-build.js` — deployment build metadata
 - `supabase/schema.sql` — canonical database schema
-- `supabase/migrations/` — ordered database migrations
+- `supabase/migrations/` — ordered database migrations, including `20261115000000_final_launch_course_outcomes.sql` for course INC/DRP decisions and the 75% final-course outcome rule
 - `supabase/functions/` — server-side Supabase Edge Functions
 - `supabase/tests/` — database regression tests
 - `tests/` — frontend and application regression tests
@@ -57,7 +57,7 @@ The Pages workflow deploys the root frontend. Review the workflow run after merg
 ## Release checklist
 
 - [ ] Confirm the production Supabase URL and publishable key are correct.
-- [ ] Confirm all required migrations have been reviewed and applied to the intended project.
+- [ ] Confirm all required migrations have been reviewed and applied to the intended project, including the final launch course-outcomes migration.
 - [ ] Verify RLS policies and server-side authorization for every role and privileged action.
 - [ ] Verify student signup, email confirmation, institutional verification, and password recovery redirects.
 - [ ] Verify teacher authoring, publishing, assignment, submissions, grading, and results end to end.
