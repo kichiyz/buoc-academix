@@ -70,7 +70,7 @@ test("question images are stored in a restricted teacher-upload bucket and deliv
   assert.match(migration,/assessment-question-images/);
   assert.match(migration,/Teachers upload assessment question images/);
   assert.match(migration,/image_url text/);
-  assert.match(migration,/RETURNS TABLE\(id uuid,position integer,question_type text,prompt text,options jsonb,points numeric,image_url text\)/);
+  assert.match(migration,/RETURNS TABLE\(id uuid,"?position"? integer,question_type text,prompt text,options jsonb,points numeric,image_url text\)/);
   assert.match(app,/getPublicUrl\(path\)/);
   assert.match(app,/question-reference-image/);
 });
