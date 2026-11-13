@@ -1321,3 +1321,288 @@ select option { color:var(--text); background:var(--panel); }
   .phase8-subject-record { align-items:stretch; flex-direction:column; }
   .phase8-subject-delete { width:100%; }
 }
+
+
+/* BICOL UNIVERSITY PORTAL-ALIGNED LIGHT THEME
+   Clean blue institutional palette, white surfaces, clear hierarchy and accessible contrast.
+   Dark mode remains governed by the existing dark theme rules above. */
+:root:not([data-theme="dark"]) {
+  color-scheme:light;
+  --bg:#eff6fd;
+  --bg2:#e4eff9;
+  --panel:#ffffff;
+  --panel2:#f5f8fc;
+  --line:#d7e1eb;
+  --text:#172b43;
+  --muted:#536a80;
+  --gold:#0878bd;
+  --gold2:#075f98;
+  --purple:#0b70ad;
+  --danger:#b42332;
+  --success:#087b50;
+  --radius:14px;
+  --shadow:0 2px 7px rgba(16,42,67,.09),0 1px 2px rgba(16,42,67,.05);
+}
+:root:not([data-theme="dark"]) html,
+:root:not([data-theme="dark"]) body,
+:root:not([data-theme="dark"]) .app-shell {
+  color:var(--text);
+  background:var(--bg)!important;
+}
+:root:not([data-theme="dark"]) body {
+  background:linear-gradient(180deg,#eaf4fd 0%,#f4f8fc 280px,#eff6fd 100%)!important;
+}
+:root:not([data-theme="dark"]) .ambient { opacity:.035; filter:blur(130px); }
+:root:not([data-theme="dark"]) .ambient-one { background:#1684c8; }
+:root:not([data-theme="dark"]) .ambient-two { background:#7db7df; }
+
+/* Authentication: white sign-in card and calm university-blue brand surface. */
+:root:not([data-theme="dark"]) .auth-layout { color:var(--text); }
+:root:not([data-theme="dark"]) .brand-panel h1,
+:root:not([data-theme="dark"]) .brand-panel h1 span { color:#172b43!important; }
+:root:not([data-theme="dark"]) .brand-panel .eyebrow { color:#096da9!important; }
+:root:not([data-theme="dark"]) .brand-panel .lead { color:#536a80!important; }
+:root:not([data-theme="dark"]) .feature-pills span {
+  color:#34536d!important;
+  background:#fff!important;
+  border:1px solid #d6e2ed;
+  box-shadow:0 1px 2px rgba(16,42,67,.04);
+}
+:root:not([data-theme="dark"]) .brand-mark {
+  color:#fff!important;
+  background:#0b70ad!important;
+  box-shadow:0 5px 15px rgba(11,112,173,.16);
+}
+:root:not([data-theme="dark"]) .auth-card,
+:root:not([data-theme="dark"]) .panel {
+  color:var(--text);
+  background:#fff!important;
+  border:1px solid #d7e1eb!important;
+  box-shadow:0 2px 7px rgba(16,42,67,.09),0 1px 2px rgba(16,42,67,.05)!important;
+}
+:root:not([data-theme="dark"]) .auth-card h2 { color:#172b43!important; }
+:root:not([data-theme="dark"]) .auth-card .muted,
+:root:not([data-theme="dark"]) .auth-card .fine-print { color:#5c7185!important; }
+:root:not([data-theme="dark"]) #auth-view .tabs {
+  background:#f0f4f8!important;
+  border:1px solid #e0e7ef!important;
+  border-radius:11px;
+  padding:4px;
+}
+:root:not([data-theme="dark"]) #auth-view .tabs .tab {
+  color:#536a80!important;
+  background:transparent!important;
+}
+:root:not([data-theme="dark"]) #auth-view .tabs .tab.active {
+  color:#fff!important;
+  background:#124c73!important;
+  box-shadow:0 1px 3px rgba(16,42,67,.16);
+}
+:root:not([data-theme="dark"]) #auth-view label,
+:root:not([data-theme="dark"]) .form-panel label,
+:root:not([data-theme="dark"]) .publish-row label {
+  color:#263f56!important;
+}
+:root:not([data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root:not([data-theme="dark"]) textarea,
+:root:not([data-theme="dark"]) select {
+  color:#20364b!important;
+  background:#f7f9fc!important;
+  border:1px solid #cbd8e4!important;
+  border-radius:9px;
+  box-shadow:inset 0 1px 2px rgba(16,42,67,.025)!important;
+}
+:root:not([data-theme="dark"]) input::placeholder,
+:root:not([data-theme="dark"]) textarea::placeholder { color:#788b9c!important; }
+:root:not([data-theme="dark"]) select option { color:#20364b!important;background:#fff!important; }
+:root:not([data-theme="dark"]) input:focus,
+:root:not([data-theme="dark"]) textarea:focus,
+:root:not([data-theme="dark"]) select:focus {
+  border-color:#2387c5!important;
+  box-shadow:0 0 0 3px rgba(35,135,197,.14)!important;
+  outline:none;
+}
+:root:not([data-theme="dark"]) .btn-primary {
+  color:#fff!important;
+  background:#0878bd!important;
+  border-color:#0878bd!important;
+  box-shadow:0 2px 4px rgba(8,120,189,.15)!important;
+}
+:root:not([data-theme="dark"]) .btn-primary:hover { background:#075f98!important; }
+:root:not([data-theme="dark"]) .btn-quiet,
+:root:not([data-theme="dark"]) .theme-toggle {
+  color:#26445e!important;
+  background:#fff!important;
+  border:1px solid #cbd8e4!important;
+}
+:root:not([data-theme="dark"]) .text-button { color:#315a78!important; }
+:root:not([data-theme="dark"]) .text-button:hover { color:#075f98!important; }
+
+/* Main workspace follows the portal's navy navigation + pale-blue canvas. */
+:root:not([data-theme="dark"]) .dashboard { background:var(--bg)!important; }
+:root:not([data-theme="dark"]) .sidebar {
+  color:#eaf4fc!important;
+  background:#124b70!important;
+  border-right:1px solid #0e4264!important;
+  box-shadow:2px 0 8px rgba(16,42,67,.06);
+}
+:root:not([data-theme="dark"]) .brand-row,
+:root:not([data-theme="dark"]) .brand-row b,
+:root:not([data-theme="dark"]) .brand-row small { color:#fff!important; }
+:root:not([data-theme="dark"]) .sidebar-label { color:#b9d7ec!important; }
+:root:not([data-theme="dark"]) .nav-item {
+  color:#e1edf6!important;
+  background:transparent!important;
+}
+:root:not([data-theme="dark"]) .nav-item:hover {
+  color:#fff!important;
+  background:#ffffff16!important;
+}
+:root:not([data-theme="dark"]) .nav-item.active {
+  color:#fff!important;
+  background:#ffffff20!important;
+  box-shadow:inset 3px 0 #7fc6ef!important;
+}
+:root:not([data-theme="dark"]) .sidebar-bottom {
+  color:#d3e5f2!important;
+  border-color:#ffffff2b!important;
+}
+:root:not([data-theme="dark"]) .sidebar-bottom .signout { color:#fff!important; }
+:root:not([data-theme="dark"]) .main-area { color:var(--text); }
+:root:not([data-theme="dark"]) .topbar {
+  border-bottom:1px solid #d6e1eb!important;
+}
+:root:not([data-theme="dark"]) .topbar h1,
+:root:not([data-theme="dark"]) .topbar h2 { color:#172b43!important; }
+:root:not([data-theme="dark"]) .topbar .eyebrow { color:#0878bd!important; }
+:root:not([data-theme="dark"]) .profile-chip b { color:#20364b!important; }
+:root:not([data-theme="dark"]) .profile-chip small { color:#60768a!important; }
+:root:not([data-theme="dark"]) .environment-badge {
+  color:#34536d!important;
+  background:#eaf3fa!important;
+  border-color:#cbdce9!important;
+}
+
+/* White cards and calm blue accents across every role and administrative tool. */
+:root:not([data-theme="dark"]) :where(
+  .metric-card,.exam-card,.tool-card,.form-panel,.account-panel,.checklist-panel,
+  .dev-tool,.dev-info-panel,.dev-admin-panel,.platform-card,.phase-two-panel,
+  .phase8-admin-data,.academic-placement-panel,.grade-directory-panel,
+  .phase8-teacher-panel,.student-preview-panel,.workflow-modal-card,
+  .phase8-grade-row,.phase8-evaluation-card,.admin-user-card,.admin-audit-row,
+  .phase-two-row,.phase-three-question,.phase8-record-row,.placement-student-row,
+  .phase8-roster-row,.question-draft
+) {
+  color:var(--text)!important;
+  background:#fff!important;
+  border:1px solid #d7e1eb!important;
+  box-shadow:0 1px 3px rgba(16,42,67,.045);
+}
+:root:not([data-theme="dark"]) .welcome-banner,
+:root:not([data-theme="dark"]) .role-hero,
+:root:not([data-theme="dark"]) .student-hero,
+:root:not([data-theme="dark"]) .teacher-hero,
+:root:not([data-theme="dark"]) .dev-masthead {
+  color:#172b43!important;
+  background:linear-gradient(115deg,#e2f0fb 0%,#f8fbfe 100%)!important;
+  border:1px solid #d0e1ef!important;
+  box-shadow:var(--shadow)!important;
+}
+:root:not([data-theme="dark"]) :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,.dev-masthead
+) :where(h1,h2,h3,h4,strong,b) { color:#172b43!important; }
+:root:not([data-theme="dark"]) :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,.dev-masthead
+) :where(p:not(.eyebrow),small,.muted,.description,.subtitle) { color:#536a80!important; }
+:root:not([data-theme="dark"]) :where(
+  .welcome-banner,.role-hero,.student-hero,.teacher-hero,.dev-masthead
+) .eyebrow { color:#0878bd!important; }
+:root:not([data-theme="dark"]) .metric-card small,
+:root:not([data-theme="dark"]) .dev-tool p,
+:root:not([data-theme="dark"]) .dev-info-panel p,
+:root:not([data-theme="dark"]) .metric-card p,
+:root:not([data-theme="dark"]) .checklist-panel small { color:#5b7185!important; }
+:root:not([data-theme="dark"]) .metric-icon,
+:root:not([data-theme="dark"]) .tool-icon,
+:root:not([data-theme="dark"]) .dev-tool-icon {
+  color:#0878bd!important;
+  background:#e8f3fb!important;
+}
+:root:not([data-theme="dark"]) .text-link,
+:root:not([data-theme="dark"]) .platform-provider-links a { color:#0878bd!important; }
+:root:not([data-theme="dark"]) .dev-tag {
+  color:#285878!important;
+  background:#edf5fb!important;
+  border-color:#c9dfef!important;
+}
+:root:not([data-theme="dark"]) .dev-seal { border-color:#8bb9d8!important;box-shadow:0 0 0 8px #0b70ad08!important; }
+:root:not([data-theme="dark"]) .dev-seal span,
+:root:not([data-theme="dark"]) .dev-seal small { color:#285878!important; }
+:root:not([data-theme="dark"]) .dev-status-strip {
+  color:var(--text)!important;
+  background:#fff!important;
+  border:1px solid #d7e1eb!important;
+}
+:root:not([data-theme="dark"]) .dev-status-strip>div { border-color:#e0e8ef!important; }
+:root:not([data-theme="dark"]) .dev-status-strip small { color:#60768a!important; }
+:root:not([data-theme="dark"]) .dev-status-strip b { color:#20364b!important; }
+
+/* Tables, notices, assessment panels, statuses and secondary controls. */
+:root:not([data-theme="dark"]) table { color:#20364b!important;border-color:#d7e1eb!important; }
+:root:not([data-theme="dark"]) th { color:#294760!important;background:#f1f5f9!important; }
+:root:not([data-theme="dark"]) td { color:#314b62!important;border-color:#e1e8ef!important; }
+:root:not([data-theme="dark"]) .notice {
+  color:#654b1b!important;background:#fff8e8!important;border-color:#f0d79f!important;
+}
+:root:not([data-theme="dark"]) .empty-state {
+  color:#60768a!important;background:#f7f9fc!important;border-color:#cbd8e4!important;
+}
+:root:not([data-theme="dark"]) .exam-instructions,
+:root:not([data-theme="dark"]) .question-navigator-wrap,
+:root:not([data-theme="dark"]) .answer-option,
+:root:not([data-theme="dark"]) .question-jump,
+:root:not([data-theme="dark"]) .platform-health-row {
+  color:#29445c!important;background:#f5f8fb!important;border-color:#d7e1eb!important;
+}
+:root:not([data-theme="dark"]) .answer-option:has(input:checked),
+:root:not([data-theme="dark"]) .question-jump.answered {
+  color:#145b85!important;background:#e8f4fc!important;border-color:#7bb7dd!important;
+}
+:root:not([data-theme="dark"]) .score,
+:root:not([data-theme="dark"]) .timer,
+:root:not([data-theme="dark"]) .question-number { color:#0878bd!important; }
+:root:not([data-theme="dark"]) .timer { background:#eaf4fb!important;border-color:#c5dfef!important; }
+:root:not([data-theme="dark"]) .badge { color:#31536d!important;background:#eaf2f8!important; }
+:root:not([data-theme="dark"]) .badge-success,
+:root:not([data-theme="dark"]) .status-passed,
+:root:not([data-theme="dark"]) .state-available { color:#087b50!important;background:#e8f6ef!important; }
+:root:not([data-theme="dark"]) .badge-warning,
+:root:not([data-theme="dark"]) .status-inc { color:#86530b!important;background:#fff5df!important; }
+:root:not([data-theme="dark"]) .btn-danger,
+:root:not([data-theme="dark"]) .phase8-subject-delete { color:#fff!important;background:#b42332!important;border-color:#b42332!important; }
+:root:not([data-theme="dark"]) .toast { color:#20364b!important;background:#fff!important;border-color:#d7e1eb!important; }
+:root:not([data-theme="dark"]) .workflow-modal-backdrop { background:rgba(17,37,56,.55)!important; }
+:root:not([data-theme="dark"]) .workflow-modal-card { color:#20364b!important;background:#fff!important;border-color:#d7e1eb!important; }
+:root:not([data-theme="dark"]) .workflow-modal-footer { background:#f5f8fb!important; }
+:root:not([data-theme="dark"]) .workflow-search-label,
+:root:not([data-theme="dark"]) .workflow-form label { color:#29445c!important; }
+
+/* Keep the code editor intentionally dark; all surrounding UI uses the light palette. */
+:root:not([data-theme="dark"]) :where(
+  #json-authoring-input,.json-editor,.code-editor,.code-editor textarea,
+  .json-code,.monaco-editor,.CodeMirror,.json-code-editor,.json-example
+) {
+  color:#eeeaf7!important;background:#171324!important;border-color:#443957!important;
+}
+:root:not([data-theme="dark"]) :where(
+  #json-authoring-input,.json-editor,.code-editor,.json-code
+)::placeholder { color:#aaa0ba!important; }
+
+/* Mobile navigation remains navy, matching the desktop sidebar. */
+@media(max-width:600px) {
+  :root:not([data-theme="dark"]) .sidebar {
+    background:#124b70!important;
+    border-top:1px solid #0e4264!important;
+  }
+}
+:root:not([data-theme="dark"]) ::selection { color:#172b43;background:#b9dcf4; }
