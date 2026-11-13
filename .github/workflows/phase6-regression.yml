@@ -13,6 +13,7 @@ on:
       - "supabase/functions/generate-quiz/index.ts"
       - "tests/gemini-retry-resilience.test.mjs"
       - "tests/phase8-semester-evaluations.test.mjs"
+      - "tests/final-launch-overhaul.test.mjs"
       - "supabase/migrations/**"
   pull_request:
     branches: [main]
@@ -25,6 +26,9 @@ on:
       - ".github/workflows/phase6-regression.yml"
       - "supabase/functions/generate-quiz/index.ts"
       - "tests/gemini-retry-resilience.test.mjs"
+      - "tests/phase8-semester-evaluations.test.mjs"
+      - "tests/final-launch-overhaul.test.mjs"
+      - "supabase/migrations/**"
   workflow_dispatch:
 
 permissions:
@@ -47,3 +51,5 @@ jobs:
         run: node --test tests/gemini-retry-resilience.test.mjs
       - name: Run Phase 8 semester evaluation and GWA security tests
         run: node --test tests/phase8-semester-evaluations.test.mjs
+      - name: Run final launch regression tests
+        run: node --test tests/final-launch-overhaul.test.mjs

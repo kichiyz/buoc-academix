@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#100d1b">
+  <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="BUOC AcademiX — practical exams and quizzes for the Bicol University community.">
   <title>BUOC AcademiX</title>
   <link rel="icon" type="image/svg+xml" href="assets/buoc-favicon.svg?v=2">
   <link rel="apple-touch-icon" href="assets/buoc-favicon.svg?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=phase8-semester1">
+  <link rel="stylesheet" href="style.css?v=final-launch-overhaul">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <main class="app-shell">
     <section id="auth-view" class="auth-layout">
       <div class="brand-panel">
-        <div class="brand-mark">A<span>+</span></div>
+        <div class="brand-mark"><img src="assets/buoc-favicon.svg" alt="BUOC AcademiX"></div>
         <p class="eyebrow">BICOL UNIVERSITY • LEARNING PLATFORM</p>
         <h1>Learn boldly.<br><span>Prove your skills.</span></h1>
         <p class="muted lead">A focused space for practical exams, AI-assisted quiz creation, and academic progress.</p>
@@ -25,7 +25,8 @@
         <div class="aura-watermark" aria-hidden="true">✦</div>
       </div>
       <div class="auth-card panel">
-        <div class="mobile-brand"><div class="brand-mark small">A<span>+</span></div><b>BUOC AcademiX</b></div>
+        <div class="mobile-brand"><div class="brand-mark small"><img src="assets/buoc-favicon.svg" alt="BUOC AcademiX"></div><b>BUOC AcademiX</b></div>
+        <button id="theme-toggle-auth" class="theme-toggle auth-theme-toggle" type="button" aria-label="Toggle color theme">☾ Dark mode</button>
         <div class="tabs" role="tablist" aria-label="Authentication">
           <button class="tab active" data-auth-tab="signin" type="button">Sign in</button>
           <button class="tab" data-auth-tab="signup" type="button">Create account</button>
@@ -56,7 +57,7 @@
 
     <section id="dashboard-view" class="dashboard hidden">
       <aside class="sidebar">
-        <a class="brand-row" href="#" aria-label="BUOC AcademiX home"><div class="brand-mark small">A<span>+</span></div><div><b>BUOC AcademiX</b><small>ASSESSMENT PORTAL</small></div></a>
+        <a class="brand-row" href="#" aria-label="BUOC AcademiX home"><div class="brand-mark small"><img src="assets/buoc-favicon.svg" alt=""></div><div><b>BUOC AcademiX</b><small>ASSESSMENT PORTAL</small></div></a>
         <div class="sidebar-label">WORKSPACE</div>
         <nav id="main-nav">
           <button class="nav-item student-only hidden" data-view="student-home"><span>⌂</span> Learning Home</button>
@@ -78,7 +79,7 @@
       <div class="main-area">
         <header class="topbar">
           <div><p class="eyebrow" id="role-label">STUDENT WORKSPACE</p><h1 id="page-heading">My Exams</h1><span id="environment-badge" class="environment-badge">ENVIRONMENT: UNCONFIGURED</span></div>
-          <div class="profile-chip"><div class="avatar" id="avatar">A</div><div><b id="profile-name">Account</b><small id="profile-role">Student</small></div></div>
+          <div class="topbar-actions"><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle color theme">☾ Dark mode</button><div class="profile-chip"><div class="avatar" id="avatar">A</div><div><b id="profile-name">Account</b><small id="profile-role">Student</small></div></div></div>
         </header>
 
         <section class="page-view hidden role-home student-home" id="view-student-home">
@@ -90,7 +91,7 @@
           <div class="role-hero teacher-hero"><div><p class="eyebrow">TEACHER WORKSPACE</p><h2>Build better assessments.</h2><p>Prepare question sets, review generated drafts, and manage assessments available to your teaching account.</p><div class="hero-actions"><button class="btn btn-primary" data-go="generator">Create a quiz draft →</button><button class="btn btn-quiet" data-go="exams">Open exam library</button></div></div><div class="hero-emblem">▦</div></div>
           <div class="metric-grid"><article class="metric-card"><span class="metric-icon">✦</span><small>ASSESSMENT AUTHORING</small><strong>Quiz Studio</strong><p>Generate a draft from authorized study material, then review it.</p><button class="text-link" data-go="generator">Open Quiz Studio →</button></article><article class="metric-card"><span class="metric-icon">▤</span><small>ASSESSMENT LIBRARY</small><strong>Manage your workflow</strong><p>See assessments visible to your current database permissions.</p><button class="text-link" data-go="exams">Open library →</button></article><article class="metric-card"><span class="metric-icon">▥</span><small>RESULTS</small><strong>Review grades</strong><p>Inspect available grading results and export tools.</p><button class="text-link" data-go="grades">View results →</button></article></div>
           <section class="dev-admin-panel phase-two-panel phase8-teacher-panel">
-            <div class="dev-section-title"><div><p class="eyebrow">PHASE 8 / COURSE RECORDS</p><h2>Final course grades</h2><p class="muted">Enter the final percentage for students in your assigned course offerings. These grades contribute to the student's term GWA.</p></div><button id="phase8-teacher-refresh" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <div class="dev-section-title"><div><p class="eyebrow">COURSE RECORDS</p><h2>Final course grades</h2><p class="muted">Enter the final percentage for students in your assigned course offerings. These grades contribute to the student's term GWA.</p></div><button id="phase8-teacher-refresh" class="btn btn-quiet" type="button">↻ Refresh</button></div>
             <label>Assigned course offering<select id="phase8-teacher-offering"><option value="">Loading assigned courses…</option></select></label>
             <div id="phase8-teacher-roster" class="phase8-roster"><div class="empty-state">Choose an assigned course to load its roster.</div></div>
           </section>
@@ -108,7 +109,7 @@
             <article class="dev-tool"><div class="dev-tool-top"><span class="dev-tool-icon">⚙</span><span class="dev-tag">AVAILABLE</span></div><h3>Platform Configuration</h3><p>Inspect service health, deployment metadata, browser-local UI preferences, and provider dashboards.</p><button class="btn btn-primary" id="jump-platform-configuration" type="button">Open platform operations ↓</button></article>
           </div>
           <section class="dev-admin-panel phase-two-panel" id="platform-configuration">
-            <div class="dev-section-title"><div><p class="eyebrow">PHASE 6 / PLATFORM CONFIGURATION</p><h2>Platform operations</h2><p class="muted">Read-only service diagnostics, deployment metadata, safe local UI flags, and provider shortcuts.</p></div><button id="refresh-platform-status" class="btn btn-quiet" type="button">↻ Refresh status</button></div>
+            <div class="dev-section-title"><div><p class="eyebrow">PLATFORM CONFIGURATION</p><h2>Platform operations</h2><p class="muted">Read-only service diagnostics, deployment metadata, safe local UI flags, and provider shortcuts.</p></div><button id="refresh-platform-status" class="btn btn-quiet" type="button">↻ Refresh status</button></div>
             <div class="platform-grid">
               <article class="platform-card"><div class="platform-card-heading"><h3>Service health</h3><span class="dev-tag">LIVE CHECK</span></div><p class="muted platform-diagnostic-hint">Checks the configured Supabase Auth endpoint and the signed-in user's permitted database read. A browser/network failure is not proof of a provider outage.</p><div id="platform-health-status" class="platform-health-list"><div class="platform-health-row"><span>Authentication API</span><b class="platform-state state-unknown">Not checked</b></div><div class="platform-health-row"><span>Database access</span><b class="platform-state state-unknown">Not checked</b></div></div><small class="platform-diagnostic-hint">Auth health is a provider endpoint check; database status is scoped to this signed-in administrator and current RLS permissions.</small><small id="platform-health-checked" class="muted">No diagnostic run yet.</small></article>
               <article class="platform-card"><div class="platform-card-heading"><h3>Deployment information</h3><span class="dev-tag">PUBLIC METADATA</span></div><dl class="platform-metadata"><div><dt>Environment</dt><dd id="platform-build-environment">—</dd></div><div><dt>Build version</dt><dd id="platform-build-version">Not supplied</dd></div><div><dt>Commit</dt><dd id="platform-build-commit">Not supplied by deployment</dd></div><div><dt>Build timestamp</dt><dd id="platform-build-time">Not supplied by deployment</dd></div><div><dt>Source branch</dt><dd id="platform-build-branch">Not supplied by deployment</dd></div></dl><p class="fine-print platform-diagnostic-hint">Build version, commit, timestamp, and source branch are generated by the GitHub Actions Pages build. Missing metadata is shown explicitly rather than guessed.</p></article>
@@ -118,12 +119,12 @@
             <div class="notice">Security boundary: these controls are operational visibility only. No service-role keys, AI provider keys, deployment secrets, or privileged infrastructure mutations are exposed here. Server-side authorization and database policies remain authoritative.</div>
           </section>
           <section class="dev-admin-panel phase-two-panel">
-            <div class="dev-section-title"><div><p class="eyebrow">PHASE 2 / READ-ONLY</p><h2>Exam Registry</h2><p class="muted">Read exam metadata permitted by the active Supabase policies. This tool does not edit or publish exams.</p></div><button id="refresh-exam-registry" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <div class="dev-section-title"><div><p class="eyebrow">READ-ONLY</p><h2>Exam Registry</h2><p class="muted">Read exam metadata permitted by the active Supabase policies. This tool does not edit or publish exams.</p></div><button id="refresh-exam-registry" class="btn btn-quiet" type="button">↻ Refresh</button></div>
             <div class="admin-search-row"><label for="exam-registry-search">Filter by title, status, or exam ID</label><div><input id="exam-registry-search" type="search" placeholder="Search exams…" maxlength="120"><button id="search-exam-registry" class="btn btn-primary" type="button">Filter</button></div></div>
             <div id="exam-registry-status" class="empty-state">Registry has not been loaded.</div><div id="exam-registry-list" class="phase-two-list"></div>
           </section>
           <section class="dev-admin-panel phase-two-panel">
-            <div class="dev-section-title"><div><p class="eyebrow">PHASE 2 / READ-ONLY</p><h2>Results Inspector</h2><p class="muted">Inspect submission status, attempt number, timestamps, and recorded scores. Access remains constrained by database RLS.</p></div><button id="refresh-results-inspector" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <div class="dev-section-title"><div><p class="eyebrow">READ-ONLY</p><h2>Results Inspector</h2><p class="muted">Inspect submission status, attempt number, timestamps, and recorded scores. Access remains constrained by database RLS.</p></div><button id="refresh-results-inspector" class="btn btn-quiet" type="button">↻ Refresh</button></div>
             <div class="admin-search-row"><label for="results-inspector-search">Filter by exam, student ID, or status</label><div><input id="results-inspector-search" type="search" placeholder="Search submissions…" maxlength="120"><button id="search-results-inspector" class="btn btn-primary" type="button">Filter</button></div></div>
             <div id="results-inspector-status" class="empty-state">Results have not been loaded.</div><div id="results-inspector-list" class="phase-two-list"></div>
           </section>
@@ -136,7 +137,7 @@
             <div class="dev-section-title"><div><p class="eyebrow">RECENT OPERATIONS</p><h2>Administrative audit log</h2></div></div>
             <div id="admin-audit-list" class="admin-audit-list"><div class="empty-state">Audit records appear after the admin function is deployed.</div></div>
             <section class="dev-admin-panel phase8-admin-panel">
-              <div class="dev-section-title"><div><p class="eyebrow">PHASE 8 / ACADEMIC CONFIGURATION</p><h2>Semester, courses &amp; GWA policy</h2><p class="muted">Create the academic term, course catalog, class offerings, student enrollments, and configure the official percentage-to-GWA conversion bands.</p></div><button id="phase8-admin-refresh" class="btn btn-quiet" type="button">↻ Refresh data</button></div>
+              <div class="dev-section-title"><div><p class="eyebrow">ACADEMIC CONFIGURATION</p><h2>Semester, courses &amp; GWA policy</h2><p class="muted">Create the academic term, course catalog, class offerings, student enrollments, and configure the official percentage-to-GWA conversion bands.</p></div><button id="phase8-admin-refresh" class="btn btn-quiet" type="button">↻ Refresh data</button></div>
               <div id="phase8-admin-status" class="notice">Apply the Phase 8 database migration before using these controls.</div>
               <div class="phase8-admin-grid">
                 <form id="phase8-term-form" class="platform-card"><h3>1. Academic term</h3><label>Academic year<input id="phase8-year" required maxlength="20" placeholder="2026–2027"></label><label>Semester<select id="phase8-semester"><option value="1st">1st Semester</option><option value="2nd">2nd Semester</option><option value="midyear">Midyear</option></select></label><label>Start date<input id="phase8-start" type="date" required></label><label>End date<input id="phase8-end" type="date" required></label><label class="phase8-inline-check"><input id="phase8-active" type="checkbox"> Set as active term</label><button class="btn btn-primary" type="submit">Save academic term</button></form>
@@ -194,7 +195,7 @@
 
         <section class="page-view hidden" id="view-grades">
           <div class="section-heading"><div><h2>Grades & results</h2><p class="muted">View assessed attempts or export results for offline review.</p></div><button id="export-grades" class="btn btn-primary teacher-only hidden">↓ Export CSV</button></div>
-          <section id="phase8-gwa-panel" class="panel phase8-gwa-panel hidden" aria-live="polite"><div class="section-heading"><div><p class="eyebrow">PHASE 8 / SEMESTER RESULT</p><h2>Final General Weighted Average</h2><p class="muted">Your GWA is released after all required instructor evaluations and final course grades are complete.</p></div></div><div id="phase8-gwa-content"><div class="empty-state">Checking GWA eligibility…</div></div></section><div id="grades-list" class="panel"><div class="empty-state">Loading grades…</div></div>
+          <section id="phase8-gwa-panel" class="panel phase8-gwa-panel hidden" aria-live="polite"><div class="section-heading"><div><p class="eyebrow">SEMESTER RESULT</p><h2>Final General Weighted Average</h2><p class="muted">Your GWA is released after all required instructor evaluations and final course grades are complete.</p></div></div><div id="phase8-gwa-content"><div class="empty-state">Checking GWA eligibility…</div></div></section><section id="phase8-student-courses" class="panel student-course-panel student-only hidden"><div class="section-heading"><div><h2>My enrolled courses</h2><p class="muted">View your course standing or request a subject drop for teacher approval.</p></div><button id="refresh-student-courses" class="btn btn-quiet" type="button">↻ Refresh</button></div><div id="student-course-status" class="empty-state">Loading course records…</div><div id="student-course-list" class="phase8-record-list"></div></section><div id="grades-list" class="panel"><div class="empty-state">Loading grades…</div></div>
         </section>
 
         <section class="page-view hidden" id="view-evaluations">
@@ -205,7 +206,7 @@
         </section>
         <section class="page-view hidden" id="view-account">
           <div class="section-heading"><div><h2>Account settings</h2><p class="muted">Your profile and institutional verification status.</p></div></div>
-          <div class="panel account-panel"><div class="avatar large" id="account-avatar">A</div><div class="account-details"><h2 id="account-name">Account</h2><p id="account-email" class="muted"></p><div class="account-meta"><span id="account-role" class="badge">Student</span><span id="email-verification-status" class="badge badge-warning">Email status unavailable</span><span id="verification-status" class="badge badge-warning">Pending admin approval</span></div><p class="muted">If your role or verification status is incorrect, contact your AcademiX administrator.</p><div id="teacher-role-notice" class="notice"><strong>Account role assignment</strong><p>Your account remains a Student by default. After you confirm your email, an administrator will verify your institutional details and update your role when appropriate. You do not need to submit a Teacher access request.</p></div></div></div>
+          <div class="panel account-panel"><div class="avatar large" id="account-avatar">A</div><div class="account-details"><h2 id="account-name">Account</h2><p id="account-email" class="muted"></p><div class="account-meta"><span id="account-role" class="badge">Student</span><span id="email-verification-status" class="badge badge-warning">Email status unavailable</span><span id="verification-status" class="badge badge-warning">Pending admin approval</span></div><p class="muted">If your role or verification status is incorrect, contact your AcademiX administrator.</p><div id="teacher-role-notice" class="notice hidden"><strong>Account role assignment</strong><p>Your account remains a Student by default. After you confirm your email, an administrator will verify your institutional details and update your role when appropriate. You do not need to submit a Teacher access request.</p></div></div></div>
         </section>
       </div>
     </section>
@@ -235,6 +236,6 @@
   <script src="academix-config.js?v=launch-refresh1"></script>
   <script>if (["localhost", "127.0.0.1"].includes(location.hostname)) document.write('<script src="academix-config.local.js"><\/script>');</script>
   <script src="academix-build.js?v=phase6-build1"></script>
-  <script src="app.js?v=phase8-semester1"></script>
+  <script src="app.js?v=final-launch-overhaul"></script>
 </body>
 </html>

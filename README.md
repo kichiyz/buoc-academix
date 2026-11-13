@@ -14,7 +14,7 @@ GitHub Pages serves the frontend from the repository root:
 - `academix-config.js` — public Supabase URL, publishable key, and environment label
 - `academix-build.js` — deployment build metadata
 - `supabase/schema.sql` — canonical database schema
-- `supabase/migrations/` — ordered database migrations
+- `supabase/migrations/` — ordered database migrations, including `20261115000000_final_launch_course_outcomes.sql` for course INC/DRP decisions and the 75% final-course outcome rule
 - `supabase/functions/` — server-side Supabase Edge Functions
 - `supabase/tests/` — database regression tests
 - `tests/` — frontend and application regression tests
@@ -57,7 +57,7 @@ The Pages workflow deploys the root frontend. Review the workflow run after merg
 ## Release checklist
 
 - [ ] Confirm the production Supabase URL and publishable key are correct.
-- [ ] Confirm all required migrations have been reviewed and applied to the intended project.
+- [ ] Confirm all required migrations have been reviewed and applied to the intended project, including the final launch course-outcomes migration.
 - [ ] Verify RLS policies and server-side authorization for every role and privileged action.
 - [ ] Verify student signup, email confirmation, institutional verification, and password recovery redirects.
 - [ ] Verify teacher authoring, publishing, assignment, submissions, grading, and results end to end.
@@ -67,6 +67,17 @@ The Pages workflow deploys the root frontend. Review the workflow run after merg
 - [ ] Run frontend and database regression suites.
 - [ ] Test the live site on desktop and mobile after deployment.
 - [ ] Obtain any required institutional authorization before representing the platform as an official Bicol University service.
+
+## Academic result rules
+
+- Assessment outcomes are calculated from the graded percentage: **Passed** at 75.00% or above; **Failed** below 75.00%.
+- Course-level **INC** (Incomplete) and **DRP** (Dropped) are separate academic outcomes. INC is assigned by the instructor when completion is permitted. DRP requires a student drop request and instructor approval.
+- The GWA conversion bands are institution-configured in the active academic term. The 75% assessment pass threshold does not replace the configured percentage-to-GWA conversion table.
+- Light and dark appearance preferences are stored locally in the current browser; they do not affect authentication or permissions.
+
+## Launch notes
+
+The final launch interface uses the supplied circular BUOC favicon asset throughout the brand marks, responsive navigation, persistent account navigation, scrollable administrative registries, and reduced-motion-aware transitions. Review the newest release pull request and apply any new SQL migration to the intended Supabase project before testing course INC/DRP actions.
 
 ## Institutional affiliation
 

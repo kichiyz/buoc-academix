@@ -117,6 +117,8 @@
     $$(".teacher-only.nav-item").forEach(el => el.classList.toggle("hidden", p.role !== "teacher"));
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
+    const roleNotice = $("#teacher-role-notice");
+    if (roleNotice) roleNotice.classList.toggle("hidden", p.role !== "student" || Boolean(p.verified_at));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
   }
   async function loadProfile() {
@@ -344,6 +346,23 @@
     const summary=document.createElement("p");summary.className="muted phase-three-summary";summary.textContent=`${questions.length} question(s) • Changes apply to this draft only until published.`;target.prepend(summary);
     panel.scrollIntoView({behavior:"smooth",block:"start"});
   }
+  function resetAssessmentAuthoring() {
+    state.draft = null;
+    state.previewQuestionIndex = 0;
+    $("#json-assessment-title").value = "";
+    $("#json-authoring-input").value = "";
+    $("#publish-duration").value = "30";
+    $("#exam-navigation-mode").value = "freeroam";
+    $("#assessment-category").value = "quiz";
+    $("#assessment-weight").value = "10";
+    $("#import-json-file").value = "";
+    $("#draft-questions").replaceChildren();
+    $("#draft-panel").classList.add("hidden");
+    $("#student-preview").innerHTML = '<div class="empty-state">Paste or import your next assessment to preview it.</div>';
+    $("#json-validation-status").textContent = "Ready for a new assessment. Nothing is published until you select Publish assessment.";
+    $("#json-validation-status").className = "notice";
+    $("#student-preview-panel").classList.remove("hidden");
+  }
   async function publishQuiz() {
     if (!state.draft?.questions?.length) return toast("Add at least one question before publishing.", "error");
     for (let i=0;i<state.draft.questions.length;i++) {
@@ -379,7 +398,7 @@
       // Publishing is a privileged workflow in a production deployment; teacher policy permits own exam updates.
       const { error: publishError } = await state.supabase.from("exams").update({ status: "published", published_at: new Date().toISOString() }).eq("id", exam.id);
       if (publishError) throw publishError;
-      state.draft = null; $("#draft-panel").classList.add("hidden"); toast("Exam published. Assign students from your course roster before use.", "success"); switchView("exams");
+      resetAssessmentAuthoring(); toast("Assessment published. The authoring form is ready for your next assessment.", "success"); switchView("exams");
     } catch (e) { toast(e.message || "Could not publish exam.", "error"); }
   }
   async function startExam(exam) {
@@ -751,9 +770,9 @@
       });
       if (error) throw error;
       showOnly("#dashboard-view");
-      const scoreMessage = result && result.score != null && result.max_score != null
-        ? `Exam submitted and graded: ${result.score} / ${result.max_score}.`
-        : "Exam submitted successfully.";
+      const percentage = result && Number(result.max_score) > 0 ? (Number(result.score) / Number(result.max_score)) * 100 : null;
+      const outcome = percentage == null ? "Submitted — awaiting grade" : percentage >= 75 ? "Passed" : "Failed";
+      const scoreMessage = percentage == null ? "Exam submitted successfully. Your result will appear after grading." : `Exam submitted: ${result.score} / ${result.max_score} (${percentage.toFixed(2)}%). ${outcome}.`;
       toast(scoreMessage, "success");
       switchView("grades");
     } catch (e) {
@@ -792,7 +811,7 @@
       const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
       const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
-    } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="The Phase 8 migration is installed. Check administrator verification, table permissions, RLS policies, and the error above; then refresh.";}
+    } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="Check administrator verification, table permissions, RLS policies, and the database error above; then refresh.";}
   }
   async function savePhase8Rpc(fn,args,success) {
     const {data,error}=await state.supabase.rpc(fn,args);if(error)throw error;
@@ -815,18 +834,65 @@
     target.textContent="Loading enrolled students…";
     try{
       const {data,error}=await state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering});if(error)throw error;
+      const ids=(data||[]).map(x=>x.enrollment_id);
+      let statusRows=[],outcomesAvailable=true;
+      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error){outcomesAvailable=false;console.warn("Course outcome controls require the final launch migration:",sr.error.message);}else statusRows=sr.data||[];}
+      const statuses=new Map(statusRows.map(x=>[x.enrollment_id,x]));
       target.replaceChildren();
       if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
       data.forEach(student=>{
+        const current=statuses.get(student.enrollment_id)||{outcome:"active",drop_requested_at:null};
         const row=document.createElement("form");row.className="phase8-grade-row";
         const info=document.createElement("div"),name=document.createElement("strong"),id=document.createElement("small");
         name.textContent=student.student_name;id.textContent=(student.bu_id||"No BU ID")+" · "+student.student_id;info.append(name,id);
         const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final %";grade.value=student.percentage??"";
         const remarks=document.createElement("input");remarks.type="text";remarks.maxLength=1000;remarks.placeholder="Remarks (optional)";remarks.value=student.remarks||"";
-        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save grade";
-        row.append(info,grade,remarks,save);row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast("Final course grade saved.","success");}catch(err){toast(err.message,"error");}finally{save.disabled=false;}});target.append(row);
+        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save final grade";
+        const tools=document.createElement("div");tools.className="course-outcome-tools";
+        const badge=document.createElement("span");badge.className="result-status "+(current.outcome==="inc"?"status-inc":current.outcome==="drp"?"status-drp":current.outcome==="passed"?"status-passed":current.outcome==="failed"?"status-failed":"status-pending");badge.textContent=current.outcome==="inc"?"INC":current.outcome==="drp"?"DRP":current.outcome==="passed"?"Passed":current.outcome==="failed"?"Failed":"In progress";
+        const request=document.createElement("small");request.className="muted";request.textContent=current.drop_requested_at&&current.outcome!=="drp"?"Student requested DRP — approval pending":current.outcome==="drp"?"Drop approved": " ";
+        tools.append(badge,request);
+        if(outcomesAvailable){
+          const outcome=document.createElement("select");outcome.setAttribute("aria-label","Course outcome for "+student.student_name);
+          [["active","In progress"],["inc","INC — Allow compliance"],["drp","DRP — Approve drop"]].forEach(([v,label])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=label;outcome.append(opt);});
+          outcome.value=["active","inc","drp"].includes(current.outcome)?current.outcome:"active";
+          const apply=document.createElement("button");apply.type="button";apply.className="btn btn-quiet";apply.textContent="Apply outcome";apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;
+          outcome.addEventListener("change",()=>{apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;});
+          apply.addEventListener("click",async()=>{apply.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_course_outcome",{p_enrollment_id:student.enrollment_id,p_outcome:outcome.value});if(error)throw error;toast(outcome.value==="inc"?"Student marked INC.":outcome.value==="drp"?"Student drop approved.":"Course returned to in progress.","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");apply.disabled=false;}});
+          tools.append(outcome,apply);
+        }else{const note=document.createElement("small");note.className="muted";note.textContent="Apply the final course-outcomes migration to enable INC and DRP decisions.";tools.append(note);}
+        row.append(info,grade,remarks,save,tools);
+        row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast(Number(grade.value)>=75?"Final grade saved — Passed (75% or above).":"Final grade saved — Failed (below 75%).","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");save.disabled=false;}});
+        target.append(row);
       });
     }catch(e){target.textContent="Could not load roster: "+e.message;}
+  }
+  async function loadStudentCourseOutcomes(){
+    const status=$("#student-course-status"),target=$("#student-course-list");if(!status||!target||state.profile?.role!=="student")return;
+    status.textContent="Loading your enrolled courses…";target.replaceChildren();
+    try{
+      const {data,error}=await state.supabase.rpc("academix_student_course_outcomes");if(error)throw error;
+      if(!data?.length){status.textContent="No enrolled courses were found for the active academic term.";return;}
+      status.textContent=data.length+" enrolled course(s) in the active term.";
+      data.forEach(course=>{
+        const row=document.createElement("article");row.className="student-course-row";
+        const info=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("small");
+        title.textContent=course.course_code+" — "+course.course_title;meta.textContent="Section "+course.section;info.append(title,meta);
+        const actions=document.createElement("div");actions.style.display="flex";actions.style.alignItems="center";actions.style.gap="10px";actions.style.flexWrap="wrap";
+        const outcome=course.outcome||"active";
+        const badge=document.createElement("span");badge.className="result-status "+(outcome==="inc"?"status-inc":outcome==="drp"?"status-drp":outcome==="passed"?"status-passed":outcome==="failed"?"status-failed":"status-pending");badge.textContent=outcome==="inc"?"INC":outcome==="drp"?"DRP":outcome==="passed"?"Passed":outcome==="failed"?"Failed":"In progress";
+        actions.append(badge);
+        if(outcome!=="drp"){
+          if(course.drop_requested){const pending=document.createElement("small");pending.className="muted";pending.textContent="DRP request pending teacher approval";actions.append(pending);}
+          else{
+            const request=document.createElement("button");request.type="button";request.className="btn btn-quiet";request.textContent="Request to drop";
+            request.addEventListener("click",async()=>{if(!confirm("Send a request to drop "+course.course_code+"? Your teacher must approve it before the status becomes DRP."))return;request.disabled=true;try{const {error}=await state.supabase.rpc("academix_student_request_course_drop",{p_enrollment_id:course.enrollment_id});if(error)throw error;toast("Drop request sent to your instructor.","success");await loadStudentCourseOutcomes();}catch(err){toast(err.message,"error");request.disabled=false;}});
+            actions.append(request);
+          }
+        }else{const approved=document.createElement("small");approved.className="muted";approved.textContent="Drop approved by instructor";actions.append(approved);}
+        row.append(info,actions);target.append(row);
+      });
+    }catch(e){status.textContent="Course outcomes are unavailable. Apply the final launch database migration, then refresh. "+e.message;}
   }
   async function loadStudentEvaluations(){
     const status=$("#phase8-evaluation-status"),target=$("#phase8-evaluation-list");if(!status||!target)return;
@@ -886,9 +952,13 @@
         const row = document.createElement("div"); row.className = "grade-row";
         const name = document.createElement("div"); const b = document.createElement("b"); b.textContent = g.exams?.title || "Assessment"; const small = document.createElement("small"); small.textContent = new Date(g.created_at).toLocaleString(); name.append(b, small);
         const score = document.createElement("div"); score.className = "score"; score.textContent = `${g.score} / ${g.max_score}`;
-        const feedback = document.createElement("div"); feedback.className = "grade-status muted"; feedback.textContent = g.feedback || "Graded";
-        row.append(name, score, feedback); target.append(row);
+        const percentage = Number(g.max_score) > 0 ? (Number(g.score) / Number(g.max_score)) * 100 : null;
+        const passed = percentage != null && percentage >= 75;
+        const feedback = document.createElement("span"); feedback.className = `result-status ${percentage == null ? "status-pending" : passed ? "status-passed" : "status-failed"}`; feedback.textContent = percentage == null ? "Awaiting grade" : passed ? "Passed" : "Failed";
+        const detail = document.createElement("small"); detail.className = "muted"; detail.textContent = `${percentage == null ? "" : percentage.toFixed(2) + "%"}${g.feedback ? " · " + g.feedback : ""}`;
+        name.append(detail); row.append(name, score, feedback); target.append(row);
       });
+      await loadStudentCourseOutcomes();
       await loadSemesterGwa();
     } catch (e) { target.innerHTML = '<div class="empty-state">Could not load grades. Check your Supabase policies.</div>'; toast(e.message, "error"); }
   }
@@ -953,7 +1023,10 @@
       const score=sub.score==null||sub.max_score==null?"Not scored":`${sub.score} / ${sub.max_score}`;
       meta.textContent=`Student: ${sub.student_id} • Attempt #${sub.attempt_number??"—"} (${sub.attempt_type||"—"}) • ${score} • Started: ${sub.started_at?new Date(sub.started_at).toLocaleString():"—"} • Submitted: ${sub.submitted_at?new Date(sub.submitted_at).toLocaleString():"—"}`;
       info.append(title,meta);
-      const badge=document.createElement("span");badge.className="badge";badge.textContent=sub.status||"unknown";
+      const pct=Number(sub.max_score)>0?(Number(sub.score)/Number(sub.max_score))*100:null;
+      const badge=document.createElement("span");
+      badge.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");
+      badge.textContent=pct==null?(sub.status||"Submitted"):(pct>=75?"Passed":"Failed");
       row.append(info,badge);frag.append(row);
     });
     target.append(frag);
@@ -1138,6 +1211,12 @@
       toast("Setup required: add your Supabase project URL and publishable/anon key in academix-config.js.", "error");
       return;
     }
+    const savedTheme = localStorage.getItem("academix-theme");
+    document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+    const themeButtons = [$("#theme-toggle"), $("#theme-toggle-auth")].filter(Boolean);
+    const syncThemeButtons = () => { const dark = document.documentElement.dataset.theme === "dark"; themeButtons.forEach(button => { button.textContent = dark ? "☀ Light mode" : "☾ Dark mode"; button.setAttribute("aria-pressed", String(dark)); }); };
+    syncThemeButtons();
+    themeButtons.forEach(button => button.addEventListener("click", () => { const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; localStorage.setItem("academix-theme", next); syncThemeButtons(); }));
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));
     $("#auth-form").addEventListener("submit", authSubmit);
@@ -1220,6 +1299,7 @@
     $("#phase8-band-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_grade_band",{p_term_id:$("#phase8-band-term").value,p_label:$("#phase8-band-label").value.trim(),p_min_percentage:Number($("#phase8-band-min").value),p_max_percentage:Number($("#phase8-band-max").value),p_gwa_value:Number($("#phase8-band-gwa").value)},"GWA conversion band saved.");}catch(err){toast(err.message,"error");}});
     $("#phase8-teacher-offering")?.addEventListener("change",loadTeacherPhase8Roster);
     $("#phase8-teacher-refresh")?.addEventListener("click",loadTeacherPhase8Offerings);
+    $("#refresh-student-courses")?.addEventListener("click",loadStudentCourseOutcomes);
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
