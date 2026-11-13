@@ -1372,10 +1372,43 @@
 
   async function adminControl(action, payload = {}) {
     if (state.profile?.role !== "admin") throw new Error("Developer access required.");
-    const { data, error } = await state.supabase.functions.invoke("admin-control", { body: { action, ...payload } });
+
+    // Obtain the current access token explicitly. On a restored mobile session,
+    // the Functions client's cached Authorization header can briefly lag behind
+    // the Auth session while initialization/refresh events are settling.
+    const getAdminSession = async (forceRefresh = false) => {
+      const { data: sessionData, error: sessionError } = await state.supabase.auth.getSession();
+      if (sessionError) throw new Error(`Could not read your sign-in session: ${sessionError.message}`);
+      let session = sessionData?.session;
+      if (!session) throw new Error("Your session has expired. Sign in again to access Developer Center.");
+      const expiresSoon = Number(session.expires_at || 0) <= Math.floor(Date.now() / 1000) + 90;
+      if (forceRefresh || expiresSoon) {
+        const { data, error } = await state.supabase.auth.refreshSession();
+        if (error || !data?.session?.access_token) {
+          throw new Error(`Could not refresh your sign-in session. Please sign in again.${error?.message ? ` (${error.message})` : ""}`);
+        }
+        session = data.session;
+      }
+      return session;
+    };
+
+    const invokeAdmin = (session) => state.supabase.functions.invoke("admin-control", {
+      body: { action, ...payload },
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    let session = await getAdminSession();
+    let result = await invokeAdmin(session);
+
+    // A stale access token can survive a page restore even when the refresh
+    // token is still valid. Refresh once and retry only authentication failures.
+    if (result.error?.context?.status === 401) {
+      session = await getAdminSession(true);
+      result = await invokeAdmin(session);
+    }
+
+    const { data, error } = result;
     if (error) {
-      // Surface the Edge Function's actual response instead of Supabase's
-      // generic "Edge Function returned non-2xx status code" message.
       let detail = "";
       let status = "";
       try {
