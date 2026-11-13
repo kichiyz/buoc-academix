@@ -755,3 +755,91 @@ input,textarea,select,.btn,.nav-item,.badge,.environment-badge{
     transition:none!important;
   }
 }
+
+/* Typography contrast correction: keep all interface text readable in both themes. */
+:root:not([data-theme="dark"]) {
+  --text:#29363b;
+  --muted:#596970;
+}
+:root[data-theme="dark"] {
+  --text:#e9eff0;
+  --muted:#b8c5c8;
+}
+body,button,input,textarea,select,
+h1,h2,h3,h4,h5,h6,p,small,strong,b,label,legend,li,dt,dd,
+th,td,figcaption,summary {
+  color:inherit;
+}
+body { color:var(--text); }
+.muted,.fine-print,.sidebar-bottom,.sidebar-label,
+.profile-chip small,.brand-row small,.dev-readout,
+.dev-seal small,.form-hint,.help-text,.field-hint,
+.workflow-search-label,.workflow-form label,
+.auth-card label,.form-panel label,.publish-row label {
+  color:var(--muted);
+}
+.eyebrow { color:var(--gold); }
+.topbar h1,.exam-top h1,.role-hero h2,.role-hero p,
+.panel h2,.panel h3,.panel h4,.metric-card h3,
+.exam-card h3,.dev-tool h3,.platform-card h3,
+.grade-directory-row strong,.weighted-grade-item strong {
+  color:var(--text);
+}
+.nav-item { color:var(--muted); }
+.nav-item:hover,.nav-item.active { color:var(--gold); }
+input,textarea,select {
+  color:var(--text);
+  background:var(--panel);
+  border-color:var(--line);
+}
+input::placeholder,textarea::placeholder { color:var(--muted); opacity:.82; }
+select option { color:var(--text); background:var(--panel); }
+.environment-badge {
+  color:var(--text);
+  border-color:var(--line);
+  background:color-mix(in srgb,var(--panel) 88%,transparent);
+}
+.environment-badge[data-environment="TEST"] {
+  color:#85521b;border-color:#c58b43;background:#c58b4318;
+}
+.environment-badge[data-environment="PRODUCTION"] {
+  color:#28694f;border-color:#69a98a;background:#69a98a18;
+}
+.environment-badge[data-environment="UNCONFIGURED"] {
+  color:#a33f49;border-color:#d17a82;background:#d17a8218;
+}
+.exam-instructions,.ai-locked-panel,.dev-admin-panel {
+  color:var(--text);
+  background:var(--panel);
+  border-color:var(--line);
+}
+.exam-instructions p,.ai-locked-panel p,.dev-admin-panel p { color:var(--muted); }
+.dev-seal span,.dev-tag,.dev-tool-icon,.dev-readout,
+.workflow-search-label,.workflow-form label { color:var(--text); }
+.dev-tag-pending { color:#85521b; }
+::selection { background:color-mix(in srgb,var(--gold) 38%,transparent); color:var(--text); }
+.btn-primary { color:#342713; }
+:root[data-theme="dark"] .btn-primary { color:#182431; }
+:root:not([data-theme="dark"]) .btn-primary { color:#342713; }
+:root[data-theme="dark"] .environment-badge[data-environment="TEST"] { color:#f0c17e; }
+:root[data-theme="dark"] .environment-badge[data-environment="PRODUCTION"] { color:#9bdbbb; }
+:root[data-theme="dark"] .environment-badge[data-environment="UNCONFIGURED"] { color:#f0a0a5; }
+:root[data-theme="dark"] .exam-instructions,
+:root[data-theme="dark"] .ai-locked-panel,
+:root[data-theme="dark"] .dev-admin-panel {
+  background:var(--panel);
+  color:var(--text);
+  border-color:var(--line);
+}
+:root:not([data-theme="dark"]) .dev-seal span,
+:root:not([data-theme="dark"]) .dev-seal small,
+:root:not([data-theme="dark"]) .dev-readout,
+:root:not([data-theme="dark"]) .dev-tag { color:#51465e; }
+:root:not([data-theme="dark"]) .dashboard.role-teacher .nav-item.active,
+:root:not([data-theme="dark"]) .dashboard.role-teacher .eyebrow { color:#356b63; }
+:root:not([data-theme="dark"]) .dashboard.role-admin .nav-item.active,
+:root:not([data-theme="dark"]) .dashboard.role-admin .eyebrow { color:#655080; }
+:root[data-theme="dark"] .dashboard.role-teacher .nav-item.active,
+:root[data-theme="dark"] .dashboard.role-teacher .eyebrow { color:#83d5ca; }
+:root[data-theme="dark"] .dashboard.role-admin .nav-item.active,
+:root[data-theme="dark"] .dashboard.role-admin .eyebrow { color:#d4bcff; }
