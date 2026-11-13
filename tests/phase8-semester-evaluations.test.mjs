@@ -46,7 +46,8 @@ test("administrators can configure terms, courses, offerings, enrollments, and g
   assert.match(html, /id="phase8-offering-form"/);
   assert.match(html, /id="phase8-enrollment-form"/);
   assert.match(html, /id="phase8-band-form"/);
-  assert.match(migration, /academix_admin_list_people/);\n  assert.match(migration, /academix_can_read_offering/);
+  assert.match(migration, /academix_admin_list_people/);
+  assert.match(migration, /academix_can_read_offering/);
 });
 
 test("teachers can finalize only grades in their own offerings", () => {
