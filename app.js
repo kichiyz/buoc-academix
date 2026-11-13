@@ -230,7 +230,7 @@
       stageIndex = Math.min(stageIndex + 1, stages.length - 1);
       button.textContent = stages[stageIndex];
     }, 8000);
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Quiz generation timed out after 90 seconds. The AI provider may be slow or unavailable; please retry shortly.")), 90000));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Quiz generation timed out after 125 seconds. The AI provider may be slow or unavailable; please retry shortly.")), 125000));
     try {
       const request = (async () => {
         const { error: sessionError } = await state.supabase.auth.getSession();
