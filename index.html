@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="assets/buoc-favicon.svg?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=layout-preview2">
+  <link rel="stylesheet" href="style.css?v=phase8-semester1">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -68,6 +68,7 @@
           <button class="nav-item teacher-only hidden" data-view="generator"><span>✦</span> Quiz Studio</button>
           <button class="nav-item developer-only hidden" data-view="generator"><span>✦</span> Exam Sandbox</button>
           <button class="nav-item student-only hidden" data-view="grades"><span>▥</span> My Grades</button>
+          <button class="nav-item student-only hidden" data-view="evaluations"><span>◎</span> Semestral Evaluation</button>
           <button class="nav-item teacher-only hidden" data-view="grades"><span>▥</span> Results</button>
           <button class="nav-item developer-only hidden" data-view="grades"><span>▥</span> Results</button>
           <button class="nav-item" data-view="account"><span>◉</span> Account</button>
@@ -88,7 +89,11 @@
         <section class="page-view hidden role-home teacher-home" id="view-teacher-home">
           <div class="role-hero teacher-hero"><div><p class="eyebrow">TEACHER WORKSPACE</p><h2>Build better assessments.</h2><p>Prepare question sets, review generated drafts, and manage assessments available to your teaching account.</p><div class="hero-actions"><button class="btn btn-primary" data-go="generator">Create a quiz draft →</button><button class="btn btn-quiet" data-go="exams">Open exam library</button></div></div><div class="hero-emblem">▦</div></div>
           <div class="metric-grid"><article class="metric-card"><span class="metric-icon">✦</span><small>ASSESSMENT AUTHORING</small><strong>Quiz Studio</strong><p>Generate a draft from authorized study material, then review it.</p><button class="text-link" data-go="generator">Open Quiz Studio →</button></article><article class="metric-card"><span class="metric-icon">▤</span><small>ASSESSMENT LIBRARY</small><strong>Manage your workflow</strong><p>See assessments visible to your current database permissions.</p><button class="text-link" data-go="exams">Open library →</button></article><article class="metric-card"><span class="metric-icon">▥</span><small>RESULTS</small><strong>Review grades</strong><p>Inspect available grading results and export tools.</p><button class="text-link" data-go="grades">View results →</button></article></div>
-          <div class="notice">Publishing, assigning students, reviewing submissions, and grading need complete database workflows. This hub links to current available features; unfinished tools are not shown as active.</div>
+          <section class="dev-admin-panel phase-two-panel phase8-teacher-panel">
+            <div class="dev-section-title"><div><p class="eyebrow">PHASE 8 / COURSE RECORDS</p><h2>Final course grades</h2><p class="muted">Enter the final percentage for students in your assigned course offerings. These grades contribute to the student's term GWA.</p></div><button id="phase8-teacher-refresh" class="btn btn-quiet" type="button">↻ Refresh</button></div>
+            <label>Assigned course offering<select id="phase8-teacher-offering"><option value="">Loading assigned courses…</option></select></label>
+            <div id="phase8-teacher-roster" class="phase8-roster"><div class="empty-state">Choose an assigned course to load its roster.</div></div>
+          </section>
         </section>
         <section class="page-view hidden developer-console" id="view-developer">
           <div class="dev-masthead"><div><p class="eyebrow">BUOC ACADEMIX / PLATFORM OPERATIONS</p><h2>Developer Control Center</h2><p>Privileged workspace for platform development, testing, and operational oversight.</p></div><div class="dev-seal"><span>AX</span><small>ROOT<br>WORKSPACE</small></div></div>
@@ -130,6 +135,19 @@
             <div id="admin-users-status" class="empty-state">Load user accounts to begin.</div><div id="admin-users-list" class="admin-users-list"></div>
             <div class="dev-section-title"><div><p class="eyebrow">RECENT OPERATIONS</p><h2>Administrative audit log</h2></div></div>
             <div id="admin-audit-list" class="admin-audit-list"><div class="empty-state">Audit records appear after the admin function is deployed.</div></div>
+            <section class="dev-admin-panel phase8-admin-panel">
+              <div class="dev-section-title"><div><p class="eyebrow">PHASE 8 / ACADEMIC CONFIGURATION</p><h2>Semester, courses &amp; GWA policy</h2><p class="muted">Create the academic term, course catalog, class offerings, student enrollments, and configure the official percentage-to-GWA conversion bands.</p></div><button id="phase8-admin-refresh" class="btn btn-quiet" type="button">↻ Refresh data</button></div>
+              <div id="phase8-admin-status" class="notice">Apply the Phase 8 database migration before using these controls.</div>
+              <div class="phase8-admin-grid">
+                <form id="phase8-term-form" class="platform-card"><h3>1. Academic term</h3><label>Academic year<input id="phase8-year" required maxlength="20" placeholder="2026–2027"></label><label>Semester<select id="phase8-semester"><option value="1st">1st Semester</option><option value="2nd">2nd Semester</option><option value="midyear">Midyear</option></select></label><label>Start date<input id="phase8-start" type="date" required></label><label>End date<input id="phase8-end" type="date" required></label><label class="phase8-inline-check"><input id="phase8-active" type="checkbox"> Set as active term</label><button class="btn btn-primary" type="submit">Save academic term</button></form>
+                <form id="phase8-course-form" class="platform-card"><h3>2. Course catalog</h3><label>Course code<input id="phase8-course-code" required maxlength="30" placeholder="CS 201"></label><label>Course title<input id="phase8-course-title" required maxlength="160" placeholder="Object-Oriented Programming"></label><label>Credit units<input id="phase8-course-units" type="number" min="0.5" max="12" step="0.5" required value="3"></label><button class="btn btn-primary" type="submit">Save course</button></form>
+                <form id="phase8-offering-form" class="platform-card"><h3>3. Class offering</h3><label>Academic term<select id="phase8-offering-term" required></select></label><label>Course<select id="phase8-offering-course" required></select></label><label>Verified teacher profile ID<input id="phase8-instructor-id" required placeholder="Teacher UUID"></label><label>Section<input id="phase8-section" required maxlength="40" placeholder="BSCS 2A"></label><button class="btn btn-primary" type="submit">Create / update offering</button></form>
+                <form id="phase8-enrollment-form" class="platform-card"><h3>4. Student enrollment</h3><label>Class offering<select id="phase8-enrollment-offering" required></select></label><label>Verified student profile ID<input id="phase8-student-id" required placeholder="Student UUID"></label><button class="btn btn-primary" type="submit">Enroll student</button></form>
+                <form id="phase8-band-form" class="platform-card"><h3>5. GWA conversion band</h3><label>Academic term<select id="phase8-band-term" required></select></label><label>Band label<input id="phase8-band-label" required maxlength="60" placeholder="e.g. Excellent"></label><div class="phase8-two-fields"><label>Minimum %<input id="phase8-band-min" type="number" min="0" max="100" step="0.01" required></label><label>Maximum %<input id="phase8-band-max" type="number" min="0" max="100" step="0.01" required></label></div><label>Equivalent BU grade / GWA<input id="phase8-band-gwa" type="number" min="1" max="5" step="0.01" required placeholder="e.g. 1.00"></label><button class="btn btn-primary" type="submit">Save conversion band</button></form>
+              </div>
+              <div class="phase8-admin-data"><h3>Configured academic records</h3><div id="phase8-admin-records" class="empty-state">No data loaded yet.</div></div>
+              <p class="fine-print">Grading bands are intentionally not pre-filled with assumed BU values. Enter the conversion approved by the University for the selected academic term.</p>
+            </section>
           </section>
         </section>
 
@@ -176,9 +194,15 @@
 
         <section class="page-view hidden" id="view-grades">
           <div class="section-heading"><div><h2>Grades & results</h2><p class="muted">View assessed attempts or export results for offline review.</p></div><button id="export-grades" class="btn btn-primary teacher-only hidden">↓ Export CSV</button></div>
-          <div id="grades-list" class="panel"><div class="empty-state">Loading grades…</div></div>
+          <section id="phase8-gwa-panel" class="panel phase8-gwa-panel hidden" aria-live="polite"><div class="section-heading"><div><p class="eyebrow">PHASE 8 / SEMESTER RESULT</p><h2>Final General Weighted Average</h2><p class="muted">Your GWA is released after all required instructor evaluations and final course grades are complete.</p></div></div><div id="phase8-gwa-content"><div class="empty-state">Checking GWA eligibility…</div></div></section><div id="grades-list" class="panel"><div class="empty-state">Loading grades…</div></div>
         </section>
 
+        <section class="page-view hidden" id="view-evaluations">
+          <div class="section-heading"><div><p class="eyebrow">STUDENT / SEMESTER REQUIREMENT</p><h2>Instructor evaluation</h2><p class="muted">Evaluate each instructor who taught your enrolled courses this active semester. Each instructor is evaluated once, even if they teach more than one of your courses.</p></div></div>
+          <div class="notice">Your evaluation is confidential. Instructors and administrators cannot access your individual ratings through the student-facing application. Only completion status is used to determine GWA eligibility.</div>
+          <div id="phase8-evaluation-status" class="empty-state">Loading your assigned instructors…</div>
+          <div id="phase8-evaluation-list" class="phase8-evaluation-list"></div>
+        </section>
         <section class="page-view hidden" id="view-account">
           <div class="section-heading"><div><h2>Account settings</h2><p class="muted">Your profile and institutional verification status.</p></div></div>
           <div class="panel account-panel"><div class="avatar large" id="account-avatar">A</div><div class="account-details"><h2 id="account-name">Account</h2><p id="account-email" class="muted"></p><div class="account-meta"><span id="account-role" class="badge">Student</span><span id="email-verification-status" class="badge badge-warning">Email status unavailable</span><span id="verification-status" class="badge badge-warning">Pending admin approval</span></div><p class="muted">If your role or verification status is incorrect, contact your AcademiX administrator.</p><div id="teacher-role-notice" class="notice"><strong>Account role assignment</strong><p>Your account remains a Student by default. After you confirm your email, an administrator will verify your institutional details and update your role when appropriate. You do not need to submit a Teacher access request.</p></div></div></div>
@@ -211,6 +235,6 @@
   <script src="academix-config.js?v=launch-refresh1"></script>
   <script>if (["localhost", "127.0.0.1"].includes(location.hostname)) document.write('<script src="academix-config.local.js"><\/script>');</script>
   <script src="academix-build.js?v=phase6-build1"></script>
-  <script src="app.js?v=layout-preview2"></script>
+  <script src="app.js?v=phase8-semester1"></script>
 </body>
 </html>
