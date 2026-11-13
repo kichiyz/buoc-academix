@@ -73,6 +73,8 @@ The Pages workflow deploys the root frontend. Review the workflow run after merg
 - Assessment outcomes are calculated from the graded percentage: **Passed** at 75.00% or above; **Failed** below 75.00%.
 - Course-level **INC** (Incomplete) and **DRP** (Dropped) are separate academic outcomes. INC is assigned by the instructor when completion is permitted. DRP requires a student drop request and instructor approval.
 - The GWA conversion bands are institution-configured in the active academic term. The 75% assessment pass threshold does not replace the configured percentage-to-GWA conversion table.
+- Course assessment computation: Midterm examination = 20%; Final examination = 25%; all other published and graded coursework assessments share 55%, proportionally normalized using each assessment's relative weight. The weighted percentage is then mapped through the active term's GWA conversion bands. Midterm and Final examination percentages also display their own transmuted GWA values.
+- Midterm/Final replacement archives the previous published assessment and preserves its submission history. Teacher deletion is permanent and is blocked while a student attempt is in progress.
 - Light and dark appearance preferences are stored locally in the current browser; they do not affect authentication or permissions.
 
 ## Launch notes
