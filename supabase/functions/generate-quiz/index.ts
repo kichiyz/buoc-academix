@@ -181,7 +181,7 @@ ${material}`;
         const attemptStartedAt = Date.now();
         const elapsedMs = attemptStartedAt - aiStartedAt;
         const remainingBudgetMs = totalRequestBudgetMs - elapsedMs;
-        const reservedBackoffMs = attempt === 1 ? 5000 : attempt === 2 ? 0 : 0;
+        const reservedBackoffMs = attempt === 1 ? 10000 : attempt === 2 ? 5000 : 0;
         const attemptTimeoutMs = Math.min(50000, remainingBudgetMs - reservedBackoffMs - 1000);
         if (attemptTimeoutMs < 1000) {
           throw new Error("Gemini request exceeded its total retry time budget.");
