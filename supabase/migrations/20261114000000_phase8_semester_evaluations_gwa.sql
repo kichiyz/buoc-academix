@@ -106,11 +106,11 @@ revoke all on function public.academix_is_active_admin() from public, anon;
 grant execute on function public.academix_is_active_admin() to authenticated;
 
 create or replace function public.academix_can_read_offering(p_offering_id uuid,p_instructor_id uuid)
-returns boolean language sql stable security definer set search_path=public,pg_temp as $
+returns boolean language sql stable security definer set search_path=public,pg_temp as $phase8$
   select public.academix_is_active_admin()
     or p_instructor_id=auth.uid()
     or exists(select 1 from public.course_enrollments e where e.offering_id=p_offering_id and e.student_id=auth.uid())
-$;
+$phase8$;
 revoke all on function public.academix_can_read_offering(uuid,uuid) from public,anon;
 grant execute on function public.academix_can_read_offering(uuid,uuid) to authenticated;
 
