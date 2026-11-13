@@ -126,7 +126,13 @@ create policy "Verified users read academic terms" on public.academic_terms for 
 drop policy if exists "Verified users read course catalog" on public.academic_courses;
 create policy "Verified users read course catalog" on public.academic_courses for select to authenticated using (public.is_verified());
 drop policy if exists "Verified users read course offerings" on public.course_offerings;
-create policy "Verified users read course offerings" on public.course_offerings for select to authenticated using (public.is_verified());
+create policy "Assigned users read course offerings" on public.course_offerings for select to authenticated using (
+  public.is_verified() and (
+    public.academix_is_active_admin()
+    or instructor_id=auth.uid()
+    or exists(select 1 from public.course_enrollments e where e.offering_id=id and e.student_id=auth.uid())
+  )
+);
 drop policy if exists "Students instructors and admins read enrollments" on public.course_enrollments;
 create policy "Students instructors and admins read enrollments" on public.course_enrollments for select to authenticated using (
   student_id=auth.uid() or public.academix_is_active_admin() or exists (
@@ -398,3 +404,17 @@ begin
 end $$;
 revoke all on function public.academix_admin_evaluation_progress(uuid) from public,anon;
 grant execute on function public.academix_admin_evaluation_progress(uuid) to authenticated;
+
+
+create or replace function public.academix_admin_list_people()
+returns table(id uuid,full_name text,role public.app_role,bu_id text)
+language plpgsql stable security definer set search_path=public,pg_temp as $$
+begin
+  if not public.academix_is_active_admin() then raise exception 'Administrator access required.' using errcode='42501'; end if;
+  return query select p.id,coalesce(p.full_name,'Unnamed account'),p.role,p.bu_id
+    from public.profiles p where p.role in ('student'::public.app_role,'teacher'::public.app_role)
+      and p.verified_at is not null and p.suspended_at is null
+    order by p.role,p.full_name;
+end $$;
+revoke all on function public.academix_admin_list_people() from public,anon;
+grant execute on function public.academix_admin_list_people() to authenticated;
