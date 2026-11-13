@@ -126,13 +126,7 @@ create policy "Verified users read academic terms" on public.academic_terms for 
 drop policy if exists "Verified users read course catalog" on public.academic_courses;
 create policy "Verified users read course catalog" on public.academic_courses for select to authenticated using (public.is_verified());
 drop policy if exists "Verified users read course offerings" on public.course_offerings;
-create policy "Assigned users read course offerings" on public.course_offerings for select to authenticated using (
-  public.is_verified() and (
-    public.academix_is_active_admin()
-    or instructor_id=auth.uid()
-    or exists(select 1 from public.course_enrollments e where e.offering_id=id and e.student_id=auth.uid())
-  )
-);
+create policy "Verified users read course offerings" on public.course_offerings for select to authenticated using (public.is_verified());
 drop policy if exists "Students instructors and admins read enrollments" on public.course_enrollments;
 create policy "Students instructors and admins read enrollments" on public.course_enrollments for select to authenticated using (
   student_id=auth.uid() or public.academix_is_active_admin() or exists (
