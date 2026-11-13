@@ -46,7 +46,7 @@ test("administrators and teachers can only retrieve grades inside the selected a
   assert.match(migration,/Teachers read submissions only in scoped classes/);
   assert.match(migration,/student\.campus_id=offering\.campus_id/);
   assert.match(migration,/academix_teacher_roster/);
-  assert.doesNotMatch(migration,/AS \$(?!\$)|^\s*\$;/m);
+  assert.doesNotMatch(migration,/\bAS \$(?!\$)|^\s*\$;/im);
   assert.equal((migration.match(/\$\$/g)||[]).length%2,0);
   assert.match(migration,/academix_teacher_assessment_grade_summary/);
 });

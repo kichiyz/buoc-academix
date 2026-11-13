@@ -799,7 +799,7 @@ $$;
 
 create or replace function public.academix_teacher_roster(p_offering_id uuid)
 returns table(enrollment_id uuid,student_id uuid,student_name text,bu_id text,percentage numeric,remarks text)
-language plpgsql stable security definer set search_path=public,pg_temp as $
+language plpgsql stable security definer set search_path=public,pg_temp AS $$
 begin
   if auth.uid() is null or not public.is_verified()
     or (select role from public.profiles where id=auth.uid()) is distinct from 'teacher'::public.app_role
@@ -963,7 +963,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+AS $$
 declare
   v_user uuid := auth.uid();
   v_exam public.exams%rowtype;
