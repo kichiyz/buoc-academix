@@ -835,8 +835,8 @@
     try{
       const {data,error}=await state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering});if(error)throw error;
       const ids=(data||[]).map(x=>x.enrollment_id);
-      let statusRows=[];
-      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error)throw sr.error;statusRows=sr.data||[];}
+      let statusRows=[],outcomesAvailable=true;
+      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error){outcomesAvailable=false;console.warn("Course outcome controls require the final launch migration:",sr.error.message);}else statusRows=sr.data||[];}
       const statuses=new Map(statusRows.map(x=>[x.enrollment_id,x]));
       target.replaceChildren();
       if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
@@ -851,13 +851,16 @@
         const tools=document.createElement("div");tools.className="course-outcome-tools";
         const badge=document.createElement("span");badge.className="result-status "+(current.outcome==="inc"?"status-inc":current.outcome==="drp"?"status-drp":current.outcome==="passed"?"status-passed":current.outcome==="failed"?"status-failed":"status-pending");badge.textContent=current.outcome==="inc"?"INC":current.outcome==="drp"?"DRP":current.outcome==="passed"?"Passed":current.outcome==="failed"?"Failed":"In progress";
         const request=document.createElement("small");request.className="muted";request.textContent=current.drop_requested_at&&current.outcome!=="drp"?"Student requested DRP — approval pending":current.outcome==="drp"?"Drop approved": " ";
-        const outcome=document.createElement("select");outcome.setAttribute("aria-label","Course outcome for "+student.student_name);
-        [["active","In progress"],["inc","INC — Allow compliance"],["drp","DRP — Approve drop"]].forEach(([v,label])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=label;outcome.append(opt);});
-        outcome.value=["active","inc","drp"].includes(current.outcome)?current.outcome:"active";
-        const apply=document.createElement("button");apply.type="button";apply.className="btn btn-quiet";apply.textContent="Apply outcome";apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;
-        outcome.addEventListener("change",()=>{apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;});
-        apply.addEventListener("click",async()=>{apply.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_course_outcome",{p_enrollment_id:student.enrollment_id,p_outcome:outcome.value});if(error)throw error;toast(outcome.value==="inc"?"Student marked INC.":outcome.value==="drp"?"Student drop approved.":"Course returned to in progress.","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");apply.disabled=false;}});
-        tools.append(badge,request,outcome,apply);
+        tools.append(badge,request);
+        if(outcomesAvailable){
+          const outcome=document.createElement("select");outcome.setAttribute("aria-label","Course outcome for "+student.student_name);
+          [["active","In progress"],["inc","INC — Allow compliance"],["drp","DRP — Approve drop"]].forEach(([v,label])=>{const opt=document.createElement("option");opt.value=v;opt.textContent=label;outcome.append(opt);});
+          outcome.value=["active","inc","drp"].includes(current.outcome)?current.outcome:"active";
+          const apply=document.createElement("button");apply.type="button";apply.className="btn btn-quiet";apply.textContent="Apply outcome";apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;
+          outcome.addEventListener("change",()=>{apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;});
+          apply.addEventListener("click",async()=>{apply.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_course_outcome",{p_enrollment_id:student.enrollment_id,p_outcome:outcome.value});if(error)throw error;toast(outcome.value==="inc"?"Student marked INC.":outcome.value==="drp"?"Student drop approved.":"Course returned to in progress.","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");apply.disabled=false;}});
+          tools.append(outcome,apply);
+        }else{const note=document.createElement("small");note.className="muted";note.textContent="Apply the final course-outcomes migration to enable INC and DRP decisions.";tools.append(note);}
         row.append(info,grade,remarks,save,tools);
         row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast(Number(grade.value)>=75?"Final grade saved — Passed (75% or above).":"Final grade saved — Failed (below 75%).","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");save.disabled=false;}});
         target.append(row);
