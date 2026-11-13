@@ -1608,8 +1608,6 @@ select option { color:var(--text); background:var(--panel); }
 :root:not([data-theme="dark"]) ::selection { color:#172b43;background:#b9dcf4; }
 
 
-.mobile-signout { display: none; }
-
 /* Final mobile-first pass: safe-area navigation, compact workspaces and touch-friendly controls. */
 @media (max-width: 700px) {
   html { scroll-padding-top: 88px; scroll-padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
@@ -1695,8 +1693,6 @@ select option { color:var(--text); background:var(--panel); }
     touch-action: manipulation;
   }
   #main-nav .nav-item span { width: auto; font-size: 1.12rem; line-height: 1; }
-  #main-nav .mobile-signout { flex: 0 0 auto; min-width: 66px; min-height: 52px; padding: 5px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; border-radius: 11px; color: var(--muted); font: 600 .62rem "DM Sans",sans-serif; line-height: 1.1; white-space: nowrap; touch-action: manipulation; }
-  #main-nav .mobile-signout span { font-size: 1.12rem; line-height: 1; }
   #main-nav .nav-item.active { box-shadow: inset 0 2px var(--role-accent, var(--gold)); }
   .page-view { min-width: 0; padding-bottom: 22px; }
   .section-heading { flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0 13px; }
@@ -1788,4 +1784,39 @@ select option { color:var(--text); background:var(--panel); }
   .sidebar { min-height: 58px; padding-top: 3px; padding-bottom: calc(3px + env(safe-area-inset-bottom)); }
   #main-nav .nav-item { height: 46px; min-height: 46px; }
   .dashboard { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+}
+
+
+/* Account session controls */
+.account-session-panel {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:22px;
+  max-width:720px;
+  margin-top:16px;
+  padding:20px 22px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:color-mix(in srgb,var(--panel) 88%,transparent);
+}
+.account-session-copy { display:flex; align-items:center; gap:14px; min-width:0; }
+.account-session-icon {
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  width:42px;
+  height:42px;
+  border-radius:13px;
+  color:var(--danger);
+  background:color-mix(in srgb,var(--danger) 12%,transparent);
+  font-size:1.2rem;
+}
+.account-session-copy h3 { margin:0 0 5px; font:600 1rem "Space Grotesk",sans-serif; color:var(--text); }
+.account-session-copy p { margin:0; font-size:.8rem; line-height:1.5; }
+.account-signout { flex:0 0 auto; min-height:44px; }
+.account-signout:disabled, .signout:disabled { opacity:.55; cursor:wait; }
+@media(max-width:700px) {
+  .account-session-panel { align-items:stretch; flex-direction:column; gap:16px; padding:17px; }
+  .account-signout { width:100%; justify-content:center; }
 }
