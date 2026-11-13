@@ -1048,3 +1048,15 @@ select option { color:var(--text); background:var(--panel); }
   color:#202d35;
   background:#e8c879;
 }
+
+/* Maintain readable white labels on the role-colored light-mode buttons. */
+:root:not([data-theme="dark"]) .dashboard.role-teacher .btn-primary {
+  background:#28685d;
+  border-color:#28685d;
+  color:#fff!important;
+}
+:root:not([data-theme="dark"]) .dashboard.role-admin .btn-primary {
+  background:#655080;
+  border-color:#655080;
+  color:#fff!important;
+}
