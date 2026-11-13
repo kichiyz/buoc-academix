@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Weighted course grading, course-linked assessments, safe deletion, and period replacement.
 -- Midterm = 20%, Final = 25%, all other graded coursework = 55%.
 -- Coursework assessment weights are relative within the 55% coursework component.
@@ -274,3 +276,5 @@ COMMENT ON COLUMN public.exams.course_offering_id IS
   'Course offering associated with this assessment; required for the weighted course grade workflow.';
 COMMENT ON FUNCTION public.academix_teacher_assessment_grade_summary(uuid) IS
   'Returns Midterm (20%), Final (25%), and weighted coursework (55%) scores plus transmuted GWA values for each enrolled student.';
+
+COMMIT;
