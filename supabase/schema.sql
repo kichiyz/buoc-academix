@@ -216,7 +216,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_user_id uuid := auth.uid();
   v_submission public.submissions%rowtype;
@@ -320,7 +320,7 @@ begin
     'submitted_at', v_now
   );
 end;
-$;
+$$;
 
 revoke all on function public.submit_exam(uuid, jsonb) from public;
 revoke all on function public.submit_exam(uuid, jsonb) from anon;
