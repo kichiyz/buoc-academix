@@ -391,3 +391,7 @@ input:focus,textarea:focus,select:focus{border-color:#c7a9f0!important;box-shado
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* AI Studio: balanced generation, JSON authoring, and print/export actions */
+.authoring-tools,.draft-export-tools{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.authoring-tools .btn,.draft-export-tools .btn{min-width:0}.draft-export-tools{padding:14px 0;border-bottom:1px solid var(--line)}
+@media(max-width:600px){.authoring-tools,.draft-export-tools{display:grid;grid-template-columns:1fr}.authoring-tools .btn,.draft-export-tools .btn{width:100%}}

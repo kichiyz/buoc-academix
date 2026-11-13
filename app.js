@@ -237,7 +237,7 @@
         if (sessionError) throw sessionError;
         const { data, error } = await state.supabase.functions.invoke("generate-quiz", {
           body: { title: $("#quiz-title").value.trim(), material: $("#quiz-material").value.slice(0, 30000),
-            count: Number($("#quiz-count").value), questionType: $("#quiz-type").value, difficulty: $("#quiz-difficulty").value }
+            count: Number($("#quiz-count").value), questionType: $("#quiz-type").value, difficulty: $("#quiz-difficulty").value, mixDistribution: $("#quiz-mix-distribution").value }
         });
         if (error) {
           // Supabase FunctionsHttpError carries the Edge Function Response in
@@ -272,6 +272,43 @@
       button.disabled = false;
       button.innerHTML = "✦ Generate draft";
     }
+  }
+  function validateImportedExam(data) {
+    if (!data || typeof data !== "object" || !Array.isArray(data.questions)) throw new Error("JSON must contain a questions array.");
+    const title = String(data.title || data.exam_title || "").trim();
+    if (!title) throw new Error("JSON must include a title.");
+    if (!data.questions.length || data.questions.length > 50) throw new Error("An exam must contain between 1 and 50 questions.");
+    const questions = data.questions.map((raw, i) => {
+      const type = raw.question_type || raw.type;
+      const prompt = String(raw.prompt || raw.question || "").trim();
+      const options = Array.isArray(raw.options) ? raw.options.map(x => String(x).trim()) : [];
+      const answer = String(raw.correct_answer ?? raw.answer ?? "").trim();
+      const explanation = String(raw.explanation || "").trim();
+      if (!["multiple_choice","true_false"].includes(type)) throw new Error("Question "+(i+1)+": question_type must be multiple_choice or true_false.");
+      if (!prompt || !answer || !options.includes(answer)) throw new Error("Question "+(i+1)+": prompt and a correct_answer matching one option are required.");
+      if (type === "multiple_choice" && (options.length !== 4 || new Set(options).size !== 4)) throw new Error("Question "+(i+1)+": multiple choice requires four unique options.");
+      if (type === "true_false" && (options.length !== 2 || !options.includes("True") || !options.includes("False") || !["True","False"].includes(answer))) throw new Error("Question "+(i+1)+": true/false options must be exactly True and False.");
+      const points = Number(raw.points ?? 1);
+      if (!Number.isInteger(points) || points < 1 || points > 100) throw new Error("Question "+(i+1)+": points must be a whole number from 1 to 100.");
+      return {position:i+1,question_type:type,prompt,options,correct_answer:answer,explanation,points};
+    });
+    return {title,questions};
+  }
+  function downloadText(filename, text, type) {
+    const url=URL.createObjectURL(new Blob([text],{type}));
+    const a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function printDraft(answerKey) {
+    if (!state.draft?.questions?.length) return toast("Create or import a draft first.","error");
+    const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const items=state.draft.questions.map((q,i)=>answerKey
+      ? '<section class="q"><b>'+ (i+1)+'. '+esc(q.prompt)+'</b><p><strong>Correct answer:</strong> '+esc(q.correct_answer)+'</p><p>'+esc(q.explanation||"")+'</p></section>'
+      : '<section class="q"><b>'+(i+1)+'. '+esc(q.prompt)+'</b><ol type="A">'+q.options.map(o=>'<li>'+esc(o)+'</li>').join("")+'</ol></section>').join("");
+    const doc='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(state.draft.title)+'</title><style>body{font:12pt Arial,sans-serif;color:#111;max-width:800px;margin:36px auto;line-height:1.5}h1{text-align:center;font-size:20pt}.meta{display:flex;justify-content:space-between;border-bottom:1px solid #777;padding:12px 0;margin-bottom:24px}.q{break-inside:avoid;margin:0 0 22px}.q ol{margin-top:8px}.answer{font-weight:bold}@page{margin:18mm}</style></head><body><h1>'+esc(state.draft.title)+'</h1><div class="meta">'+(answerKey?'<b>TEACHER ANSWER KEY — CONFIDENTIAL</b>':'<span>Name: __________________________</span><span>Section: __________</span><span>Date: __________</span>')+'</div>'+items+'</body></html>';
+    const w=window.open("","_blank");if(!w)return toast("Allow pop-ups to print this document.","error");w.document.open();w.document.write(doc);w.document.close();w.onload=()=>{w.focus();w.print();};
+  }
+  function importExamJson(file) {
+    const reader=new FileReader();reader.onload=()=>{try{state.draft=validateImportedExam(JSON.parse(String(reader.result)));renderDraft();toast("JSON exam imported as a draft. Review it before publishing.","success");}catch(e){toast("JSON import failed: "+e.message,"error");}};reader.onerror=()=>toast("Could not read the selected JSON file.","error");reader.readAsText(file);
   }
   function renderDraft() {
     const panel=$("#draft-panel"), target=$("#draft-questions");
@@ -1046,6 +1083,12 @@
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
     $("#generator-form").addEventListener("submit", generateQuiz);
+    $("#import-json-button").addEventListener("click", () => $("#import-json-file").click());
+    $("#import-json-file").addEventListener("change", e => { if(e.target.files?.[0]) importExamJson(e.target.files[0]); e.target.value=""; });
+    $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",explanation:"Explain why A is correct.",points:1},{question_type:"true_false",prompt:"Sample statement.",options:["True","False"],correct_answer:"True",explanation:"Explain the statement.",points:1}]},null,2),"application/json"));
+    $("#export-draft-json").addEventListener("click", () => { if(state.draft) downloadText("academix-exam.json",JSON.stringify({schema_version:1,...state.draft},null,2),"application/json"); });
+    $("#print-student-exam").addEventListener("click", () => printDraft(false));
+    $("#print-answer-key").addEventListener("click", () => printDraft(true));
     $("#publish-quiz").addEventListener("click", publishQuiz);
     $("#export-grades").addEventListener("click", exportGrades);
     $("#previous-question").addEventListener("click", () => { if (state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
