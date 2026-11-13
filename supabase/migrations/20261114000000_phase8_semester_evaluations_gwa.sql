@@ -257,7 +257,14 @@ begin
     raise exception 'Complete all four evaluation criteria using ratings from 1 to 5.' using errcode='22023';
   end if;
   if (select count(*) from jsonb_object_keys(p_ratings)) <> 4
-     or exists(select 1 from jsonb_each_text(p_ratings) x where x.key not in ('clarity','preparedness','engagement','feedback') or x.value !~ '^[1-5]
+     or exists (
+       select 1
+       from jsonb_each_text(p_ratings) x
+       where x.key not in ('clarity','preparedness','engagement','feedback')
+          or x.value !~ '^[1-5]$'
+     ) then
+    raise exception 'Complete all four evaluation criteria using ratings from 1 to 5.' using errcode='22023';
+  end if;
   if not exists(
     select 1 from public.course_enrollments e join public.course_offerings o on o.id=e.offering_id
     join public.academic_terms t on t.id=o.term_id
