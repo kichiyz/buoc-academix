@@ -9,7 +9,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
+    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
   const validSupabaseUrl = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) || (APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL));
   const configured = validSupabaseUrl && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
@@ -297,9 +297,17 @@
     }
   }
   function renderStudentPreview() {
-    const target=$("#student-preview"),draft=state.draft;if(!draft?.questions?.length)return;
-    const q=draft.questions[0],safe=value=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-    target.innerHTML='<div class="preview-exam-top"><span class="eyebrow">STUDENT ASSESSMENT PREVIEW</span><span class="preview-pill">'+(draft.exam_mode==="sequential"?"SEQUENTIAL":"FREE-ROAM")+'</span></div><h3>'+safe(draft.title)+'</h3><div class="preview-meta"><span>'+draft.questions.length+' questions</span><span>'+Number($("#publish-duration").value||30)+' minutes</span><span>Question 1 of '+draft.questions.length+'</span></div><div class="preview-progress"><span></span></div><article class="preview-question"><p class="eyebrow">QUESTION 01 · '+q.points+' POINTS</p><h4>'+safe(q.prompt)+'</h4><div class="preview-options">'+q.options.map((o,i)=>'<label><span>'+(i+1)+'</span>'+safe(o)+'</label>').join("")+'</div></article><div class="preview-controls"><button type="button" disabled>← Previous</button><span>Student view · answers hidden</span><button type="button" disabled>Next →</button></div>';
+    const target=$("#student-preview"),draft=state.draft;
+    if(!target||!draft?.questions?.length)return;
+    const safe=value=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    const total=draft.questions.length;
+    state.previewQuestionIndex=Math.max(0,Math.min(state.previewQuestionIndex||0,total-1));
+    const index=state.previewQuestionIndex,q=draft.questions[index];
+    if(window.MathJax?.typesetClear)window.MathJax.typesetClear([target]);
+    const progress=((index+1)/total)*100;
+    target.innerHTML='<div class="preview-exam-top"><span class="eyebrow">STUDENT ASSESSMENT PREVIEW</span><span class="preview-pill">'+(draft.exam_mode==="sequential"?"SEQUENTIAL":"FREE-ROAM")+'</span></div><h3>'+safe(draft.title)+'</h3><div class="preview-meta"><span>'+total+' questions</span><span>'+Number($("#publish-duration").value||30)+' minutes</span><span>Question '+(index+1)+' of '+total+'</span></div><div class="preview-progress" role="progressbar" aria-label="Preview question progress" aria-valuemin="1" aria-valuemax="'+total+'" aria-valuenow="'+(index+1)+'"><span style="width:'+progress+'%"></span></div><article class="preview-question" aria-live="polite"><p class="eyebrow">QUESTION '+String(index+1).padStart(2,"0")+' · '+Number(q.points||1)+' POINTS</p><h4>'+safe(q.prompt)+'</h4><div class="preview-options">'+(q.options||[]).map((o,i)=>'<div class="preview-option"><span>'+(i+1)+'</span><div>'+safe(o)+'</div></div>').join("")+'</div></article><div class="preview-controls"><button type="button" class="btn btn-quiet" data-preview-prev '+(index===0?"disabled":"")+' aria-label="Previous preview question">← Previous</button><span>Student view · answers hidden</span><button type="button" class="btn btn-quiet" data-preview-next '+(index===total-1?"disabled":"")+' aria-label="Next preview question">Next →</button></div>';
+    target.querySelector("[data-preview-prev]")?.addEventListener("click",()=>{state.previewQuestionIndex=Math.max(0,index-1);renderStudentPreview();});
+    target.querySelector("[data-preview-next]")?.addEventListener("click",()=>{state.previewQuestionIndex=Math.min(total-1,index+1);renderStudentPreview();});
     if(window.MathJax?.typesetPromise)window.MathJax.typesetPromise([target]).catch(()=>{});
   }
   function renderDraft() {
@@ -960,7 +968,7 @@
       list.replaceChildren(fragment);
       const audit = await adminControl("list_audit");
       if (loadSequence !== adminUsersLoadSequence) return;
-      const auditList=$("#admin-audit-list"); auditList.replaceChildren();
+      const auditList=$("#admin-audit-list"); auditList.replaceChildren(); auditList.classList.add("admin-audit-scroll");
       if(!audit.logs?.length) auditList.innerHTML='<div class="empty-state">No administrative actions recorded yet.</div>';
       (audit.logs||[]).forEach(log=>{
         const row=document.createElement("article");
