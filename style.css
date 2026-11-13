@@ -482,3 +482,10 @@ html,body{background:var(--bg);color:var(--text)}body{background:radial-gradient
 :root[data-theme="dark"] .btn-primary{color:#182033}:root[data-theme="dark"] .role-hero{background:linear-gradient(115deg,#29374a,var(--panel))}:root[data-theme="dark"] .auth-card{background:var(--panel)}
 @media(max-width:900px){.sidebar{position:sticky;top:0;height:100vh}.topbar{top:0}.topbar-actions{gap:8px}.theme-toggle{padding:8px 10px}}
 @media(max-width:600px){.topbar{position:relative;flex-wrap:wrap}.topbar-actions{margin-left:auto}.theme-toggle{font-size:.68rem}.student-course-row{align-items:flex-start;flex-direction:column}.phase-two-list{max-height:360px}}
+
+/* Readability refinements for the light portal theme */
+:root:not([data-theme="dark"]) .auth-card label,:root:not([data-theme="dark"]) .form-panel label,:root:not([data-theme="dark"]) .publish-row label{color:var(--text)}
+:root:not([data-theme="dark"]) .feature-pills span{color:var(--muted);background:var(--panel);border-color:var(--line)}
+:root:not([data-theme="dark"]) .sidebar-label,:root:not([data-theme="dark"]) .grade-status,:root:not([data-theme="dark"]) .exam-meta{color:var(--muted)}
+:root:not([data-theme="dark"]) .dev-tag{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:var(--line)}
+.auth-card{position:relative}.auth-theme-toggle{position:absolute;right:18px;top:16px;z-index:2}.mobile-brand{padding-right:112px}
