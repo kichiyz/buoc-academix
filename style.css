@@ -488,4 +488,4 @@ html,body{background:var(--bg);color:var(--text)}body{background:radial-gradient
 :root:not([data-theme="dark"]) .feature-pills span{color:var(--muted);background:var(--panel);border-color:var(--line)}
 :root:not([data-theme="dark"]) .sidebar-label,:root:not([data-theme="dark"]) .grade-status,:root:not([data-theme="dark"]) .exam-meta{color:var(--muted)}
 :root:not([data-theme="dark"]) .dev-tag{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:var(--line)}
-.auth-card{position:relative}.auth-theme-toggle{position:absolute;right:18px;top:16px;z-index:2}.mobile-brand{padding-right:112px}
+.auth-theme-toggle{position:static;display:flex;margin:0 0 16px auto}.mobile-brand{padding-right:0}
