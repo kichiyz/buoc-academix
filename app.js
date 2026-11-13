@@ -384,7 +384,7 @@
     try {
       const { data: exam, error } = await state.supabase.from("exams").insert({
         teacher_id: state.user.id, title: state.draft.title || $("#json-assessment-title").value.trim(),
-        duration_minutes: Number($("#publish-duration").value), exam_mode: state.draft.exam_mode || $("#exam-navigation-mode").value, status: "draft"
+        duration_minutes: Number($("#publish-duration").value), exam_mode: state.draft.exam_mode || $("#exam-navigation-mode").value, assessment_category: $("#assessment-category").value, grade_weight_percent: Number($("#assessment-weight").value), status: "draft"
       }).select("id").single();
       if (error) throw error;
       const rows = state.draft.questions.map(q => ({ exam_id: exam.id, position: q.position, question_type: q.question_type,
@@ -732,7 +732,7 @@
     (q.options || []).forEach(option => {
       const label = document.createElement("label"); label.className = "answer-option";
       const input = document.createElement("input"); input.type = "radio"; input.name = `answer-${q.id}`; input.value = option; input.checked = state.answers[q.id] === option;
-      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = `${Object.keys(state.answers).length} of ${total} answered`; renderQuestionNavigator(); });
+      input.addEventListener("change", () => { state.answers[q.id] = option; $("#question-count-label").textContent = Object.keys(state.answers).length + " of " + total + " answered"; $("#next-question").disabled = state.currentExam?.exam_mode === "sequential" && state.answers[q.id] === undefined; renderQuestionNavigator(); });
       const text = document.createElement("span"); text.textContent = option; label.append(input, text); list.append(label);
     });
     target.append(list); renderQuestionNavigator();
@@ -1107,7 +1107,7 @@
     initPlatformFlags();
     $("#jump-admin-users")?.addEventListener("click", () => $("#admin-users-list")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#search-admin-users")?.addEventListener("click", loadAdminUsers);
-    $("#generator-form").addEventListener("submit", generateQuiz);
+    // AI generation is intentionally locked in the UI; retain generateQuiz() and the Edge Function for future reactivation.
     $("#validate-json-authoring").addEventListener("click", validateJsonAuthoring);
     $("#json-authoring-input").addEventListener("input", () => {const s=$("#json-validation-status");s.textContent="JSON changed — validate to refresh the student preview.";s.className="notice";});
     $("#json-assessment-title").addEventListener("input",()=>{if(state.draft){state.draft.title=$("#json-assessment-title").value.trim()||state.draft.title;renderStudentPreview();}});
