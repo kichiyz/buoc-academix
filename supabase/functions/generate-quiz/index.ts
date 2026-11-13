@@ -117,39 +117,49 @@ ${material}`;
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } },
       });
-      let response: Response;
+      let response: Response | undefined;
       let result: any;
-      // Retry only transient provider overload/gateway responses. Never retry
+      // Retry one transient provider timeout or overload response. Never retry
       // authentication, model, or quota errors, which require configuration/action.
       for (let attempt = 1; attempt <= 2; attempt++) {
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(38000),
-          body: requestBody,
-        });
-        result = await response.json();
+        try {
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(38000),
+            body: requestBody,
+          });
+          result = await response.json();
+        } catch (error) {
+          const timeoutError = error instanceof Error
+            && (error.name === "TimeoutError" || /signal timed out|timed out/i.test(error.message));
+          if (!timeoutError || attempt === 2) throw error;
+          console.warn("Gemini request timed out; retrying once after backoff.");
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          continue;
+        }
         if (response.ok || ![503, 504].includes(response.status) || attempt === 2) break;
         console.warn("Gemini temporarily unavailable; retrying once after backoff. HTTP", response.status);
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
-      console.log("Gemini request duration_ms:", Date.now() - aiStartedAt, "status:", response!.status);
-      if (!response!.ok) {
-        console.error("Gemini request failed:", response!.status, JSON.stringify(result).slice(0, 1000));
+      console.log("Gemini request duration_ms:", Date.now() - aiStartedAt, "status:", response?.status ?? "timeout");
+      if (!response) throw new Error("Gemini request timed out after one automatic retry.");
+      if (!response.ok) {
+        console.error("Gemini request failed:", response.status, JSON.stringify(result).slice(0, 1000));
         const providerMessage = typeof result?.error?.message === "string" ? result.error.message.slice(0, 300) : "";
-        if (response!.status === 429) {
+        if (response.status === 429) {
           return json({ error: "Gemini rate limit or quota reached. Check your Google AI Studio quota/billing, then try again." }, 429);
         }
-        if (response!.status === 401 || response!.status === 403) {
+        if (response.status === 401 || response.status === 403) {
           return json({ error: "Gemini authentication failed. Verify that GEMINI_API_KEY is valid and has access to the Gemini API." }, 502);
         }
-        if (response!.status === 404) {
+        if (response.status === 404) {
           return json({ error: "Gemini model not found or unavailable: " + model + ". Set GEMINI_MODEL to a model available to your API key. Provider detail: " + (providerMessage || "no detail returned") }, 502);
         }
-        if (response!.status === 503 || response!.status === 504) {
+        if (response.status === 503 || response.status === 504) {
           return json({ error: "Gemini remained temporarily unavailable after one automatic retry. Wait briefly and try again. If this persists, check Google AI Studio service status and quota." }, 503);
         }
-        return json({ error: "Gemini request failed (HTTP " + response!.status + "). Check the function logs for provider details" + (providerMessage ? ": " + providerMessage : ".") }, 502);
+        return json({ error: "Gemini request failed (HTTP " + response.status + "). Check the function logs for provider details" + (providerMessage ? ": " + providerMessage : ".") }, 502);
       }
       rawText = result?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
     } else if (provider === "openai") {
