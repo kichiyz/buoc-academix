@@ -1373,7 +1373,23 @@
   async function adminControl(action, payload = {}) {
     if (state.profile?.role !== "admin") throw new Error("Developer access required.");
     const { data, error } = await state.supabase.functions.invoke("admin-control", { body: { action, ...payload } });
-    if (error) throw error;
+    if (error) {
+      // Surface the Edge Function's actual response instead of Supabase's
+      // generic "Edge Function returned non-2xx status code" message.
+      let detail = "";
+      let status = "";
+      try {
+        const response = error.context;
+        if (response && typeof response.json === "function") {
+          status = response.status ? ` (HTTP ${response.status})` : "";
+          const body = await response.json();
+          detail = typeof body?.error === "string" ? body.error
+            : typeof body?.message === "string" ? body.message : "";
+        }
+      } catch (_) {}
+      throw new Error(detail ? `Admin service: ${detail}${status}`
+        : `${error.message || "Admin service request failed."}${status}. Check the admin-control Edge Function logs.`);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   }
