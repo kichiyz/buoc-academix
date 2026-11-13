@@ -787,12 +787,12 @@
       records.replaceChildren();
       const summary=document.createElement("p");summary.textContent=terms.length+" term(s), "+courses.length+" course(s), "+offerings.length+" offering(s) configured.";records.append(summary);
       const list=document.createElement("div");list.className="phase8-record-list";
-      offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Teacher ID: "+o.instructor_id;list.append(row);});
+      offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id),teacher=people.find(p=>p.id===o.instructor_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Instructor: "+(teacher?.full_name||"Assigned teacher");list.append(row);});
       records.append(list);
       const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
       const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
-    } catch(e){status.textContent="Phase 8 database is not ready: "+(e.message||"Migration may not have been applied.");records.textContent="Apply supabase/migrations/20261114000000_phase8_semester_evaluations_gwa.sql in the Supabase SQL Editor, then refresh.";}
+    } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="The Phase 8 migration is installed. Check administrator verification, table permissions, RLS policies, and the error above; then refresh.";}
   }
   async function savePhase8Rpc(fn,args,success) {
     const {data,error}=await state.supabase.rpc(fn,args);if(error)throw error;
@@ -872,7 +872,7 @@
       heading.append(term,score);target.append(heading);
       const list=document.createElement("div");list.className="phase8-record-list";
       (data.courses||[]).forEach(c=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=c.course_code+" — "+c.course_title+" · "+c.units+" units · "+c.percentage+"% → GWA "+c.gwa;list.append(row);});target.append(list);
-    }catch(e){target.textContent="Final GWA is unavailable. "+e.message+" Apply the Phase 8 migration if this is a new deployment.";}
+    }catch(e){target.textContent="Final GWA could not be loaded: "+e.message+" Check student verification, course enrollment, and database permissions.";}
   }
 
   async function loadGrades() {
