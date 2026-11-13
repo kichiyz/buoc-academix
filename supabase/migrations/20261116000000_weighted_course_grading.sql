@@ -37,6 +37,10 @@ BEGIN
     RAISE EXCEPTION 'Assessment not found or not owned by this teacher.' USING errcode = '42501';
   END IF;
 
+  IF v_exam.status <> 'draft' THEN
+    RAISE EXCEPTION 'Only a draft assessment can be published.' USING errcode = '55000';
+  END IF;
+
   IF v_exam.course_offering_id IS NULL OR NOT EXISTS (
     SELECT 1 FROM public.course_offerings o
     WHERE o.id = v_exam.course_offering_id AND o.instructor_id = auth.uid()
