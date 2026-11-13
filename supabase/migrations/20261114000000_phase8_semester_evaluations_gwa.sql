@@ -371,3 +371,27 @@ begin
 end $$;
 revoke all on function public.academix_teacher_roster(uuid) from public,anon;
 grant execute on function public.academix_teacher_roster(uuid) to authenticated;
+
+
+-- Admins can monitor completion totals without seeing individual student ratings or comments.
+create or replace function public.academix_admin_evaluation_progress(p_term_id uuid default null)
+returns table(instructor_id uuid,instructor_name text,student_count bigint,completed_count bigint,completion_percent numeric)
+language plpgsql stable security definer set search_path=public,pg_temp as $$
+begin
+  if not public.academix_is_active_admin() then raise exception 'Administrator access required.' using errcode='42501'; end if;
+  return query
+  select o.instructor_id,coalesce(p.full_name,'Assigned instructor'),
+    count(distinct e.student_id),
+    count(distinct e.student_id) filter(where ie.id is not null),
+    case when count(distinct e.student_id)=0 then 0
+      else round(100.0*count(distinct e.student_id) filter(where ie.id is not null)/count(distinct e.student_id),1) end
+  from public.course_offerings o
+  join public.course_enrollments e on e.offering_id=o.id
+  join public.profiles p on p.id=o.instructor_id
+  left join public.instructor_evaluations ie on ie.term_id=o.term_id and ie.instructor_id=o.instructor_id and ie.student_id=e.student_id
+  where p_term_id is null or o.term_id=p_term_id
+  group by o.instructor_id,p.full_name
+  order by p.full_name;
+end $$;
+revoke all on function public.academix_admin_evaluation_progress(uuid) from public,anon;
+grant execute on function public.academix_admin_evaluation_progress(uuid) to authenticated;
