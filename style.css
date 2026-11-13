@@ -442,3 +442,34 @@ button,.btn{line-height:1.35}
  .preview-controls span{grid-column:1/-1;grid-row:1;text-align:center}
  .preview-controls button{width:100%}
 }
+
+
+/* Phase 8 semester evaluation and GWA workflow */
+.phase8-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;margin-top:18px}
+.phase8-admin-grid .platform-card{display:grid;align-content:start;gap:12px;min-width:0}
+.phase8-admin-grid h3{margin:0 0 4px}
+.phase8-admin-grid label,.phase8-evaluation-form label{display:grid;gap:6px;font-size:.9rem}
+.phase8-inline-check{display:flex!important;align-items:center;gap:10px!important}
+.phase8-inline-check input{width:auto}
+.phase8-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.phase8-admin-data{margin-top:22px}
+.phase8-record-list{display:grid;gap:8px;margin-top:12px}
+.phase8-record-row{padding:12px 14px;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:10px;overflow-wrap:anywhere;font-size:.88rem}
+.phase8-teacher-panel{margin-top:24px}
+.phase8-teacher-panel>label{display:grid;gap:8px;max-width:680px}
+.phase8-roster{display:grid;gap:10px;margin-top:16px}
+.phase8-grade-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(100px,.5fr) minmax(150px,1fr) auto;align-items:center;gap:12px;padding:14px;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:12px}
+.phase8-grade-row>div{display:grid;gap:4px;min-width:0}
+.phase8-grade-row small{color:var(--muted);overflow-wrap:anywhere}
+.phase8-evaluation-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:18px}
+.phase8-evaluation-card{padding:20px;border:1px solid var(--line,rgba(255,255,255,.14));border-radius:16px;background:rgba(255,255,255,.035)}
+.phase8-evaluation-card h3{margin:0 0 8px}
+.phase8-evaluation-form{display:grid;gap:12px;margin-top:16px}
+.phase8-evaluation-form select{width:100%}
+.phase8-gwa-result{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px;border-radius:14px;background:rgba(239,190,77,.1);border:1px solid rgba(239,190,77,.35)}
+.phase8-gwa-result p{margin:0}
+.phase8-gwa-result strong{font-size:clamp(2rem,5vw,3rem);color:var(--gold,#efbe4d)}
+@media(max-width:760px){.phase8-grade-row{grid-template-columns:1fr 1fr}.phase8-grade-row>div{grid-column:1/-1}.phase8-grade-row button{width:100%}.phase8-two-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.phase8-grade-row{grid-template-columns:1fr}.phase8-grade-row>div{grid-column:auto}.phase8-gwa-result{align-items:flex-start;flex-direction:column}}
+
+.phase8-admin-data{min-width:0}.phase8-admin-data>h3{margin-bottom:8px}.phase8-record-row{line-height:1.5}
