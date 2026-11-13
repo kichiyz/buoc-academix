@@ -149,6 +149,7 @@
               <label>Time limit (minutes)<input id="publish-duration" type="number" min="1" max="300" value="30"></label>
               <label>Question navigation<select id="exam-navigation-mode"><option value="freeroam">Free-roam — revisit any question</option><option value="sequential">Sequential — answer, then continue</option></select></label>
               <label>Assessment type<select id="assessment-category"><option value="quiz">Quiz</option><option value="long_test">Long test</option><option value="midterm">Midterm examination</option><option value="final">Final examination</option><option value="other">Other</option></select></label>
+              <label>Final-grade weight (%)<input id="assessment-weight" type="number" min="0" max="100" step="0.25" value="10"></label>
             </div>
             <label for="json-authoring-input">JSON code editor</label><textarea id="json-authoring-input" class="json-code-editor" spellcheck="false" rows="20" placeholder="Paste your exam JSON here…"></textarea>
             <div class="authoring-tools"><button id="validate-json-authoring" class="btn btn-primary" type="button">Validate & preview</button><button id="import-json-button" class="btn btn-quiet" type="button">Import .JSON file</button><input id="import-json-file" type="file" accept=".json,application/json" hidden><button id="export-draft-json" class="btn btn-quiet" type="button">Export JSON</button></div>
