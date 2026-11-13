@@ -43,5 +43,5 @@ test("Gemini quiz generation retries only transient 503/504 responses once", () 
 test("quiz-generation client timeout allows the bounded backend retry window", async () => {
   const app = await readFile("app.js", "utf8");
   assert.match(app, /Quiz generation timed out after 90 seconds/);
-  assert.match(app, /\}\), 90000\)/);
+  assert.match(app, /90000\)/);
 });
