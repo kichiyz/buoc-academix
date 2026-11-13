@@ -1606,3 +1606,182 @@ select option { color:var(--text); background:var(--panel); }
   }
 }
 :root:not([data-theme="dark"]) ::selection { color:#172b43;background:#b9dcf4; }
+
+
+/* Final mobile-first pass: safe-area navigation, compact workspaces and touch-friendly controls. */
+@media (max-width: 700px) {
+  html { scroll-padding-top: 88px; scroll-padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  body { -webkit-text-size-adjust: 100%; }
+  .dashboard { display: block; min-height: 100dvh; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .main-area { width: 100%; min-width: 0; padding: 0 14px calc(28px + env(safe-area-inset-bottom)); }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    min-height: 72px;
+    margin: 0 -14px 18px;
+    padding: 10px 14px;
+    gap: 8px;
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .topbar h1 { font-size: clamp(1.05rem, 4.5vw, 1.3rem); line-height: 1.2; }
+  .topbar .eyebrow { font-size: .55rem; letter-spacing: .12em; }
+  .topbar-actions { gap: 7px; flex: 0 0 auto; }
+  .theme-toggle { min-height: 40px; padding: 8px 10px; font-size: .68rem; }
+  .profile-chip { gap: 0; }
+  .profile-chip .avatar { width: 36px; height: 36px; }
+  .profile-chip > div:last-child { display: none; }
+
+  .sidebar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 60;
+    width: 100%;
+    height: auto;
+    min-height: calc(66px + env(safe-area-inset-bottom));
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+    border-radius: 16px 16px 0 0;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow: 0 -8px 28px rgba(10, 25, 40, .12);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+  }
+  .brand-row, .sidebar-label, .sidebar-bottom { display: none !important; }
+  #main-nav {
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    gap: 5px;
+    justify-content: flex-start;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  #main-nav::-webkit-scrollbar { display: none; }
+  #main-nav .nav-item {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 66px;
+    min-height: 52px;
+    height: 52px;
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    border-radius: 11px;
+    font-size: .62rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-align: center;
+    touch-action: manipulation;
+  }
+  #main-nav .nav-item span { width: auto; font-size: 1.12rem; line-height: 1; }
+  #main-nav .nav-item.active { box-shadow: inset 0 2px var(--role-accent, var(--gold)); }
+  .page-view { min-width: 0; padding-bottom: 22px; }
+  .section-heading { flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0 13px; }
+  .section-heading > :first-child { min-width: 0; flex: 1 1 180px; }
+  .section-heading h2 { font-size: 1.08rem; }
+  .section-heading .btn, .section-heading > button { min-height: 42px; }
+  .role-hero, .welcome-banner, .dev-masthead {
+    min-height: 0;
+    padding: 20px 18px;
+    margin-bottom: 18px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  .role-hero { align-items: flex-start; }
+  .role-hero h2, .dev-masthead h2 { font-size: clamp(1.35rem, 6vw, 1.75rem); line-height: 1.2; }
+  .role-hero p, .welcome-banner p, .dev-masthead p { font-size: .84rem; line-height: 1.55; }
+  .hero-emblem, .dev-seal { display: none; }
+  .hero-actions { display: grid; grid-template-columns: 1fr; width: 100%; gap: 8px; }
+  .hero-actions .btn { width: 100%; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0 22px; }
+  .metric-card { min-height: 0; padding: 14px; border-radius: 14px; }
+  .metric-icon { width: 34px; height: 34px; margin-bottom: 12px; }
+  .metric-card strong { font-size: 1rem; overflow-wrap: anywhere; }
+  .metric-card p { font-size: .75rem; margin-bottom: 8px; }
+  .panel, .form-panel, .dev-admin-panel, .dev-info-panel, .platform-card,
+  .phase8-evaluation-card, .phase8-teacher-panel { min-width: 0; padding: 15px; border-radius: 15px; }
+  .exam-grid { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+  .exam-card { min-width: 0; padding: 16px; }
+  .exam-card .btn { width: 100%; align-self: stretch; min-height: 44px; }
+  .form-grid, .phase8-two-fields { grid-template-columns: minmax(0, 1fr); }
+  .form-panel label, .workflow-form label { min-width: 0; }
+  input, textarea, select { min-height: 44px; font-size: 16px; }
+  textarea { min-height: 104px; }
+  .btn, button { touch-action: manipulation; }
+  .btn { min-height: 44px; }
+  .tool-card { align-items: flex-start; padding: 15px; gap: 12px; }
+  .tool-card .btn { width: 100%; margin: 4px 0 0; }
+  .publish-row { align-items: stretch; }
+  .publish-row .btn { width: 100%; }
+  .grade-row { grid-template-columns: minmax(0, 1fr) auto; padding: 13px 12px; gap: 8px; }
+  .account-panel { max-width: none; padding: 17px; gap: 14px; }
+  .account-meta { flex-wrap: wrap; gap: 6px; }
+  .admin-user-controls { grid-template-columns: minmax(0, 1fr); }
+  .admin-user-controls select { grid-column: auto; }
+  .admin-user-card { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .admin-search-row { grid-template-columns: minmax(0, 1fr); }
+  .admin-search-row > div { grid-template-columns: minmax(0, 1fr); }
+  .admin-search-row .btn, .admin-user-controls .btn { width: 100%; }
+  .dev-status-strip { grid-template-columns: minmax(0, 1fr); }
+  .dev-status-strip > div { min-width: 0; }
+  .platform-provider-links { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .phase8-grade-row { grid-template-columns: minmax(0, 1fr); }
+  .phase8-grade-row > * { min-width: 0; }
+  .phase8-grade-row button, .course-outcome-tools button { width: 100%; }
+  .course-outcome-tools { display: grid !important; grid-template-columns: minmax(0, 1fr); }
+  .course-outcome-tools select { max-width: none; width: 100%; }
+  .phase-two-row { flex-direction: column; gap: 9px; padding: 13px; }
+  .phase-two-row > .badge { align-self: flex-start; }
+  .workflow-modal { padding: 0; align-items: end; }
+  .workflow-modal-card { width: 100%; max-height: min(94dvh, 900px); border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .workflow-modal-header { padding: 17px 16px 13px; gap: 12px; }
+  .workflow-modal-body { padding: 15px 16px; }
+  .workflow-modal-footer { padding: 12px 16px 15px; grid-template-columns: minmax(0, 1fr); }
+  .workflow-modal-footer .btn { width: 100%; }
+  table { display: block; width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { white-space: nowrap; }
+  .toast { right: 12px; left: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); max-width: none; }
+  .exam-screen { min-height: 100dvh; padding: 14px 12px calc(32px + env(safe-area-inset-bottom)); }
+  .exam-top { align-items: center; gap: 9px; margin-bottom: 16px; }
+  .exam-top > div:nth-child(2) { min-width: 0; }
+  .exam-top h1 { font-size: 1.08rem; overflow-wrap: anywhere; }
+  .exam-top .btn { min-height: 42px; }
+  .exam-paper { padding: 17px 14px; min-height: 0; }
+  .question-title { font-size: 1.08rem; line-height: 1.5; }
+  .answer-option { min-height: 48px; padding: 13px; }
+  .exam-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .exam-controls .btn { width: 100%; min-width: 0; }
+  .exam-controls #submit-exam { grid-column: 1 / -1; }
+}
+@media (max-width: 390px) {
+  .main-area { padding-left: 11px; padding-right: 11px; }
+  .topbar { margin-left: -11px; margin-right: -11px; padding-left: 11px; padding-right: 11px; }
+  .metric-grid { grid-template-columns: minmax(0, 1fr); }
+  #main-nav .nav-item { min-width: 62px; padding-left: 6px; padding-right: 6px; }
+  .role-hero, .welcome-banner, .dev-masthead { padding: 17px 15px; }
+  .panel, .form-panel { padding: 13px; }
+}
+@media (max-height: 520px) and (max-width: 900px) {
+  .sidebar { min-height: 58px; padding-top: 3px; padding-bottom: calc(3px + env(safe-area-inset-bottom)); }
+  #main-nav .nav-item { height: 46px; min-height: 46px; }
+  .dashboard { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+}
