@@ -768,13 +768,14 @@
     if(!status||!records)return;
     status.textContent="Loading academic configuration…";
     try {
-      const [termsR,coursesR,offeringsR]=await Promise.all([
+      const [termsR,coursesR,offeringsR,bandsR]=await Promise.all([
         state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
         state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
-        state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false})
+        state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false}),
+        state.supabase.from("term_grade_bands").select("term_id,label,min_percentage,max_percentage,gwa_value").order("min_percentage")
       ]);
-      for(const r of [termsR,coursesR,offeringsR])if(r.error)throw r.error;
-      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[];
+      for(const r of [termsR,coursesR,offeringsR,bandsR])if(r.error)throw r.error;
+      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[];
       const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
       fill("#phase8-offering-term",terms,t=>t.academic_year+" / "+t.semester+(t.is_active?" (active)":""),"Select academic term");
       fill("#phase8-band-term",terms,t=>t.academic_year+" / "+t.semester,"Select academic term");
@@ -785,6 +786,8 @@
       const list=document.createElement("div");list.className="phase8-record-list";
       offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Teacher ID: "+o.instructor_id;list.append(row);});
       records.append(list);
+      const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
+      const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
     } catch(e){status.textContent="Phase 8 database is not ready: "+(e.message||"Migration may not have been applied.");records.textContent="Apply supabase/migrations/20261114000000_phase8_semester_evaluations_gwa.sql in the Supabase SQL Editor, then refresh.";}
   }
