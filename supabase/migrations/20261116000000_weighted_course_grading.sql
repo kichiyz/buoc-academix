@@ -46,6 +46,14 @@ BEGIN
     RAISE EXCEPTION 'Add at least one question before publishing.' USING errcode = '23514';
   END IF;
 
+  IF v_exam.assessment_category = 'midterm' THEN
+    UPDATE public.exams SET grade_weight_percent = 20 WHERE id = p_exam_id;
+  ELSIF v_exam.assessment_category = 'final' THEN
+    UPDATE public.exams SET grade_weight_percent = 25 WHERE id = p_exam_id;
+  ELSIF COALESCE(v_exam.grade_weight_percent, 0) <= 0 THEN
+    RAISE EXCEPTION 'Coursework assessments need a relative weight greater than zero.' USING errcode = '23514';
+  END IF;
+
   IF v_exam.assessment_category IN ('midterm','final') THEN
     UPDATE public.exams
     SET status = 'archived'
