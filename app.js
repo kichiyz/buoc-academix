@@ -1151,14 +1151,16 @@
   }
   async function exportGrades() {
     try {
-      const { data, error } = await state.supabase.from("grades").select("student_id,exam_id,score,max_score,feedback,created_at,exams(title),profiles!grades_student_id_fkey(full_name,bu_id)").order("created_at", { ascending: false });
-      if (error) throw error;
-      const cols = ["student_id","student_name","bu_id","exam_title","score","max_score","feedback","graded_at"];
-      const esc = v => `"${String(v ?? "").replaceAll('"','""')}"`;
-      const lines = [cols.join(","), ...(data || []).map(g => [g.student_id,g.profiles?.full_name,g.profiles?.bu_id,g.exams?.title,g.score,g.max_score,g.feedback,g.created_at].map(esc).join(","))];
-      const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = `academix-grades-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
-    } catch (e) { toast(e.message || "Could not export grades.", "error"); }
+      const offeringId=$("#teacher-grade-offering")?.value;
+      if(!offeringId)return toast("Select one assigned class before exporting its grades.","error");
+      const {data,error}=await state.supabase.rpc("academix_teacher_grade_directory",{p_offering_id:offeringId});
+      if(error)throw error;
+      const cols=["student_id","student_name","bu_id","year_level","block","course_code","course_title","grade_type","assessment","score","max_score","percentage","gwa","graded_at"];
+      const esc=v=>'"'+String(v??"").replaceAll('"','""')+'"';
+      const lines=[cols.join(","),...(data||[]).map(g=>[g.student_id,g.full_name,g.bu_id,g.year_level,g.block_code,g.course_code,g.course_title,g.record_type,g.exam_title,g.score,g.max_score,g.percentage,g.gwa_value,g.graded_at].map(esc).join(","))];
+      const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="academix-grades-"+String(offeringId).slice(0,8)+"-"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(url);
+    }catch(e){toast(e.message||"Could not export grades.","error");}
   }
 
   // Phase 2: read-only diagnostic views. Queries deliberately use ordinary

@@ -39,10 +39,15 @@ test("administrators and teachers can only retrieve grades inside the selected a
   assert.match(html,/id="teacher-grade-directory"/);
   assert.match(app,/academix_admin_grade_directory/);
   assert.match(app,/academix_teacher_grade_directory/);
+  assert.match(migration,/FROM public\.course_final_grades/);
+  assert.match(app,/x\.record_type==="course_final"/);
+  assert.match(app,/map\(x=>\(\{\.\.\.x,id:x\.student_id\}\)\)/);
   assert.match(migration,/Teachers read grades only in scoped classes/);
   assert.match(migration,/Teachers read submissions only in scoped classes/);
   assert.match(migration,/student\.campus_id=offering\.campus_id/);
   assert.match(migration,/academix_teacher_roster/);
+  assert.doesNotMatch(migration,/AS \$(?!\$)|^\s*\$;/m);
+  assert.equal((migration.match(/\$\$/g)||[]).length%2,0);
   assert.match(migration,/academix_teacher_assessment_grade_summary/);
 });
 

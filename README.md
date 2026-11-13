@@ -108,7 +108,7 @@ The placement checker includes active student accounts that have incomplete plac
 
 ### Grade visibility and access control
 
-Administrators must select the exact campus, college, degree program, year level, and block before the grade directory returns records. Teachers choose one of their assigned class offerings. The same academic-scope match is enforced by protected database functions and row-level policies; the frontend filters are not the security boundary.
+Administrators must select the exact campus, college, degree program, year level, and block before the grade directory returns records. Teachers choose one of their assigned class offerings. The directory includes individual assessment scores and finalized course grades with the active term's GWA conversion. The same academic-scope match is enforced by protected database functions and row-level policies; the frontend filters are not the security boundary.
 
 ### Question types, images, and manual grading
 

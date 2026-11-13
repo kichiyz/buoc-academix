@@ -248,7 +248,7 @@ ALTER TABLE public.course_offerings ADD CONSTRAINT course_offerings_academic_sco
 );
 
 CREATE OR REPLACE FUNCTION public.academix_validate_profile_academic_placement()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NEW.campus_id IS NULL THEN RETURN NEW; END IF;
   IF NOT EXISTS(
@@ -259,13 +259,13 @@ BEGIN
       AND ca.is_active AND co.is_active AND pr.is_active
   ) THEN RAISE EXCEPTION 'Student campus, college, and degree program must match the official academic directory.' USING errcode='23514'; END IF;
   RETURN NEW;
-END $;
+END $$;
 DROP TRIGGER IF EXISTS profiles_validate_academic_placement ON public.profiles;
 CREATE TRIGGER profiles_validate_academic_placement BEFORE INSERT OR UPDATE OF campus_id,college_id,program_id,year_level,block_code
 ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.academix_validate_profile_academic_placement();
 
 CREATE OR REPLACE FUNCTION public.academix_validate_offering_academic_scope()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NEW.campus_id IS NULL THEN RETURN NEW; END IF;
   IF NOT EXISTS(
@@ -276,7 +276,7 @@ BEGIN
       AND ca.is_active AND co.is_active AND pr.is_active
   ) THEN RAISE EXCEPTION 'Course offering campus, college, and program must match the academic directory.' USING errcode='23514'; END IF;
   RETURN NEW;
-END $;
+END $$;
 DROP TRIGGER IF EXISTS course_offerings_validate_academic_scope ON public.course_offerings;
 CREATE TRIGGER course_offerings_validate_academic_scope BEFORE INSERT OR UPDATE OF campus_id,college_id,program_id,year_level,block_code
 ON public.course_offerings FOR EACH ROW EXECUTE FUNCTION public.academix_validate_offering_academic_scope();
@@ -349,7 +349,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.academix_admin_save_scoped_offering(
   p_term_id uuid,p_course_id uuid,p_instructor_id uuid,p_campus_id uuid,p_college_id uuid,
   p_program_id uuid,p_year_level smallint,p_section text,p_block_code text
-) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE v_id uuid;
 BEGIN
   IF NOT public.academix_is_active_admin() THEN RAISE EXCEPTION 'Administrator access required.' USING errcode='42501'; END IF;
@@ -377,27 +377,35 @@ BEGIN
     AND p.year_level=p_year_level AND upper(p.block_code)=upper(trim(p_block_code))
   ON CONFLICT(offering_id,student_id) DO NOTHING;
   RETURN v_id;
-END $;
+END $$;
 
-CREATE OR REPLACE FUNCTION public.academix_admin_grade_directory(
+DROP FUNCTION IF EXISTS public.academix_admin_grade_directory(uuid,uuid,uuid,smallint,text,uuid);
+CREATE FUNCTION public.academix_admin_grade_directory(
   p_campus_id uuid DEFAULT NULL,p_college_id uuid DEFAULT NULL,p_program_id uuid DEFAULT NULL,
   p_year_level smallint DEFAULT NULL,p_block_code text DEFAULT NULL,p_term_id uuid DEFAULT NULL
 ) RETURNS TABLE(grade_id uuid,student_id uuid,full_name text,bu_id text,campus_name text,
   college_name text,program_name text,year_level smallint,block_code text,course_code text,
-  course_title text,exam_title text,score numeric,max_score numeric,percentage numeric,graded_at timestamptz)
+  course_title text,exam_title text,score numeric,max_score numeric,percentage numeric,
+  record_type text,gwa_value numeric,graded_at timestamptz)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NOT public.academix_is_active_admin() THEN RAISE EXCEPTION 'Administrator access required.' USING errcode='42501'; END IF;
   RETURN QUERY
   SELECT g.id,p.id,p.full_name,p.bu_id,ca.campus_name,co.college_name,pr.program_name,p.year_level,p.block_code,
     ac.course_code,ac.course_title,e.title,g.score,g.max_score,
-    CASE WHEN g.max_score>0 THEN round(g.score/g.max_score*100,2) ELSE NULL END,g.created_at
+    CASE WHEN g.max_score>0 THEN round(g.score/g.max_score*100,2) ELSE NULL END,
+    'assessment'::text,band.gwa_value,g.created_at
   FROM public.grades g JOIN public.profiles p ON p.id=g.student_id
   JOIN public.exams e ON e.id=g.exam_id JOIN public.course_offerings o ON o.id=e.course_offering_id
   JOIN public.academic_courses ac ON ac.id=o.course_id
   LEFT JOIN public.academic_campuses ca ON ca.id=p.campus_id
   LEFT JOIN public.academic_colleges co ON co.id=p.college_id
   LEFT JOIN public.academic_programs pr ON pr.id=p.program_id
+  LEFT JOIN LATERAL (
+    SELECT b.gwa_value FROM public.term_grade_bands b
+    WHERE b.term_id=o.term_id AND g.max_score>0 AND (g.score/g.max_score*100) BETWEEN b.min_percentage AND b.max_percentage
+    ORDER BY b.min_percentage DESC LIMIT 1
+  ) band ON true
   WHERE (p_campus_id IS NULL OR p.campus_id=p_campus_id)
     AND (p_college_id IS NULL OR p.college_id=p_college_id)
     AND (p_program_id IS NULL OR p.program_id=p_program_id)
@@ -406,12 +414,39 @@ BEGIN
     AND (p_term_id IS NULL OR o.term_id=p_term_id)
     AND p.campus_id=o.campus_id AND p.college_id=o.college_id AND p.program_id=o.program_id
     AND p.year_level=o.year_level AND upper(p.block_code)=upper(o.block_code)
-  ORDER BY ca.campus_name,co.college_name,pr.program_name,p.year_level,p.block_code,p.full_name,g.created_at DESC;
+  UNION ALL
+  SELECT fg.id,p.id,p.full_name,p.bu_id,ca.campus_name,co.college_name,pr.program_name,p.year_level,p.block_code,
+    ac.course_code,ac.course_title,'Final course grade'::text,fg.percentage,100::numeric,fg.percentage,
+    'course_final'::text,band.gwa_value,fg.finalized_at
+  FROM public.course_final_grades fg
+  JOIN public.course_enrollments ce ON ce.id=fg.enrollment_id
+  JOIN public.profiles p ON p.id=ce.student_id
+  JOIN public.course_offerings o ON o.id=ce.offering_id
+  JOIN public.academic_courses ac ON ac.id=o.course_id
+  LEFT JOIN public.academic_campuses ca ON ca.id=p.campus_id
+  LEFT JOIN public.academic_colleges co ON co.id=p.college_id
+  LEFT JOIN public.academic_programs pr ON pr.id=p.program_id
+  LEFT JOIN LATERAL (
+    SELECT b.gwa_value FROM public.term_grade_bands b
+    WHERE b.term_id=o.term_id AND fg.percentage BETWEEN b.min_percentage AND b.max_percentage
+    ORDER BY b.min_percentage DESC LIMIT 1
+  ) band ON true
+  WHERE (p_campus_id IS NULL OR p.campus_id=p_campus_id)
+    AND (p_college_id IS NULL OR p.college_id=p_college_id)
+    AND (p_program_id IS NULL OR p.program_id=p_program_id)
+    AND (p_year_level IS NULL OR p.year_level=p_year_level)
+    AND (p_block_code IS NULL OR upper(p.block_code)=upper(trim(p_block_code)))
+    AND (p_term_id IS NULL OR o.term_id=p_term_id)
+    AND p.campus_id=o.campus_id AND p.college_id=o.college_id AND p.program_id=o.program_id
+    AND p.year_level=o.year_level AND upper(p.block_code)=upper(o.block_code)
+  ORDER BY campus_name,college_name,program_name,year_level,block_code,full_name,graded_at DESC;
 END $$;
 
-CREATE OR REPLACE FUNCTION public.academix_teacher_grade_directory(p_offering_id uuid)
+DROP FUNCTION IF EXISTS public.academix_teacher_grade_directory(uuid);
+CREATE FUNCTION public.academix_teacher_grade_directory(p_offering_id uuid)
 RETURNS TABLE(grade_id uuid,student_id uuid,full_name text,bu_id text,year_level smallint,block_code text,
-  course_code text,course_title text,exam_title text,score numeric,max_score numeric,percentage numeric,graded_at timestamptz)
+  course_code text,course_title text,exam_title text,score numeric,max_score numeric,percentage numeric,
+  record_type text,gwa_value numeric,graded_at timestamptz)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NOT EXISTS(SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='teacher'::public.app_role
@@ -421,38 +456,33 @@ BEGIN
   END IF;
   RETURN QUERY
   SELECT g.id,p.id,p.full_name,p.bu_id,p.year_level,p.block_code,ac.course_code,ac.course_title,e.title,
-    g.score,g.max_score,CASE WHEN g.max_score>0 THEN round(g.score/g.max_score*100,2) ELSE NULL END,g.created_at
+    g.score,g.max_score,CASE WHEN g.max_score>0 THEN round(g.score/g.max_score*100,2) ELSE NULL END,
+    'assessment'::text,band.gwa_value,g.created_at
   FROM public.grades g JOIN public.profiles p ON p.id=g.student_id
   JOIN public.exams e ON e.id=g.exam_id JOIN public.course_offerings o ON o.id=e.course_offering_id
   JOIN public.academic_courses ac ON ac.id=o.course_id
+  LEFT JOIN LATERAL (
+    SELECT b.gwa_value FROM public.term_grade_bands b
+    WHERE b.term_id=o.term_id AND g.max_score>0 AND (g.score/g.max_score*100) BETWEEN b.min_percentage AND b.max_percentage
+    ORDER BY b.min_percentage DESC LIMIT 1
+  ) band ON true
   WHERE o.id=p_offering_id AND p.campus_id=o.campus_id AND p.college_id=o.college_id
     AND p.program_id=o.program_id AND p.year_level=o.year_level AND upper(p.block_code)=upper(o.block_code)
-  ORDER BY p.full_name,g.created_at DESC;
+  UNION ALL
+  SELECT fg.id,p.id,p.full_name,p.bu_id,p.year_level,p.block_code,ac.course_code,ac.course_title,
+    'Final course grade'::text,fg.percentage,100::numeric,fg.percentage,'course_final'::text,band.gwa_value,fg.finalized_at
+  FROM public.course_final_grades fg JOIN public.course_enrollments ce ON ce.id=fg.enrollment_id
+  JOIN public.profiles p ON p.id=ce.student_id JOIN public.course_offerings o ON o.id=ce.offering_id
+  JOIN public.academic_courses ac ON ac.id=o.course_id
+  LEFT JOIN LATERAL (
+    SELECT b.gwa_value FROM public.term_grade_bands b
+    WHERE b.term_id=o.term_id AND fg.percentage BETWEEN b.min_percentage AND b.max_percentage
+    ORDER BY b.min_percentage DESC LIMIT 1
+  ) band ON true
+  WHERE o.id=p_offering_id AND p.campus_id=o.campus_id AND p.college_id=o.college_id
+    AND p.program_id=o.program_id AND p.year_level=o.year_level AND upper(p.block_code)=upper(o.block_code)
+  ORDER BY full_name,graded_at DESC;
 END $$;
-
--- Support objective/free-response question types and optional reference images.
-ALTER TABLE public.questions DROP CONSTRAINT IF EXISTS questions_question_type_check;
-ALTER TABLE public.questions ADD CONSTRAINT questions_question_type_check CHECK (
-  question_type IN ('multiple_choice','true_false','identification','enumeration','short_answer','essay')
-);
-ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS image_url text;
-
-DROP FUNCTION IF EXISTS public.get_exam_questions(uuid);
-CREATE FUNCTION public.get_exam_questions(p_exam_id uuid)
-RETURNS TABLE(id uuid,position integer,question_type text,prompt text,options jsonb,points numeric,image_url text)
-LANGUAGE sql STABLE SECURITY INVOKER SET search_path=public AS $$
-  SELECT q.id,q.position,q.question_type,q.prompt,q.options,q.points,q.image_url
-  FROM public.questions q JOIN public.exams e ON e.id=q.exam_id
-  JOIN public.exam_assignments a ON a.exam_id=e.id
-  JOIN public.course_offerings o ON o.id=e.course_offering_id
-  JOIN public.profiles student ON student.id=a.student_id
-  WHERE q.exam_id=p_exam_id AND a.student_id=auth.uid() AND e.status='published' AND public.is_verified()
-    AND student.campus_id=o.campus_id AND student.college_id=o.college_id
-    AND student.program_id=o.program_id AND student.year_level=o.year_level
-    AND upper(student.block_code)=upper(o.block_code)
-  ORDER BY q.position
-$$;
-GRANT EXECUTE ON FUNCTION public.get_exam_questions(uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.academix_answer_matches(p_expected jsonb,p_actual jsonb,p_type text)
 RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path=public,pg_temp AS $$
@@ -502,7 +532,9 @@ BEGIN
   END IF;
   IF NOT EXISTS(
     SELECT 1 FROM public.profiles student JOIN public.course_offerings offering ON offering.id=v_exam.course_offering_id
-    WHERE student.id=v_user_id AND student.campus_id=offering.campus_id AND student.college_id=offering.college_id
+    WHERE student.id=v_user_id AND student.role='student'::public.app_role
+      AND student.verified_at IS NOT NULL AND student.suspended_at IS NULL
+      AND student.campus_id=offering.campus_id AND student.college_id=offering.college_id
       AND student.program_id=offering.program_id AND student.year_level=offering.year_level
       AND upper(student.block_code)=upper(offering.block_code)
   ) THEN RAISE EXCEPTION 'Your student account is not assigned to this academic class.' USING errcode='42501'; END IF;
@@ -565,7 +597,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.academix_teacher_pending_manual_reviews(p_offering_id uuid)
 RETURNS TABLE(submission_id uuid,student_name text,exam_title text,answers jsonb,questions jsonb,
   auto_score numeric,max_score numeric,submitted_at timestamptz)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NOT public.academix_is_active_admin() THEN
     IF NOT EXISTS(SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='teacher'::public.app_role
@@ -587,7 +619,7 @@ BEGIN
     AND p.year_level=o.year_level AND upper(p.block_code)=upper(o.block_code)
     AND EXISTS(SELECT 1 FROM public.questions q WHERE q.exam_id=e.id AND q.question_type='essay')
   ORDER BY s.submitted_at;
-END $;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.exam_integrity_events (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -686,7 +718,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE
   v_exam public.exams%rowtype;
   v_archived integer := 0;
@@ -763,14 +795,15 @@ BEGIN
     'assigned_students', v_assigned
   );
 END;
-$;
+$$;
 
 create or replace function public.academix_teacher_roster(p_offering_id uuid)
 returns table(enrollment_id uuid,student_id uuid,student_name text,bu_id text,percentage numeric,remarks text)
 language plpgsql stable security definer set search_path=public,pg_temp as $
 begin
   if auth.uid() is null or not public.is_verified()
-    or (select role from public.profiles where id=auth.uid()) is distinct from 'teacher'::public.app_role then
+    or (select role from public.profiles where id=auth.uid()) is distinct from 'teacher'::public.app_role
+    or exists(select 1 from public.profiles where id=auth.uid() and suspended_at is not null) then
     raise exception 'Verified Teacher access required.' using errcode='42501';
   end if;
   if not exists(select 1 from public.course_offerings where id=p_offering_id and instructor_id=auth.uid()) then
@@ -786,7 +819,7 @@ begin
     and p.campus_id=o.campus_id and p.college_id=o.college_id and p.program_id=o.program_id
     and p.year_level=o.year_level and upper(p.block_code)=upper(o.block_code)
   order by p.full_name;
-end $;
+end $$;
 
 CREATE OR REPLACE FUNCTION public.academix_teacher_assessment_grade_summary(p_offering_id uuid)
 RETURNS TABLE(
@@ -805,7 +838,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_verified()
      OR (SELECT role FROM public.profiles WHERE id = auth.uid()) IS DISTINCT FROM 'teacher'::public.app_role
@@ -923,7 +956,7 @@ BEGIN
   ) final_band ON true
   ORDER BY c.student_id;
 END;
-$;
+$$;
 
 create or replace function public.start_exam_attempt(p_exam_id uuid)
 returns jsonb
@@ -952,7 +985,7 @@ begin
   if not exists(
     select 1 from public.profiles student join public.course_offerings offering
       on offering.id=v_exam.course_offering_id
-    where student.id=v_user AND student.role='student'::public.app_role
+    where student.id=v_user AND student.role='student'::public.app_role AND student.verified_at IS NOT NULL AND student.suspended_at IS NULL
       AND student.campus_id=offering.campus_id AND student.college_id=offering.college_id
       AND student.program_id=offering.program_id AND student.year_level=offering.year_level
       AND upper(student.block_code)=upper(offering.block_code)
@@ -992,7 +1025,7 @@ begin
 
   return jsonb_build_object('submission_id',v_submission,'attempt_number',v_attempt,'attempt_type',v_type);
 end;
-$;
+$$;
 
 
 -- Enforce academic class boundaries at the database layer, not only in the interface.
@@ -1004,8 +1037,12 @@ USING (
   OR EXISTS(
     SELECT 1 FROM public.exams e JOIN public.course_offerings o ON o.id=e.course_offering_id
     JOIN public.profiles actor ON actor.id=auth.uid()
+    JOIN public.profiles student ON student.id=exam_assignments.student_id
     WHERE e.id=exam_assignments.exam_id AND e.teacher_id=auth.uid()
       AND actor.role='teacher'::public.app_role AND actor.verified_at IS NOT NULL AND actor.suspended_at IS NULL
+      AND student.role='student'::public.app_role AND student.campus_id=o.campus_id
+      AND student.college_id=o.college_id AND student.program_id=o.program_id
+      AND student.year_level=o.year_level AND upper(student.block_code)=upper(o.block_code)
   )
 )
 WITH CHECK (
