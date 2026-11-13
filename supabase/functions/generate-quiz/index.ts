@@ -41,6 +41,20 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError || !authData.user) return json({ error: "Your session is invalid or expired. Sign in again." }, 401);
 
+    // The UI is not an authorization boundary. Enforce the allowed roles here as well.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role,suspended_at")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    if (profileError) {
+      console.error("Could not verify quiz-generation permissions:", profileError.message);
+      return json({ error: "Unable to verify account permissions. Please try again." }, 500);
+    }
+    if (!profile || !["teacher", "admin"].includes(profile.role) || profile.suspended_at) {
+      return json({ error: "Active teacher or administrator access is required to generate quizzes." }, 403);
+    }
+
     const body = await req.json();
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 160) : "";
     const material = typeof body.material === "string" ? body.material.trim().slice(0, 30000) : "";
