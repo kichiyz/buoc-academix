@@ -4,6 +4,34 @@
 
 BEGIN;
 
+-- Phase 5's audit table may not have been applied in every existing database.
+-- Create the exact compatible table here so this migration is independently runnable.
+CREATE TABLE IF NOT EXISTS public.admin_audit_log (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  actor_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  target_user_id uuid,
+  action text NOT NULL,
+  outcome text NOT NULL DEFAULT 'success' CHECK (outcome IN ('success')),
+  reason text NOT NULL CHECK (char_length(trim(reason)) BETWEEN 3 AND 500),
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+
+CREATE INDEX IF NOT EXISTS admin_audit_log_target_created_idx
+  ON public.admin_audit_log(target_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS admin_audit_log_actor_created_idx
+  ON public.admin_audit_log(actor_id, created_at DESC);
+
+ALTER TABLE public.admin_audit_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.admin_audit_log FROM anon, authenticated;
+GRANT SELECT ON public.admin_audit_log TO authenticated;
+
+DROP POLICY IF EXISTS "Admins read identity audit log" ON public.admin_audit_log;
+CREATE POLICY "Admins read identity audit log"
+ON public.admin_audit_log
+FOR SELECT TO authenticated
+USING (public.academix_is_active_admin());
+
 ALTER TABLE public.admin_audit_log
   DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
 
