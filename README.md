@@ -68,6 +68,17 @@ The Pages workflow deploys the root frontend. Review the workflow run after merg
 - [ ] Test the live site on desktop and mobile after deployment.
 - [ ] Obtain any required institutional authorization before representing the platform as an official Bicol University service.
 
+## Academic result rules
+
+- Assessment outcomes are calculated from the graded percentage: **Passed** at 75.00% or above; **Failed** below 75.00%.
+- Course-level **INC** (Incomplete) and **DRP** (Dropped) are separate academic outcomes. INC is assigned by the instructor when completion is permitted. DRP requires a student drop request and instructor approval.
+- The GWA conversion bands are institution-configured in the active academic term. The 75% assessment pass threshold does not replace the configured percentage-to-GWA conversion table.
+- Light and dark appearance preferences are stored locally in the current browser; they do not affect authentication or permissions.
+
+## Launch notes
+
+The final launch interface uses the supplied circular BUOC favicon asset throughout the brand marks, responsive navigation, persistent account navigation, scrollable administrative registries, and reduced-motion-aware transitions. Review the newest release pull request and apply any new SQL migration to the intended Supabase project before testing course INC/DRP actions.
+
 ## Institutional affiliation
 
 BUOC AcademiX is an independent project unless and until the relevant university offices formally authorize its use or endorsement.
