@@ -1526,6 +1526,7 @@
       if (event.key === "Escape" && !$("#workflow-modal")?.classList.contains("hidden")) closeWorkflowModal();
     });
         $("#signout").addEventListener("click", signOut);
+        $("#mobile-signout")?.addEventListener("click", signOut);
     $("#refresh-exams").addEventListener("click", loadExams);
     $("#refresh-exam-registry")?.addEventListener("click", loadExamRegistry);
     $("#search-exam-registry")?.addEventListener("click", renderExamRegistry);
