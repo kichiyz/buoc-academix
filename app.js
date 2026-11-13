@@ -84,6 +84,9 @@
     $("#dashboard-view").classList.add(role === "admin" ? "role-admin" : role === "teacher" ? "role-teacher" : "role-student");
     if (view === "exams") loadExams();
     if (view === "grades") loadGrades();
+    if (view === "evaluations" && role === "student") loadStudentEvaluations();
+    if (view === "developer" && role === "admin") loadPhase8Admin();
+    if (view === "teacher-home" && role === "teacher") loadTeacherPhase8Offerings();
     if (view === "developer") { loadAdminUsers(); loadExamRegistry(); loadResultsInspector(); }
     if (view === "generator") { const sandbox = role === "admin"; $("#publish-quiz").classList.toggle("hidden", sandbox); $("#draft-mode-note").textContent = sandbox ? "SANDBOX MODE — generated drafts stay in this browser and are never published to real exam tables." : "AI output is a draft. Review every question, option, answer, and explanation before publishing."; }
   }
@@ -759,20 +762,128 @@
       else updateTimer();
     }
   }
+
+  async function loadPhase8Admin() {
+    const status=$("#phase8-admin-status"), records=$("#phase8-admin-records");
+    if(!status||!records)return;
+    status.textContent="Loading academic configuration…";
+    try {
+      const [termsR,coursesR,offeringsR]=await Promise.all([
+        state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
+        state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
+        state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false})
+      ]);
+      for(const r of [termsR,coursesR,offeringsR])if(r.error)throw r.error;
+      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[];
+      const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
+      fill("#phase8-offering-term",terms,t=>t.academic_year+" / "+t.semester+(t.is_active?" (active)":""),"Select academic term");
+      fill("#phase8-band-term",terms,t=>t.academic_year+" / "+t.semester,"Select academic term");
+      fill("#phase8-offering-course",courses,c=>c.course_code+" — "+c.course_title,"Select course");
+      fill("#phase8-enrollment-offering",offerings,o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);return (c?.course_code||"Course")+" / "+(t?.academic_year||"Term")+" / "+o.section+" / "+o.id.slice(0,8);},"Select offering");
+      records.replaceChildren();
+      const summary=document.createElement("p");summary.textContent=terms.length+" term(s), "+courses.length+" course(s), "+offerings.length+" offering(s) configured.";records.append(summary);
+      const list=document.createElement("div");list.className="phase8-record-list";
+      offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Teacher ID: "+o.instructor_id;list.append(row);});
+      records.append(list);
+      status.textContent="Academic configuration loaded. Use the forms to add or update records.";
+    } catch(e){status.textContent="Phase 8 database is not ready: "+(e.message||"Migration may not have been applied.");records.textContent="Apply supabase/migrations/20261114000000_phase8_semester_evaluations_gwa.sql in the Supabase SQL Editor, then refresh.";}
+  }
+  async function savePhase8Rpc(fn,args,success) {
+    const {data,error}=await state.supabase.rpc(fn,args);if(error)throw error;
+    toast(success,"success");await loadPhase8Admin();return data;
+  }
+  async function loadTeacherPhase8Offerings() {
+    const select=$("#phase8-teacher-offering"),target=$("#phase8-teacher-roster");if(!select||!target)return;
+    try{
+      const {data,error}=await state.supabase.from("course_offerings").select("id,section,academic_terms(academic_year,semester),academic_courses(course_code,course_title)").eq("instructor_id",state.user.id);
+      if(error)throw error;
+      select.replaceChildren();const first=document.createElement("option");first.value="";first.textContent="Choose an assigned class";select.append(first);
+      (data||[]).forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=(o.academic_courses?.course_code||"Course")+" — "+(o.academic_courses?.course_title||"")+" · "+(o.academic_terms?.academic_year||"")+" "+(o.academic_terms?.semester||"")+" · "+o.section;select.append(opt);});
+      target.textContent=data?.length?"Select a class to load its roster.":"No course offerings are assigned to your account yet.";
+      if(data?.length)await loadTeacherPhase8Roster();
+    }catch(e){target.textContent="Could not load course offerings: "+e.message;}
+  }
+  async function loadTeacherPhase8Roster(){
+    const offering=$("#phase8-teacher-offering")?.value,target=$("#phase8-teacher-roster");if(!target)return;
+    if(!offering){target.textContent="Choose an assigned course to load its roster.";return;}
+    target.textContent="Loading enrolled students…";
+    try{
+      const {data,error}=await state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering});if(error)throw error;
+      target.replaceChildren();
+      if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
+      data.forEach(student=>{
+        const row=document.createElement("form");row.className="phase8-grade-row";
+        const info=document.createElement("div"),name=document.createElement("strong"),id=document.createElement("small");
+        name.textContent=student.student_name;id.textContent=(student.bu_id||"No BU ID")+" · "+student.student_id;info.append(name,id);
+        const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final %";grade.value=student.percentage??"";
+        const remarks=document.createElement("input");remarks.type="text";remarks.maxLength=1000;remarks.placeholder="Remarks (optional)";remarks.value=student.remarks||"";
+        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save grade";
+        row.append(info,grade,remarks,save);row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast("Final course grade saved.","success");}catch(err){toast(err.message,"error");}finally{save.disabled=false;}});target.append(row);
+      });
+    }catch(e){target.textContent="Could not load roster: "+e.message;}
+  }
+  async function loadStudentEvaluations(){
+    const status=$("#phase8-evaluation-status"),target=$("#phase8-evaluation-list");if(!status||!target)return;
+    status.textContent="Loading your assigned instructors…";target.replaceChildren();
+    try{
+      const {data,error}=await state.supabase.rpc("academix_student_evaluation_targets");if(error)throw error;
+      if(!data?.length){status.textContent="No active-term course enrollments were found. Contact your administrator if you believe this is incorrect.";return;}
+      const done=data.filter(x=>x.submitted).length;status.textContent=done+" of "+data.length+" instructor evaluation(s) completed.";
+      data.forEach(item=>{
+        const card=document.createElement("article");card.className="phase8-evaluation-card";
+        const title=document.createElement("h3");title.textContent=item.instructor_name;
+        const courses=document.createElement("p");courses.className="muted";courses.textContent=item.courses||"Assigned course(s)";
+        const statusText=document.createElement("span");statusText.className="badge "+(item.submitted?"badge-success":"badge-warning");statusText.textContent=item.submitted?"Completed":"Required";
+        card.append(title,courses,statusText);
+        if(!item.submitted){
+          const form=document.createElement("form");form.className="phase8-evaluation-form";
+          const criteria=[["clarity","Explains course concepts clearly"],["preparedness","Comes prepared and organized"],["engagement","Encourages participation and learning"],["feedback","Provides useful feedback"]];
+          const fields=[];
+          criteria.forEach(([key,label])=>{const wrap=document.createElement("label");wrap.textContent=label;const select=document.createElement("select");select.required=true;select.innerHTML='<option value="">Select rating</option><option value="5">5 — Excellent</option><option value="4">4 — Very good</option><option value="3">3 — Good</option><option value="2">2 — Needs improvement</option><option value="1">1 — Poor</option>';wrap.append(select);fields.push([key,select]);form.append(wrap);});
+          const submit=document.createElement("button");submit.type="submit";submit.className="btn btn-primary";submit.textContent="Submit confidential evaluation";form.append(submit);
+          form.addEventListener("submit",async e=>{e.preventDefault();if(fields.some(([,el])=>!el.value))return toast("Complete all four ratings before submitting.","error");if(!confirm("Submit this confidential evaluation? You cannot edit it after submission."))return;submit.disabled=true;try{const ratings=Object.fromEntries(fields.map(([key,el])=>[key,Number(el.value)]));const {error}=await state.supabase.rpc("academix_student_submit_instructor_evaluation",{p_term_id:item.term_id,p_instructor_id:item.instructor_id,p_ratings:ratings});if(error)throw error;toast("Confidential evaluation submitted.","success");await loadStudentEvaluations();}catch(err){toast(err.message,"error");submit.disabled=false;}});
+          card.append(form);
+        }
+        target.append(card);
+      });
+    }catch(e){status.textContent="Could not load evaluations. "+e.message;}
+  }
+  async function loadSemesterGwa(){
+    const panel=$("#phase8-gwa-panel"),target=$("#phase8-gwa-content");if(!panel||!target||state.profile?.role!=="student")return;
+    panel.classList.remove("hidden");target.textContent="Checking semester GWA eligibility…";
+    try{
+      const {data,error}=await state.supabase.rpc("academix_student_semester_gwa");if(error)throw error;
+      target.replaceChildren();
+      if(data?.locked){
+        const message=document.createElement("p");message.className="notice";message.textContent=data.reason||"Your final GWA is currently locked.";
+        target.append(message);
+        if(data.missing_evaluations?.length){const list=document.createElement("ul");data.missing_evaluations.forEach(x=>{const li=document.createElement("li");li.textContent=x.instructor_name+" — evaluation required";list.append(li);});target.append(list);const go=document.createElement("button");go.type="button";go.className="btn btn-primary";go.textContent="Complete instructor evaluations";go.addEventListener("click",()=>switchView("evaluations"));target.append(go);}
+        return;
+      }
+      const heading=document.createElement("div");heading.className="phase8-gwa-result";
+      const term=document.createElement("p");term.className="eyebrow";term.textContent="FINAL GWA · "+(data.total_units||0)+" CREDIT UNITS";
+      const score=document.createElement("strong");score.textContent=Number(data.gwa).toFixed(2);
+      heading.append(term,score);target.append(heading);
+      const list=document.createElement("div");list.className="phase8-record-list";
+      (data.courses||[]).forEach(c=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=c.course_code+" — "+c.course_title+" · "+c.units+" units · "+c.percentage+"% → GWA "+c.gwa;list.append(row);});target.append(list);
+    }catch(e){target.textContent="Final GWA is unavailable. "+e.message+" Apply the Phase 8 migration if this is a new deployment.";}
+  }
+
   async function loadGrades() {
     const target = $("#grades-list"); target.innerHTML = '<div class="empty-state">Loading grades…</div>';
     try {
       const { data, error } = await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at", { ascending: false });
       if (error) throw error;
-      if (!data?.length) { target.innerHTML = '<div class="empty-state">No graded submissions yet.</div>'; return; }
       target.innerHTML = "";
-      data.forEach(g => {
+      if (!data?.length) target.innerHTML = '<div class="empty-state">No graded assessment submissions yet.</div>';
+      (data||[]).forEach(g => {
         const row = document.createElement("div"); row.className = "grade-row";
         const name = document.createElement("div"); const b = document.createElement("b"); b.textContent = g.exams?.title || "Assessment"; const small = document.createElement("small"); small.textContent = new Date(g.created_at).toLocaleString(); name.append(b, small);
         const score = document.createElement("div"); score.className = "score"; score.textContent = `${g.score} / ${g.max_score}`;
         const feedback = document.createElement("div"); feedback.className = "grade-status muted"; feedback.textContent = g.feedback || "Graded";
         row.append(name, score, feedback); target.append(row);
       });
+      await loadSemesterGwa();
     } catch (e) { target.innerHTML = '<div class="empty-state">Could not load grades. Check your Supabase policies.</div>'; toast(e.message, "error"); }
   }
   async function exportGrades() {
@@ -1095,6 +1206,14 @@
     $("#print-answer-key").addEventListener("click", () => printDraft(true));
     $("#publish-quiz").addEventListener("click", publishQuiz);
     $("#export-grades").addEventListener("click", exportGrades);
+    $("#phase8-admin-refresh")?.addEventListener("click",loadPhase8Admin);
+    $("#phase8-term-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_term",{p_academic_year:$("#phase8-year").value.trim(),p_semester:$("#phase8-semester").value,p_starts_on:$("#phase8-start").value,p_ends_on:$("#phase8-end").value,p_is_active:$("#phase8-active").checked},"Academic term saved.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-course-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_course",{p_course_code:$("#phase8-course-code").value.trim(),p_course_title:$("#phase8-course-title").value.trim(),p_units:Number($("#phase8-course-units").value)},"Course saved.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-offering-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_offering",{p_term_id:$("#phase8-offering-term").value,p_course_id:$("#phase8-offering-course").value,p_instructor_id:$("#phase8-instructor-id").value.trim(),p_section:$("#phase8-section").value.trim()},"Class offering saved.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-enrollment-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_enroll_student",{p_offering_id:$("#phase8-enrollment-offering").value,p_student_id:$("#phase8-student-id").value.trim()},"Student enrolled.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-band-form")?.addEventListener("submit",async e=>{e.preventDefault();try{await savePhase8Rpc("academix_admin_save_grade_band",{p_term_id:$("#phase8-band-term").value,p_label:$("#phase8-band-label").value.trim(),p_min_percentage:Number($("#phase8-band-min").value),p_max_percentage:Number($("#phase8-band-max").value),p_gwa_value:Number($("#phase8-band-gwa").value)},"GWA conversion band saved.");}catch(err){toast(err.message,"error");}});
+    $("#phase8-teacher-offering")?.addEventListener("change",loadTeacherPhase8Roster);
+    $("#phase8-teacher-refresh")?.addEventListener("click",loadTeacherPhase8Offerings);
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
