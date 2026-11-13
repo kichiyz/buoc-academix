@@ -12,6 +12,8 @@ on:
       - ".github/workflows/phase6-regression.yml"
       - "supabase/functions/generate-quiz/index.ts"
       - "tests/gemini-retry-resilience.test.mjs"
+      - "tests/phase8-semester-evaluations.test.mjs"
+      - "supabase/migrations/**"
   pull_request:
     branches: [main]
     paths:
@@ -43,3 +45,5 @@ jobs:
         run: node --test tests/phase6-platform-configuration.test.mjs
       - name: Run Gemini retry resilience tests
         run: node --test tests/gemini-retry-resilience.test.mjs
+      - name: Run Phase 8 semester evaluation and GWA security tests
+        run: node --test tests/phase8-semester-evaluations.test.mjs
