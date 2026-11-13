@@ -52,6 +52,9 @@ jobs:
       - name: Run Phase 6 regression tests
         run: node --test tests/phase6-platform-configuration.test.mjs
 
+      - name: Run release-readiness security regression tests
+        run: node --test tests/release-readiness-security.test.mjs
+
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
