@@ -978,11 +978,11 @@
       const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[],people=peopleR.data||[];
       const campusRows=campusesR.data||[],collegeRows=collegesR.data||[],programRows=programsR.data||[];
       academicDirectory={campuses:campusRows,colleges:collegeRows,programs:programRows};
+      const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
       fill("#phase8-offering-campus",campusRows,x=>x.campus_name,"Select campus");
       fill("#phase8-offering-college",collegeRows,x=>x.college_name,"Select college");
       fill("#phase8-offering-program",programRows,x=>x.program_name+" ("+x.program_code+")","Select program");
       $("#phase8-offering-college").disabled=true;$("#phase8-offering-program").disabled=true;
-      const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
       fill("#phase8-offering-term",terms,t=>t.academic_year+" / "+t.semester+(t.is_active?" (active)":""),"Select academic term");
       fill("#phase8-band-term",terms,t=>t.academic_year+" / "+t.semester,"Select academic term");
       fill("#phase8-offering-course",courses,c=>c.course_code+" — "+c.course_title,"Select course");
