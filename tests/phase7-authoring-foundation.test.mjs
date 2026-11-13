@@ -8,10 +8,10 @@ const [html, app, migration] = await Promise.all([
   readFile(new URL("../supabase/migrations/20261113000000_phase7_assessment_foundation.sql", import.meta.url), "utf8"),
 ]);
 
-test("AI quiz generation is locked in the authoring UI without deleting its implementation", () => {
+test("AI quiz generation is locked in the UI and Edge Function without deleting its implementation", async () => {
   assert.match(html, /AI quiz generation is locked/);
   assert.match(html, /Locked · not deleted/);
-  assert.match(app, /async function generateQuiz\(/);
+  assert.match(app, /async function generateQuiz\(/);\n  const edge = await readFile(new URL("../supabase/functions/generate-quiz/index.ts", import.meta.url), "utf8");\n  assert.match(edge, /AI_GENERATION_ENABLED.*!== "true"/);
   assert.doesNotMatch(app, /#generator-form["']\)\.addEventListener\(["']submit["'],\s*generateQuiz/);
 });
 
