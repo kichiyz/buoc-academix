@@ -12,7 +12,7 @@ test("students have a dedicated semestral instructor-evaluation workspace", () =
   assert.match(html, /id="view-evaluations"/);
   assert.match(app, /academix_student_evaluation_targets/);
   assert.match(app, /academix_student_submit_instructor_evaluation/);
-  assert.match(app, /Complete every required instructor evaluation/);
+  assert.match(migration, /Complete every required instructor evaluation/);
 });
 
 test("instructor evaluation submissions are one-per-instructor-per-student-per-term", () => {
