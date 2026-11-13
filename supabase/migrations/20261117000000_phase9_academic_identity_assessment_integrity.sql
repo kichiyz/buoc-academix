@@ -34,7 +34,7 @@ LANGUAGE sql
 STABLE
 SECURITY INVOKER
 SET search_path = public
-AS $function$
+AS $$
   SELECT q.id, q.position, q.question_type, q.prompt, q.options, q.points, q.image_url
   FROM public.questions q
   JOIN public.exams e ON e.id = q.exam_id
@@ -44,7 +44,7 @@ AS $function$
     AND e.status = 'published'
     AND public.is_verified()
   ORDER BY q.position
-$function$;
+$$;
 
 -- The invoker RPC needs column-level SELECT for the image URL, not access to answer keys.
 GRANT SELECT (image_url) ON public.questions TO authenticated;
