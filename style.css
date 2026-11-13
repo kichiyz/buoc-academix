@@ -489,3 +489,31 @@ html,body{background:var(--bg);color:var(--text)}body{background:radial-gradient
 :root:not([data-theme="dark"]) .sidebar-label,:root:not([data-theme="dark"]) .grade-status,:root:not([data-theme="dark"]) .exam-meta{color:var(--muted)}
 :root:not([data-theme="dark"]) .dev-tag{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:var(--line)}
 .auth-theme-toggle{position:static;display:flex;margin:0 0 16px auto}.mobile-brand{padding-right:0}
+
+/* iBU-inspired AcademiX portal refinement — continuous, edge-to-edge ambient canvas */
+:root{color-scheme:light;--bg:#f4f7fb;--bg2:#e9f0f6;--panel:#fff;--panel2:#f7fafc;--line:#d7e2ec;--gold:#c47a37;--gold2:#a85d23;--text:#172d3d;--muted:#647b8b;--purple:#4c7893;--danger:#c7474d;--success:#25845d;--radius:18px;--shadow:0 12px 34px rgba(25,57,79,.08);--portal-blue:#174b69;--portal-green:#638e4d}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0c1924;--bg2:#122637;--panel:#152b3c;--panel2:#1b3548;--line:#29475a;--gold:#f0a45b;--gold2:#ffc27e;--text:#edf5f8;--muted:#a7bdc9;--purple:#8eb6cc;--danger:#ff8589;--success:#70d5a8;--shadow:0 18px 48px rgba(0,0,0,.30);--portal-blue:#8bc7df;--portal-green:#9bc77d}
+html,body{min-height:100%;background:var(--bg);color:var(--text)}
+body{position:relative;background:transparent;isolation:isolate}
+body::before{content:"";position:fixed;inset:-12vh -8vw;z-index:-2;pointer-events:none;background:radial-gradient(ellipse at 4% 2%,color-mix(in srgb,var(--portal-blue) 17%,transparent),transparent 42%),radial-gradient(ellipse at 96% 12%,color-mix(in srgb,var(--portal-green) 12%,transparent),transparent 38%),radial-gradient(ellipse at 54% 100%,color-mix(in srgb,var(--gold) 8%,transparent),transparent 48%),linear-gradient(145deg,var(--bg),var(--bg2) 52%,var(--bg))}
+.app-shell,.dashboard,.main-area,.page-view,.teacher-home,.role-home{background:transparent!important}
+.app-shell{min-height:100vh;overflow:visible}.dashboard{min-height:100vh}
+.teacher-home>.dev-admin-panel,.teacher-home>.phase-two-panel{background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(14px)}
+.panel,.metric-card,.exam-card,.dev-tool,.phase8-grade-row,.phase8-evaluation-card{background:color-mix(in srgb,var(--panel) 94%,transparent);border-color:var(--line)}
+.sidebar{background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(18px);border-color:var(--line)}
+.topbar{background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(18px);border-color:var(--line)}
+.role-hero,.teacher-hero{background:radial-gradient(ellipse at 86% 15%,color-mix(in srgb,var(--portal-green) 16%,transparent),transparent 40%),linear-gradient(118deg,color-mix(in srgb,var(--portal-blue) 14%,var(--panel)),color-mix(in srgb,var(--panel) 95%,transparent))!important;border-color:var(--line)}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#fff}
+:root[data-theme="dark"] .btn-primary{color:#102431}
+.btn-primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-danger{background:color-mix(in srgb,var(--danger) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--danger) 42%,var(--line));color:var(--danger)}
+.badge{background:color-mix(in srgb,var(--gold) 13%,transparent);color:var(--gold)}
+input,textarea,select{background:var(--panel2);border-color:var(--line);color:var(--text)}
+.weighted-grade-breakdown{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%}
+.weighted-grade-item{display:grid;gap:5px;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel) 86%,transparent)}
+.weighted-grade-item small{color:var(--muted);font-size:.68rem;font-weight:700}.weighted-grade-item strong{font-size:1rem;color:var(--text)}.weighted-grade-item span{font-size:.68rem;color:var(--muted);overflow-wrap:anywhere}
+.phase8-grade-row{grid-template-columns:minmax(160px,1.1fr) minmax(0,2.4fr) minmax(110px,.55fr) minmax(150px,.8fr) auto;align-items:center}
+.phase8-grade-row .course-outcome-tools{grid-column:1/-1}.exam-card-actions{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:900px){.weighted-grade-breakdown{grid-template-columns:repeat(2,minmax(0,1fr))}.phase8-grade-row{grid-template-columns:1fr 1fr}.phase8-grade-row>div{grid-column:1/-1}}
+@media(max-width:600px){.weighted-grade-breakdown{grid-template-columns:1fr 1fr}.exam-card-actions .btn{width:100%}}
+@media(prefers-reduced-motion:no-preference){body::before{animation:portal-aura 24s ease-in-out infinite alternate}@keyframes portal-aura{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(0,-1.5%,0) scale(1.025)}}}

@@ -14,6 +14,7 @@ on:
       - "tests/gemini-retry-resilience.test.mjs"
       - "tests/phase8-semester-evaluations.test.mjs"
       - "tests/final-launch-overhaul.test.mjs"
+      - "tests/weighted-course-grading.test.mjs"
       - "supabase/migrations/**"
   pull_request:
     branches: [main]
@@ -28,6 +29,7 @@ on:
       - "tests/gemini-retry-resilience.test.mjs"
       - "tests/phase8-semester-evaluations.test.mjs"
       - "tests/final-launch-overhaul.test.mjs"
+      - "tests/weighted-course-grading.test.mjs"
       - "supabase/migrations/**"
   workflow_dispatch:
 
@@ -53,3 +55,5 @@ jobs:
         run: node --test tests/phase8-semester-evaluations.test.mjs
       - name: Run final launch regression tests
         run: node --test tests/final-launch-overhaul.test.mjs
+      - name: Run weighted course grading regression tests
+        run: node --test tests/weighted-course-grading.test.mjs

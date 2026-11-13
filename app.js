@@ -189,6 +189,21 @@
           attempts.textContent = "Authorize retake / remedial";
           attempts.addEventListener("click", () => authorizeAttempt(exam));
           actions.append(assign, attempts);
+          if (state.profile.role === "teacher") {
+            const remove = document.createElement("button");
+            remove.className = "btn btn-danger";
+            remove.textContent = "Delete assessment";
+            remove.addEventListener("click", async () => {
+              const {count,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
+              if(countError)return toast(countError.message,"error");
+              const warning=count? " This permanently deletes "+count+" student submission(s) and their associated scores.":"";
+              if(!confirm("Delete “"+exam.title+"” permanently?"+warning+" This cannot be undone."))return;
+              remove.disabled=true;
+              try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
+              catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
+            });
+            actions.append(remove);
+          }
           card.querySelector("button").replaceWith(actions);
         }
         target.append(card);
@@ -355,6 +370,10 @@
     $("#exam-navigation-mode").value = "freeroam";
     $("#assessment-category").value = "quiz";
     $("#assessment-weight").value = "10";
+    $("#assessment-weight").disabled = false;
+    const weightLabel = $("#assessment-weight").closest("label");
+    if (weightLabel) weightLabel.firstChild.textContent = "Relative weight within coursework (55%)";
+    $("#assessment-category").value = "quiz";
     $("#import-json-file").value = "";
     $("#draft-questions").replaceChildren();
     $("#draft-panel").classList.add("hidden");
@@ -366,40 +385,54 @@
   async function publishQuiz() {
     if (!state.draft?.questions?.length) return toast("Add at least one question before publishing.", "error");
     for (let i=0;i<state.draft.questions.length;i++) {
-      const q=state.draft.questions[i];
-      q.position=i+1;
+      const q=state.draft.questions[i]; q.position=i+1;
       q.prompt=String(q.prompt||"").trim();
       q.options=Array.isArray(q.options)?q.options.map(v=>String(v).trim()).filter(Boolean):[];
-      q.correct_answer=String(q.correct_answer||"").trim();
-      q.points=Number(q.points)||1;
-      if(!q.prompt)return toast(`Question ${i+1} needs a prompt.`,"error");
-      if(q.options.length<2)return toast(`Question ${i+1} needs at least two answer options.`,"error");
-      if(new Set(q.options).size!==q.options.length)return toast(`Question ${i+1} has duplicate options.`,"error");
-      if(!q.options.includes(q.correct_answer))return toast(`Choose a valid correct answer for question ${i+1}.`,"error");
-      if(!Number.isInteger(q.points)||q.points<1||q.points>100)return toast(`Question ${i+1} must have 1–100 points.`,"error");
+      q.correct_answer=String(q.correct_answer||"").trim(); q.points=Number(q.points)||1;
+      if(!q.prompt)return toast("Question "+(i+1)+" needs a prompt.","error");
+      if(q.options.length<2)return toast("Question "+(i+1)+" needs at least two answer options.","error");
+      if(new Set(q.options).size!==q.options.length)return toast("Question "+(i+1)+" has duplicate options.","error");
+      if(!q.options.includes(q.correct_answer))return toast("Choose a valid correct answer for question "+(i+1)+".","error");
+      if(!Number.isInteger(q.points)||q.points<1||q.points>100)return toast("Question "+(i+1)+" must have 1–100 points.","error");
     }
+    const category=$("#assessment-category").value;
+    const offeringId=$("#assessment-course-offering")?.value;
+    if(!offeringId)return toast("Choose the course offering this assessment belongs to.","error");
     const duration=Number($("#publish-duration").value);
     if(!Number.isInteger(duration)||duration<1||duration>300)return toast("Exam duration must be between 1 and 300 whole minutes.","error");
-    const weight=Number($("#assessment-weight").value);
-    if(!Number.isFinite(weight)||weight<0||weight>100)return toast("Final-grade weight must be between 0 and 100 percent.","error");
-
-    if (state.profile?.role === "admin") return toast("Developer sandbox cannot publish to live exam tables.", "error");
-    if (!state.draft) return toast("Generate a draft first.", "error");
+    const weight=category==="midterm"?20:category==="final"?25:Number($("#assessment-weight").value);
+    if(!Number.isFinite(weight)||weight<=0||weight>100)return toast("Coursework relative weight must be greater than 0 and no more than 100.","error");
+    if(state.profile?.role!=="teacher")return toast("Only verified teachers can publish live assessments.","error");
     try {
-      const { data: exam, error } = await state.supabase.from("exams").insert({
-        teacher_id: state.user.id, title: state.draft.title || $("#json-assessment-title").value.trim(),
-        duration_minutes: Number($("#publish-duration").value), exam_mode: state.draft.exam_mode || $("#exam-navigation-mode").value, assessment_category: $("#assessment-category").value, grade_weight_percent: Number($("#assessment-weight").value), status: "draft"
+      if(["midterm","final"].includes(category)){
+        const {data:existing,error:existingError}=await state.supabase.from("exams").select("id,title")
+          .eq("teacher_id",state.user.id).eq("course_offering_id",offeringId)
+          .eq("assessment_category",category).eq("status","published");
+        if(existingError)throw existingError;
+        if(existing?.length){
+          const old=existing.map(x=>"• "+x.title).join("\n");
+          const label=category==="midterm"?"Midterm":"Final";
+          if(!confirm("A published "+label+" examination already exists for this course:\n\n"+old+
+            "\n\nPublish this new "+label+" examination and replace the existing one? The old exam will be archived and its submitted records preserved."))return;
+        }
+      }
+      const {data:exam,error}=await state.supabase.from("exams").insert({
+        teacher_id:state.user.id,course_offering_id:offeringId,
+        title:state.draft.title||$("#json-assessment-title").value.trim(),
+        duration_minutes:duration,exam_mode:state.draft.exam_mode||$("#exam-navigation-mode").value,
+        assessment_category:category,grade_weight_percent:weight,status:"draft"
       }).select("id").single();
-      if (error) throw error;
-      const rows = state.draft.questions.map(q => ({ exam_id: exam.id, position: q.position, question_type: q.question_type,
-        prompt: q.prompt, options: q.options, correct_answer: q.correct_answer, explanation: q.explanation, points: q.points || 1 }));
-      const { error: questionError } = await state.supabase.from("questions").insert(rows);
-      if (questionError) { await state.supabase.from("exams").delete().eq("id", exam.id); throw questionError; }
-      // Publishing is a privileged workflow in a production deployment; teacher policy permits own exam updates.
-      const { error: publishError } = await state.supabase.from("exams").update({ status: "published", published_at: new Date().toISOString() }).eq("id", exam.id);
-      if (publishError) throw publishError;
-      resetAssessmentAuthoring(); toast("Assessment published. The authoring form is ready for your next assessment.", "success"); switchView("exams");
-    } catch (e) { toast(e.message || "Could not publish exam.", "error"); }
+      if(error)throw error;
+      const rows=state.draft.questions.map(q=>({exam_id:exam.id,position:q.position,question_type:q.question_type,
+        prompt:q.prompt,options:q.options,correct_answer:q.correct_answer,explanation:q.explanation,points:q.points||1}));
+      const {error:questionError}=await state.supabase.from("questions").insert(rows);
+      if(questionError){await state.supabase.from("exams").delete().eq("id",exam.id);throw questionError;}
+      const {error:publishError}=await state.supabase.rpc("academix_teacher_publish_course_assessment",{p_exam_id:exam.id});
+      if(publishError){await state.supabase.from("exams").delete().eq("id",exam.id);throw publishError;}
+      resetAssessmentAuthoring();
+      toast("Assessment published and assigned to the selected class. The authoring form is ready for the next assessment.","success");
+      switchView("exams");
+    }catch(e){toast(e.message||"Could not publish assessment.","error");}
   }
   async function startExam(exam) {
     if (state.profile?.role !== "student") return toast("Only student accounts can take assessments.", "error");
@@ -818,39 +851,63 @@
     toast(success,"success");await loadPhase8Admin();return data;
   }
   async function loadTeacherPhase8Offerings() {
-    const select=$("#phase8-teacher-offering"),target=$("#phase8-teacher-roster");if(!select||!target)return;
+    const select=$("#phase8-teacher-offering"),target=$("#phase8-teacher-roster"),authoring=$("#assessment-course-offering");
+    if(!select||!target)return;
     try{
-      const {data,error}=await state.supabase.from("course_offerings").select("id,section,academic_terms(academic_year,semester),academic_courses(course_code,course_title)").eq("instructor_id",state.user.id);
+      const {data,error}=await state.supabase.from("course_offerings")
+        .select("id,section,academic_terms(academic_year,semester),academic_courses(course_code,course_title)")
+        .eq("instructor_id",state.user.id);
       if(error)throw error;
+      const offerings=data||[];
+      const label=o=>(o.academic_courses?.course_code||"Course")+" — "+(o.academic_courses?.course_title||"")+" · "+(o.academic_terms?.academic_year||"")+" "+(o.academic_terms?.semester||"")+" · "+o.section;
       select.replaceChildren();const first=document.createElement("option");first.value="";first.textContent="Choose an assigned class";select.append(first);
-      (data||[]).forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=(o.academic_courses?.course_code||"Course")+" — "+(o.academic_courses?.course_title||"")+" · "+(o.academic_terms?.academic_year||"")+" "+(o.academic_terms?.semester||"")+" · "+o.section;select.append(opt);});
-      target.textContent=data?.length?"Select a class to load its roster.":"No course offerings are assigned to your account yet.";
-      if(data?.length)await loadTeacherPhase8Roster();
+      offerings.forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=label(o);select.append(opt);});
+      if(authoring){const keep=authoring.value;authoring.replaceChildren();const prompt=document.createElement("option");prompt.value="";prompt.textContent="Choose the class for this assessment";authoring.append(prompt);offerings.forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=label(o);authoring.append(opt);});if(offerings.some(o=>o.id===keep))authoring.value=keep;}
+      target.textContent=offerings.length?"Select a class to load its roster.":"No course offerings are assigned to your account yet.";
+      if(offerings.length)await loadTeacherPhase8Roster();
     }catch(e){target.textContent="Could not load course offerings: "+e.message;}
   }
   async function loadTeacherPhase8Roster(){
     const offering=$("#phase8-teacher-offering")?.value,target=$("#phase8-teacher-roster");if(!target)return;
     if(!offering){target.textContent="Choose an assigned course to load its roster.";return;}
-    target.textContent="Loading enrolled students…";
+    target.textContent="Loading enrolled students and weighted grade calculations…";
     try{
-      const {data,error}=await state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering});if(error)throw error;
+      const [{data,error},{data:summary,error:summaryError}]=await Promise.all([
+        state.supabase.rpc("academix_teacher_roster",{p_offering_id:offering}),
+        state.supabase.rpc("academix_teacher_assessment_grade_summary",{p_offering_id:offering})
+      ]);
+      if(error)throw error;
+      if(summaryError)console.warn("Weighted grade summary unavailable:",summaryError.message);
+      const summaryByStudent=new Map((summary||[]).map(x=>[x.enrollment_id,x]));
       const ids=(data||[]).map(x=>x.enrollment_id);
       let statusRows=[],outcomesAvailable=true;
-      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error){outcomesAvailable=false;console.warn("Course outcome controls require the final launch migration:",sr.error.message);}else statusRows=sr.data||[];}
+      if(ids.length){const sr=await state.supabase.from("course_enrollment_statuses").select("enrollment_id,outcome,drop_requested_at").in("enrollment_id",ids);if(sr.error){outcomesAvailable=false;console.warn("Course outcome controls unavailable:",sr.error.message);}else statusRows=sr.data||[];}
       const statuses=new Map(statusRows.map(x=>[x.enrollment_id,x]));
       target.replaceChildren();
       if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
       data.forEach(student=>{
         const current=statuses.get(student.enrollment_id)||{outcome:"active",drop_requested_at:null};
+        const computed=summaryByStudent.get(student.enrollment_id);
         const row=document.createElement("form");row.className="phase8-grade-row";
         const info=document.createElement("div"),name=document.createElement("strong"),id=document.createElement("small");
         name.textContent=student.student_name;id.textContent=(student.bu_id||"No BU ID")+" · "+student.student_id;info.append(name,id);
-        const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final %";grade.value=student.percentage??"";
+        const breakdown=document.createElement("div");breakdown.className="weighted-grade-breakdown";
+        const gwaText=value=>value==null?"Pending":Number(value).toFixed(2);
+        const pctText=value=>value==null?"Pending":Number(value).toFixed(2)+"%";
+        const items=[
+          ["Midterm GWA",gwaText(computed?.midterm_gwa),pctText(computed?.midterm_percentage)],
+          ["Final exam GWA",gwaText(computed?.final_gwa),pctText(computed?.final_percentage)],
+          ["Coursework (55%)",pctText(computed?.coursework_percentage),computed?.missing_coursework_assessments?computed.missing_coursework_assessments+" assessment(s) ungraded":"All published coursework graded"],
+          ["Computed final",pctText(computed?.computed_final_percentage),computed?.computed_final_gwa==null?"GWA pending":"GWA "+gwaText(computed.computed_final_gwa)]
+        ];
+        items.forEach(([label,value,note])=>{const item=document.createElement("div");item.className="weighted-grade-item";const small=document.createElement("small");small.textContent=label;const strong=document.createElement("strong");strong.textContent=value;const hint=document.createElement("span");hint.textContent=note;item.append(small,strong,hint);breakdown.append(item);});
+        const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final computed %";
+        grade.value=student.percentage??computed?.computed_final_percentage??"";
         const remarks=document.createElement("input");remarks.type="text";remarks.maxLength=1000;remarks.placeholder="Remarks (optional)";remarks.value=student.remarks||"";
-        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Save final grade";
+        const save=document.createElement("button");save.className="btn btn-primary";save.type="submit";save.textContent="Assign final course grade";
         const tools=document.createElement("div");tools.className="course-outcome-tools";
         const badge=document.createElement("span");badge.className="result-status "+(current.outcome==="inc"?"status-inc":current.outcome==="drp"?"status-drp":current.outcome==="passed"?"status-passed":current.outcome==="failed"?"status-failed":"status-pending");badge.textContent=current.outcome==="inc"?"INC":current.outcome==="drp"?"DRP":current.outcome==="passed"?"Passed":current.outcome==="failed"?"Failed":"In progress";
-        const request=document.createElement("small");request.className="muted";request.textContent=current.drop_requested_at&&current.outcome!=="drp"?"Student requested DRP — approval pending":current.outcome==="drp"?"Drop approved": " ";
+        const request=document.createElement("small");request.className="muted";request.textContent=current.drop_requested_at&&current.outcome!=="drp"?"Student requested DRP — approval pending":current.outcome==="drp"?"Drop approved":" ";
         tools.append(badge,request);
         if(outcomesAvailable){
           const outcome=document.createElement("select");outcome.setAttribute("aria-label","Course outcome for "+student.student_name);
@@ -860,9 +917,15 @@
           outcome.addEventListener("change",()=>{apply.disabled=outcome.value==="drp"&&!current.drop_requested_at;});
           apply.addEventListener("click",async()=>{apply.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_course_outcome",{p_enrollment_id:student.enrollment_id,p_outcome:outcome.value});if(error)throw error;toast(outcome.value==="inc"?"Student marked INC.":outcome.value==="drp"?"Student drop approved.":"Course returned to in progress.","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");apply.disabled=false;}});
           tools.append(outcome,apply);
-        }else{const note=document.createElement("small");note.className="muted";note.textContent="Apply the final course-outcomes migration to enable INC and DRP decisions.";tools.append(note);}
-        row.append(info,grade,remarks,save,tools);
-        row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:Number(grade.value),p_remarks:remarks.value||null});if(error)throw error;toast(Number(grade.value)>=75?"Final grade saved — Passed (75% or above).":"Final grade saved — Failed (below 75%).","success");await loadTeacherPhase8Roster();}catch(err){toast(err.message,"error");save.disabled=false;}});
+        }
+        row.append(info,breakdown,grade,remarks,save,tools);
+        row.addEventListener("submit",async e=>{e.preventDefault();save.disabled=true;try{
+          const percentage=Number(grade.value);
+          const {error}=await state.supabase.rpc("academix_teacher_set_final_grade",{p_enrollment_id:student.enrollment_id,p_percentage:percentage,p_remarks:remarks.value||null});
+          if(error)throw error;
+          toast(percentage>=75?"Final course grade saved — Passed (75% or above).":"Final course grade saved — Failed (below 75%).","success");
+          await loadTeacherPhase8Roster();
+        }catch(err){toast(err.message,"error");save.disabled=false;}});
         target.append(row);
       });
     }catch(e){target.textContent="Could not load roster: "+e.message;}
@@ -1283,6 +1346,12 @@
     $("#json-assessment-title").addEventListener("input",()=>{if(state.draft){state.draft.title=$("#json-assessment-title").value.trim()||state.draft.title;renderStudentPreview();}});
     $("#exam-navigation-mode").addEventListener("change",()=>{if(state.draft){state.draft.exam_mode=$("#exam-navigation-mode").value;renderStudentPreview();}});
     $("#publish-duration").addEventListener("input",()=>{if(state.draft)renderStudentPreview();});
+    $("#assessment-category").addEventListener("change",()=>{
+      const category=$("#assessment-category").value,weight=$("#assessment-weight"),label=weight.closest("label");
+      if(category==="midterm"||category==="final"){weight.value=category==="midterm"?"20":"25";weight.disabled=true;if(label)label.firstChild.textContent="Fixed course weight (%)";}
+      else{weight.disabled=false;if(label)label.firstChild.textContent="Relative weight within coursework (55%)";}
+    });
+
     $("#import-json-button").addEventListener("click", () => $("#import-json-file").click());
     $("#import-json-file").addEventListener("change", e => { if(e.target.files?.[0]) importExamJson(e.target.files[0]); e.target.value=""; });
     $("#download-json-template").addEventListener("click", () => downloadText("academix-exam-template.json", JSON.stringify({schema_version:1,title:"Practical Examination",exam_mode:"freeroam",questions:[{question_type:"multiple_choice",prompt:"Sample question?",options:["A","B","C","D"],correct_answer:"A",explanation:"Explain why A is correct.",points:1},{question_type:"true_false",prompt:"Sample statement.",options:["True","False"],correct_answer:"True",explanation:"Explain the statement.",points:1}]},null,2),"application/json"));
