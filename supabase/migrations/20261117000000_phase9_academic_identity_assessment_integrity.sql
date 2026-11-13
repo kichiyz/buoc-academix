@@ -3,6 +3,63 @@
 
 BEGIN;
 
+-- Expand the supported question types without changing existing question records.
+ALTER TABLE public.questions
+  ADD COLUMN IF NOT EXISTS image_url text;
+
+ALTER TABLE public.questions
+  DROP CONSTRAINT IF EXISTS questions_question_type_check;
+
+ALTER TABLE public.questions
+  ADD CONSTRAINT questions_question_type_check
+  CHECK (question_type IN (
+    'multiple_choice',
+    'true_false',
+    'identification',
+    'enumeration',
+    'short_answer',
+    'essay'
+  ));
+
+COMMENT ON COLUMN public.questions.image_url IS
+  'Optional public reference image URL for a question prompt; never contains answer-key data.';
+
+-- Student-facing question delivery remains SECURITY INVOKER and returns no answer key.
+-- Recreate the function because PostgreSQL cannot change a RETURNS TABLE row type in place.
+DROP FUNCTION IF EXISTS public.get_exam_questions(uuid);
+
+CREATE FUNCTION public.get_exam_questions(p_exam_id uuid)
+RETURNS TABLE(
+  id uuid,
+  position int,
+  question_type text,
+  prompt text,
+  options jsonb,
+  points numeric,
+  image_url text
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = public
+AS $function$
+  SELECT q.id, q.position, q.question_type, q.prompt, q.options, q.points, q.image_url
+  FROM public.questions q
+  JOIN public.exams e ON e.id = q.exam_id
+  JOIN public.exam_assignments a ON a.exam_id = e.id
+  WHERE q.exam_id = p_exam_id
+    AND a.student_id = auth.uid()
+    AND e.status = 'published'
+    AND public.is_verified()
+  ORDER BY q.position
+$function$;
+
+-- The invoker RPC needs column-level SELECT for the image URL, not access to answer keys.
+GRANT SELECT (image_url) ON public.questions TO authenticated;
+REVOKE ALL ON FUNCTION public.get_exam_questions(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_exam_questions(uuid) TO authenticated;
+
+
 CREATE TABLE IF NOT EXISTS public.academic_campuses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   campus_code text NOT NULL UNIQUE,
