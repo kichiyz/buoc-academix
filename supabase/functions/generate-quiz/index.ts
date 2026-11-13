@@ -228,9 +228,14 @@ ${material}`;
         let retryAfterMs = 0;
         if (retryAfterHeader) {
           const seconds = Number(retryAfterHeader);
-          retryAfterMs = Number.isFinite(seconds)
-            ? seconds * 1000
-            : Math.max(0, Date.parse(retryAfterHeader) - Date.now());
+          if (Number.isFinite(seconds)) {
+            retryAfterMs = Math.max(0, seconds * 1000);
+          } else {
+            const retryAfterDate = Date.parse(retryAfterHeader);
+            retryAfterMs = Number.isFinite(retryAfterDate)
+              ? Math.max(0, retryAfterDate - Date.now())
+              : 0;
+          }
         }
         const exponentialDelayMs = retryDelaysMs[attempt - 1] ?? 3000;
         // Do not retry earlier than the provider requests. If its Retry-After
