@@ -55,6 +55,12 @@ Deno.serve(async (req) => {
       return json({ error: "Active teacher or administrator access is required to generate quizzes." }, 403);
     }
 
+    // Keep AI generation closed at the server boundary as well as in the UI.
+    // Set AI_GENERATION_ENABLED=true only when the provider is stable and the feature is intentionally re-enabled.
+    if (Deno.env.get("AI_GENERATION_ENABLED") !== "true") {
+      return json({ error: "AI quiz generation is temporarily disabled. Please use manual JSON authoring." }, 423);
+    }
+
     const body = await req.json();
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 160) : "";
     const material = typeof body.material === "string" ? body.material.trim().slice(0, 30000) : "";
