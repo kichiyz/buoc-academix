@@ -289,7 +289,7 @@
       raw.exam_mode=$("#exam-navigation-mode").value;
       const draft=validateImportedExam(raw);
       const title=$("#json-assessment-title").value.trim();if(title)draft.title=title;
-      state.draft=draft;status.textContent="Valid JSON — "+draft.questions.length+" question(s). Student preview is ready.";status.className="notice notice-success";
+      state.draft=draft;state.previewQuestionIndex=0;status.textContent="Valid JSON — "+draft.questions.length+" question(s). Student preview is ready.";status.className="notice notice-success";
       renderStudentPreview();renderDraft();return true;
     } catch(error) {
       state.draft=null;status.textContent="JSON needs attention: "+error.message;status.className="notice notice-error";
