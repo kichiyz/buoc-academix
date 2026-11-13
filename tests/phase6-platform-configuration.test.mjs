@@ -14,7 +14,7 @@ test("Platform Operations is part of the administrator Developer Center", () => 
   assert.match(html, /Platform Configuration/);
   assert.match(html, /AVAILABLE/);
   assert.match(html, /Platform operations/);
-  assert.doesNotMatch(html, /PHASE\\s+\\d+\\s*\\//i);
+  assert.doesNotMatch(html, /PHASE\s+\d+\s*\//i);
   assert.match(app, /state\.profile\?\.role !== "admin"/);
 });
 
