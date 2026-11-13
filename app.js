@@ -188,19 +188,22 @@
           attempts.className = "btn btn-quiet";
           attempts.textContent = "Authorize retake / remedial";
           attempts.addEventListener("click", () => authorizeAttempt(exam));
-          const remove = document.createElement("button");
-          remove.className = "btn btn-danger";
-          remove.textContent = "Delete assessment";
-          remove.addEventListener("click", async () => {
-            const {count,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
-            if(countError)return toast(countError.message,"error");
-            const warning=count? " This permanently deletes "+count+" student submission(s) and their associated scores.":"";
-            if(!confirm("Delete “"+exam.title+"” permanently?"+warning+" This cannot be undone."))return;
-            remove.disabled=true;
-            try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
-            catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
-          });
-          actions.append(assign, attempts, remove);
+          actions.append(assign, attempts);
+          if (state.profile.role === "teacher") {
+            const remove = document.createElement("button");
+            remove.className = "btn btn-danger";
+            remove.textContent = "Delete assessment";
+            remove.addEventListener("click", async () => {
+              const {count,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
+              if(countError)return toast(countError.message,"error");
+              const warning=count? " This permanently deletes "+count+" student submission(s) and their associated scores.":"";
+              if(!confirm("Delete “"+exam.title+"” permanently?"+warning+" This cannot be undone."))return;
+              remove.disabled=true;
+              try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
+              catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
+            });
+            actions.append(remove);
+          }
           card.querySelector("button").replaceWith(actions);
         }
         target.append(card);
@@ -367,6 +370,10 @@
     $("#exam-navigation-mode").value = "freeroam";
     $("#assessment-category").value = "quiz";
     $("#assessment-weight").value = "10";
+    $("#assessment-weight").disabled = false;
+    const weightLabel = $("#assessment-weight").closest("label");
+    if (weightLabel) weightLabel.firstChild.textContent = "Relative weight within coursework (55%)";
+    $("#assessment-category").value = "quiz";
     $("#import-json-file").value = "";
     $("#draft-questions").replaceChildren();
     $("#draft-panel").classList.add("hidden");
