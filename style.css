@@ -547,3 +547,72 @@ input,textarea,select{background:var(--panel2);border-color:var(--line);color:va
 }
 .integrity-notice{font-size:.78rem;color:var(--muted);border-left:3px solid var(--gold);padding:9px 12px;margin:12px 0}
 @media(max-width:700px){.grade-directory-row{grid-template-columns:1fr 1fr}.grade-directory-row>div:first-child{grid-column:1/-1}}
+
+
+/* Developer Center visual repair: remove near-black panels and improve hierarchy/contrast. */
+.developer-console{
+  --dev-accent:#f0cf68;
+  --dev-muted:#e4d9ef;
+}
+.developer-console .dev-masthead{
+  background:
+    radial-gradient(ellipse at 88% 8%,rgba(240,207,104,.20),transparent 34%),
+    radial-gradient(ellipse at 12% 100%,rgba(188,145,235,.28),transparent 46%),
+    linear-gradient(118deg,#49345f 0%,#39284f 52%,#30223f 100%);
+  border:1px solid rgba(220,190,245,.42);
+  box-shadow:0 18px 44px rgba(12,7,20,.22),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.developer-console .dev-masthead h2{
+  color:#fffaf0;
+  letter-spacing:-.035em;
+}
+.developer-console .dev-masthead .eyebrow{
+  color:#f5d875;
+}
+.developer-console .dev-masthead p:not(.eyebrow){
+  color:#e7dcef;
+}
+.developer-console .dev-seal{
+  border-color:rgba(245,216,117,.68);
+  background:rgba(255,255,255,.055);
+  box-shadow:0 0 0 9px rgba(245,216,117,.07),0 0 38px rgba(245,216,117,.13);
+}
+.developer-console .dev-seal span{color:#ffe9a3}
+.developer-console .dev-seal small{color:#e4d2a0}
+.developer-console .dev-status-strip{
+  background:linear-gradient(110deg,#332544,#3d2b50);
+  border-color:rgba(205,175,230,.32);
+  box-shadow:0 10px 28px rgba(12,7,20,.14);
+}
+.developer-console .dev-status-strip>div{border-color:rgba(220,195,238,.18)}
+.developer-console .dev-status-strip small{color:#d0c0df}
+.developer-console .dev-status-strip b{color:#fffaf0}
+.developer-console .dev-tool{
+  background:linear-gradient(145deg,#3b2b50,#30233f);
+  border-color:rgba(205,175,230,.28);
+  box-shadow:0 9px 24px rgba(12,7,20,.12);
+}
+.developer-console .dev-tool-primary{
+  background:
+    radial-gradient(circle at 100% 0%,rgba(240,207,104,.13),transparent 42%),
+    linear-gradient(145deg,#4a345f,#342541);
+  border-color:rgba(240,207,104,.48);
+}
+.developer-console .dev-tool h3,
+.developer-console .dev-info-panel h3{color:#fffaf0}
+.developer-console .dev-tool p,
+.developer-console .dev-info-panel p:not(.eyebrow){color:#d4c7e0}
+.developer-console .dev-info-panel{
+  background:linear-gradient(145deg,#38294b,#30233f);
+  border-color:rgba(205,175,230,.28);
+}
+.developer-console .dev-readout{color:#d0bde4}
+.developer-console .environment-badge{
+  background:linear-gradient(120deg,rgba(139,224,189,.18),rgba(139,224,189,.08));
+  border-color:rgba(139,224,189,.62);
+  color:#b9f3d9;
+  box-shadow:0 3px 14px rgba(25,130,91,.10);
+}
+@media(max-width:700px){
+  .developer-console .dev-masthead{padding:24px 20px}
+}
