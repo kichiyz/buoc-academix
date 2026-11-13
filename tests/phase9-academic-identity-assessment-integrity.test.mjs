@@ -24,9 +24,9 @@ test("student placement is complete, validated, admin-only, and automatically en
   assert.match(migration,/academix_admin_list_unassigned_students/);
   assert.match(migration,/academix_admin_force_assign_student/);
   assert.match(migration,/academix_admin_save_scoped_offering/);
-  assert.match(migration,/CREATE OR REPLACE FUNCTION public\\.academix_admin_save_scoped_offering\\([\\s\\S]*?p_program_id uuid,p_year_level smallint,p_section text,p_block_code text\\s*\\) RETURNS uuid/);
-  assert.match(migration,/REVOKE ALL ON FUNCTION public\\.academix_admin_save_scoped_offering\\(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text,text\\) FROM PUBLIC,anon/);
-  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\\.academix_admin_save_scoped_offering\\(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text,text\\) TO authenticated/);
+  assert.match(migration,/CREATE OR REPLACE FUNCTION public\.academix_admin_save_scoped_offering\([\s\S]*?p_program_id uuid,p_year_level smallint,p_section text,p_block_code text\s*\) RETURNS uuid/);
+  assert.match(migration,/REVOKE ALL ON FUNCTION public\.academix_admin_save_scoped_offering\(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text,text\) FROM PUBLIC,anon/);
+  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.academix_admin_save_scoped_offering\(uuid,uuid,uuid,uuid,uuid,uuid,smallint,text,text\) TO authenticated/);
   assert.match(app,/p_block_code:\$\("#phase8-offering-block"\)\.value\.trim\(\)/);
   assert.match(migration,/course_enrollments\(offering_id,student_id\)/);
   assert.match(html,/id="academic-placement-admin"/);
