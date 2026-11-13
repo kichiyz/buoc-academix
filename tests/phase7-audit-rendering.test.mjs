@@ -18,6 +18,24 @@ test("audit reason and details are independently spaced readable blocks", () => 
 });
 
 test("audit rendering fix is cache-busted in the deployed entry point", () => {
-  assert.match(html, /style\.css\?v=launch-refresh1/);
-  assert.match(html, /app\.js\?v=launch-refresh1/);
+  assert.match(html, /style\\.css\\?v=layout-preview2/);
+  assert.match(html, /app\\.js\\?v=layout-preview2/);
+});
+
+test("admin audit history is constrained to a scrollable region", () => {
+  assert.match(app, /auditList\.classList\.add\("admin-audit-scroll"\)/);
+  assert.match(readFileSync(new URL("../style.css", import.meta.url), "utf8"), /\.admin-audit-scroll\{[^}]*max-height:[^}]*overflow-y:auto/);
+});
+
+test("student preview supports previous and next question navigation", () => {
+  assert.match(app, /previewQuestionIndex: 0/);
+  assert.match(app, /data-preview-prev/);
+  assert.match(app, /data-preview-next/);
+  assert.match(app, /Question '\+\(index\+1\)\+' of '\+total/);
+});
+
+test("favicon uses a circular crop and entry point cache-busts the refreshed asset", () => {
+  const favicon = readFileSync(new URL("../assets/buoc-favicon.svg", import.meta.url), "utf8");
+  assert.match(favicon, /clipPath id="logo-circle"/);
+  assert.match(html, /assets\/buoc-favicon\.svg\?v=2/);
 });
