@@ -1131,3 +1131,117 @@ select option { color:var(--text); background:var(--panel); }
 :root[data-theme="dark"] .welcome-banner :where(h1,h2,h3,p,span) {
   text-shadow:none;
 }
+
+
+
+/* LIGHT MODE CONTRAST REPAIR — shared forms, controls, cards and administrative tools */
+:root:not([data-theme="dark"]) {
+  color-scheme:light;
+  --text:#20313b;
+  --muted:#5c707c;
+  --panel:#ffffff;
+  --panel2:#f3f6f8;
+  --line:#cbd7de;
+}
+:root:not([data-theme="dark"]) :where(
+  .page-view,.dev-admin-panel,.dev-info-panel,.platform-card,.platform-grid,
+  .phase-two-panel,.phase8-admin-data,.academic-placement-panel,
+  .grade-directory-panel,.phase8-teacher-panel,.form-panel,.tool-card,
+  .metric-card,.exam-card,.student-preview-panel,.draft-export-tools
+) {
+  color:var(--text);
+}
+:root:not([data-theme="dark"]) :where(
+  .page-view,.dev-admin-panel,.dev-info-panel,.platform-card,.platform-grid,
+  .phase-two-panel,.phase8-admin-data,.academic-placement-panel,
+  .grade-directory-panel,.phase8-teacher-panel,.form-panel,.tool-card,
+  .metric-card,.exam-card,.student-preview-panel
+) :where(h1,h2,h3,h4,h5,b,strong,legend,summary,th) {
+  color:var(--text)!important;
+}
+:root:not([data-theme="dark"]) :where(
+  .page-view,.dev-admin-panel,.dev-info-panel,.platform-card,.platform-grid,
+  .phase-two-panel,.phase8-admin-data,.academic-placement-panel,
+  .grade-directory-panel,.phase8-teacher-panel,.form-panel,.tool-card,
+  .metric-card,.exam-card,.student-preview-panel
+) :where(p,small,.muted,.fine-print,.description,.hint,td,dd,dt) {
+  color:var(--muted);
+}
+:root:not([data-theme="dark"]) :where(
+  .page-view,.dev-admin-panel,.dev-info-panel,.platform-card,.platform-grid,
+  .phase-two-panel,.phase8-admin-data,.academic-placement-panel,
+  .grade-directory-panel,.phase8-teacher-panel,.form-panel
+) label,
+:root:not([data-theme="dark"]) .page-view label,
+:root:not([data-theme="dark"]) .platform-card label,
+:root:not([data-theme="dark"]) .dev-admin-panel label {
+  color:var(--text)!important;
+}
+:root:not([data-theme="dark"]) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea) {
+  color:#20313b!important;
+  background:#f4f7f9!important;
+  border-color:#bdcbd3!important;
+  caret-color:#20313b;
+  box-shadow:inset 0 1px 2px rgba(24,45,58,.04);
+}
+:root:not([data-theme="dark"]) :where(input,textarea)::placeholder {
+  color:#71838d!important;
+  opacity:1;
+}
+:root:not([data-theme="dark"]) select option {
+  color:#20313b!important;
+  background:#fff!important;
+}
+:root:not([data-theme="dark"]) :where(input,select,textarea):focus {
+  border-color:#477b91!important;
+  box-shadow:0 0 0 3px rgba(71,123,145,.14)!important;
+}
+:root:not([data-theme="dark"]) :where(
+  .platform-card,.dev-admin-panel,.dev-info-panel,.phase-two-panel,
+  .phase8-admin-data,.academic-placement-panel,.grade-directory-panel,
+  .phase8-teacher-panel,.form-panel,.student-preview-panel,.tool-card,
+  .metric-card,.exam-card,.panel
+) {
+  background:#fff;
+  border-color:#d1dce2;
+}
+:root:not([data-theme="dark"]) :where(
+  .phase8-record-row,.phase8-grade-row,.phase8-evaluation-card,
+  .grade-directory-row,.student-course-row,.weighted-grade-item,
+  .platform-health-row,.platform-metadata>div,.admin-user-row,
+  .placement-student-row,.phase8-roster-row,.question-draft
+) {
+  color:var(--text);
+  background:#f7f9fa;
+  border-color:#d5dfe4;
+}
+:root:not([data-theme="dark"]) :where(
+  .notice,.integrity-notice,.platform-diagnostic-hint,
+  .empty-state,.exam-instructions
+) {
+  color:#526874!important;
+}
+:root:not([data-theme="dark"]) .notice {
+  background:#fff8e9!important;
+  border-color:#ead6a8!important;
+}
+:root:not([data-theme="dark"]) :where(.badge,.dev-tag,.environment-badge) {
+  color:#72501d;
+}
+:root:not([data-theme="dark"]) .question-draft :where(p,small,span,li) {
+  color:var(--text);
+}
+/* Keep the deliberately dark JSON/code authoring surfaces distinct and readable. */
+:root:not([data-theme="dark"]) :where(
+  #json-authoring-input,.json-editor,.code-editor,.code-editor textarea,
+  .json-code,.monaco-editor,.CodeMirror
+) {
+  color:#eeeaf7!important;
+  background:#171324!important;
+  border-color:#443957!important;
+}
+:root:not([data-theme="dark"]) :where(
+  #json-authoring-input,.json-editor,.code-editor,.json-code
+)::placeholder {
+  color:#aaa0ba!important;
+}
