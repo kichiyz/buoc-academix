@@ -34,7 +34,7 @@ test("canonical schema uses valid dollar quoting for secure exam submission", ()
 test("Gemini quiz generation retries one transient timeout and 503/504 response", () => {
   assert.match(generateQuiz, /attempt <= 2/);
   assert.match(generateQuiz, /\[503, 504\]\.includes\(response\.status\)/);
-  assert.match(generateQuiz, /AbortSignal\.timeout\(38000\)/);
+  assert.match(generateQuiz, /AbortSignal\.timeout\(50000\)/);
   assert.match(generateQuiz, /error\.name === "TimeoutError"/);
   assert.match(generateQuiz, /signal timed out\|timed out/i);
   assert.match(generateQuiz, /Gemini request timed out; retrying once after backoff/);
@@ -45,6 +45,6 @@ test("Gemini quiz generation retries one transient timeout and 503/504 response"
 
 test("quiz-generation client timeout allows the bounded backend retry window", async () => {
   const app = await readFile("app.js", "utf8");
-  assert.match(app, /Quiz generation timed out after 90 seconds/);
-  assert.match(app, /90000\)/);
+  assert.match(app, /Quiz generation timed out after 125 seconds/);
+  assert.match(app, /125000\)/);
 });
