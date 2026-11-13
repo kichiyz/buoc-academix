@@ -115,39 +115,12 @@
     $$(".developer-only").forEach(el => el.classList.toggle("hidden", p.role !== "admin"));
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
-    renderTeacherRequest();
   }
   async function loadProfile() {
     const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at").eq("id", state.user.id).single();
     if (error) throw error;
     state.profile = data;
-    await loadTeacherRequest();
     renderProfile();
-  }
-
-  async function loadTeacherRequest() {
-    state.teacherRequest = null;
-    if (!state.user || !state.supabase) return;
-    const { data, error } = await state.supabase.from("teacher_access_requests").select("status,requested_at,reviewed_at,review_note").eq("user_id", state.user.id).maybeSingle();
-    if (error) { console.warn("Teacher request status unavailable:", error.message); return; }
-    state.teacherRequest = data || null;
-  }
-  function renderTeacherRequest() {
-    const panel=$("#teacher-request-panel"), title=$("#teacher-request-title"), message=$("#teacher-request-message"), button=$("#teacher-request-button");
-    if(!panel||!title||!message||!button)return;
-    const request=state.teacherRequest;
-    panel.classList.toggle("hidden",state.profile?.role!=="student");
-    button.classList.add("hidden");
-    if(state.profile?.role!=="student")return;
-    if(request?.status==="pending"){title.textContent="Teacher access pending";message.textContent="An administrator must review your request. You remain a Student until approved.";}
-    else if(request?.status==="rejected"){title.textContent="Teacher access request not approved";message.textContent=(request.review_note?request.review_note+" ":"")+"You remain a Student. You may submit a new request when ready.";button.textContent="Reapply for Teacher access";button.classList.remove("hidden");}
-    else {title.textContent="Request Teacher access";message.textContent="Teacher access requires administrator approval. Your account remains a Student while your request is reviewed.";button.textContent="Request Teacher access";button.classList.remove("hidden");}
-  }
-  async function submitTeacherRequest() {
-    const button=$("#teacher-request-button");button.disabled=true;
-    try {const {error}=await state.supabase.rpc("request_teacher_access");if(error)throw error;await loadTeacherRequest();renderTeacherRequest();toast("Teacher access request submitted for administrator review.","success");}
-    catch(error){toast(error.message||"Could not submit the Teacher access request. Ensure the Supabase migration has been applied.","error");}
-    finally{button.disabled=false;}
   }
 
   async function enterApp() {
@@ -177,10 +150,9 @@
         const name = $("#auth-name").value.trim(), buId = $("#auth-bu-id").value.trim();
         if (!name) return toast("Enter your full name.", "error");
         const emailRedirectTo = "https://kichiyz.github.io/buoc-academix/";
-        const requestedRole = $("#auth-role").value === "teacher" ? "teacher" : "student";
-        const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId, requested_role: requestedRole } } });
+        const { error } = await state.supabase.auth.signUp({ email, password, options: { emailRedirectTo, data: { full_name: name, bu_id: buId } } });
         if (error) throw error;
-        toast(requestedRole === "teacher" ? "Account created. Your Teacher access request is pending administrator approval. Check your email if confirmation is enabled." : "Account created. Check your email if confirmation is enabled.", "success");
+        toast("Account created as a Student. Confirm your email, then wait for an administrator to verify your institutional details and assign any elevated role.", "success");
         setAuthMode("signin");
       }
     } catch (e) { toast(e.message || "Authentication failed.", "error"); }
@@ -1051,7 +1023,6 @@
     state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     $$("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.authTab)));
     $("#auth-form").addEventListener("submit", authSubmit);
-    $("#teacher-request-button")?.addEventListener("click", submitTeacherRequest);
     $("#forgot-password").addEventListener("click", async () => {
       const email = $("#auth-email").value.trim(); if (!email) return toast("Enter your email address first.", "error");
       const { error } = await state.supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
