@@ -169,20 +169,35 @@ ${material}`;
       });
       let response: Response | undefined;
       let result: any;
-      // Keep the two-attempt provider window bounded below the Supabase
-      // Edge Function wall-clock limit, and log each attempt for diagnosis.
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      const maxAttempts = 3;
+      const totalRequestBudgetMs = 110000;
+      const retryDelaysMs = [1500, 3000];
+      let timeoutRetryUsed = false;
+
+      // Allow up to three quick retries for explicit provider 503/504 responses.
+      // A shared time budget keeps the complete operation below the frontend's
+      // 125-second timeout and leaves room for function/runtime overhead.
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const attemptStartedAt = Date.now();
+        const elapsedMs = attemptStartedAt - aiStartedAt;
+        const remainingBudgetMs = totalRequestBudgetMs - elapsedMs;
+        const reservedBackoffMs = attempt === 1 ? 5000 : attempt === 2 ? 0 : 0;
+        const attemptTimeoutMs = Math.min(50000, remainingBudgetMs - reservedBackoffMs - 1000);
+        if (attemptTimeoutMs < 1000) {
+          throw new Error("Gemini request exceeded its total retry time budget.");
+        }
+
         try {
           response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(50000),
+            signal: AbortSignal.timeout(attemptTimeoutMs),
             body: requestBody,
           });
           console.log("Gemini attempt completed:", {
             attempt,
             duration_ms: Date.now() - attemptStartedAt,
+            timeout_ms: attemptTimeoutMs,
             status: response.status,
           });
           result = await response.json();
@@ -192,20 +207,53 @@ ${material}`;
           console.error("Gemini attempt failed:", {
             attempt,
             duration_ms: Date.now() - attemptStartedAt,
+            timeout_ms: attemptTimeoutMs,
             name: error instanceof Error ? error.name : "UnknownError",
             message: error instanceof Error ? error.message : String(error),
           });
-          if (!timeoutError || attempt === 2) throw error;
-          console.warn("Gemini request timed out; retrying once after backoff.");
-          await new Promise(resolve => setTimeout(resolve, 1200));
+          if (!timeoutError || timeoutRetryUsed || attempt === maxAttempts) throw error;
+          timeoutRetryUsed = true;
+          const delayMs = retryDelaysMs[attempt - 1] ?? 3000;
+          console.warn("Gemini request timed out; using its single permitted timeout retry.", {
+            attempt,
+            delay_ms: delayMs,
+          });
+          await new Promise(resolve => setTimeout(resolve, delayMs));
           continue;
         }
-        if (response.ok || ![503, 504].includes(response.status) || attempt === 2) break;
-        console.warn("Gemini temporarily unavailable; retrying once after backoff. HTTP", response.status);
-        await new Promise(resolve => setTimeout(resolve, 1200));
+
+        if (response.ok || ![503, 504].includes(response.status) || attempt === maxAttempts) break;
+
+        const retryAfterHeader = response.headers.get("retry-after");
+        let retryAfterMs = 0;
+        if (retryAfterHeader) {
+          const seconds = Number(retryAfterHeader);
+          retryAfterMs = Number.isFinite(seconds)
+            ? seconds * 1000
+            : Math.max(0, Date.parse(retryAfterHeader) - Date.now());
+        }
+        const exponentialDelayMs = retryDelaysMs[attempt - 1] ?? 3000;
+        // Do not retry earlier than the provider requests. If its Retry-After
+        // exceeds our bounded wait window, return the provider response instead.
+        if (retryAfterMs > 5000) {
+          console.warn("Gemini requested a longer Retry-After than the bounded retry window; returning provider response.", {
+            attempt,
+            status: response.status,
+            retry_after_ms: retryAfterMs,
+          });
+          break;
+        }
+        const delayMs = Math.max(exponentialDelayMs, retryAfterMs);
+        console.warn("Gemini temporarily unavailable; retrying with bounded backoff.", {
+          attempt,
+          next_attempt: attempt + 1,
+          status: response.status,
+          delay_ms: delayMs,
+        });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
       console.log("Gemini total request duration_ms:", Date.now() - aiStartedAt, "status:", response?.status ?? "timeout");
-      if (!response) throw new Error("Gemini request timed out after one automatic retry.");
+      if (!response) throw new Error("Gemini request timed out or exceeded its bounded retry budget.");
       if (!response.ok) {
         console.error("Gemini request failed:", response.status, JSON.stringify(result).slice(0, 1000));
         const providerMessage = typeof result?.error?.message === "string" ? result.error.message.slice(0, 300) : "";
@@ -219,7 +267,12 @@ ${material}`;
           return json({ error: "Gemini model not found or unavailable: " + model + ". Set GEMINI_MODEL to a model available to your API key. Provider detail: " + (providerMessage || "no detail returned") }, 502);
         }
         if (response.status === 503 || response.status === 504) {
-          return json({ error: "Gemini remained temporarily unavailable after one automatic retry. Wait briefly and try again. If this persists, check Google AI Studio service status and quota." }, 503);
+          const providerMessage = typeof result?.error?.message === "string" ? result.error.message.slice(0, 300) : "";
+          return json({
+            error: "Gemini is temporarily overloaded or unavailable after bounded retries. Wait briefly and try again." + (providerMessage ? " Provider detail: " + providerMessage : ""),
+            retryable: true,
+            provider_status: response.status,
+          }, 503);
         }
         return json({ error: "Gemini request failed (HTTP " + response.status + "). Check the function logs for provider details" + (providerMessage ? ": " + providerMessage : ".") }, 502);
       }
