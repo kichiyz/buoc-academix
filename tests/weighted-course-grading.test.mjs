@@ -50,7 +50,7 @@ test("portal theme has balanced light and dark palettes and continuous ambient b
   assert.match(css, /--portal-blue:#174b69/);
   assert.match(css, /:root\[data-theme="dark"\]/);
   assert.match(css, /body::before\{content:"";position:fixed/);
-  assert.match(css, //\\.teacher-home,.role-home\\\{background:transparent!important\\\}/g/);
+  assert.match(css, /\.teacher-home,.role-home\{background:transparent!important\}/);
 });
 
 test("README explains the complete weighted grading formula", () => {
