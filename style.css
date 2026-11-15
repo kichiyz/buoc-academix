@@ -1884,3 +1884,61 @@ select option { color:var(--text); background:var(--panel); }
 .student-grade-eligibility-note{margin:0 0 18px}
 @media(max-width:850px){.student-faculty-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.student-faculty-status{padding:19px}.student-faculty-cards{grid-template-columns:1fr}.student-faculty-heading{align-items:flex-start;flex-direction:column}.student-assessment-tabs{width:100%}.student-assessment-tab{flex:1;padding:10px 8px}}
+
+
+/* Keep workspace navigation and account actions available while the page scrolls. */
+@media (min-width: 901px) {
+  .dashboard {
+    display: block;
+    min-height: 100vh;
+    padding-left: 258px;
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 258px;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-self: stretch;
+    z-index: 50;
+  }
+  .sidebar-bottom {
+    position: sticky;
+    bottom: 0;
+    flex: 0 0 auto;
+    background: inherit;
+  }
+  .main-area { min-width: 0; }
+}
+@media (min-width: 601px) and (max-width: 900px) {
+  .dashboard {
+    display: block;
+    min-height: 100vh;
+    padding-left: 76px;
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 76px;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 50;
+  }
+  .main-area { min-width: 0; }
+}
+.retake-policy-note {
+  margin: -5px 0 16px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+  font-size: .78rem;
+}
