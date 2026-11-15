@@ -9,7 +9,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0 };
+    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0, examSubmissionInFlight: false };
   const validSupabaseUrl = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) || (APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL));
   const configured = validSupabaseUrl && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
@@ -819,9 +819,12 @@
   }
   function installIntegrityMonitoring() {
     if(state.integrityHandlersInstalled)return;state.integrityHandlersInstalled=true;
-    document.addEventListener("visibilitychange",()=>{if(state.currentExam&&document.hidden)logIntegrityEvent("tab_hidden",{visibility_state:document.visibilityState});});
-    document.addEventListener("fullscreenchange",()=>{if(state.currentExam&&state.integrityFullscreenRequested&&!document.fullscreenElement)logIntegrityEvent("fullscreen_exit",{reason:"fullscreen element exited"});});
-    window.addEventListener("blur",()=>{if(state.currentExam)logIntegrityEvent("window_blur",{reason:"window lost focus"});});
+    // Submission dialogs and the successful submit transition can temporarily blur the
+    // browser window or leave fullscreen. Those are normal completion mechanics, not
+    // exam-integrity signals, so ignore them while a submission is being confirmed/saved.
+    document.addEventListener("visibilitychange",()=>{if(state.currentExam&&!state.examSubmissionInFlight&&document.hidden)logIntegrityEvent("tab_hidden",{visibility_state:document.visibilityState});});
+    document.addEventListener("fullscreenchange",()=>{if(state.currentExam&&!state.examSubmissionInFlight&&state.integrityFullscreenRequested&&!document.fullscreenElement)logIntegrityEvent("fullscreen_exit",{reason:"fullscreen element exited"});});
+    window.addEventListener("blur",()=>{if(state.currentExam&&!state.examSubmissionInFlight)logIntegrityEvent("window_blur",{reason:"window lost focus"});});
   }
   async function stopIntegrityMonitoring() {
     document.body.classList.remove("exam-active");$("#exam-view")?.classList.remove("exam-integrity-active");
@@ -872,7 +875,14 @@
   function updateTimer() { const m = Math.max(0, Math.floor(state.secondsLeft / 60)), s = Math.max(0, state.secondsLeft % 60); $("#exam-timer").textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
   async function submitExam(event, timedOut = false) {
     if (event) event.preventDefault();
-    if (!timedOut && !confirm("Submit this exam now? You cannot change answers after submission.")) return;
+    // Suppress focus/fullscreen events caused by the confirmation dialog and normal
+    // post-submit browser transition. If the student cancels or submission fails,
+    // integrity monitoring resumes for the still-active attempt.
+    state.examSubmissionInFlight = true;
+    if (!timedOut && !confirm("Submit this exam now? You cannot change answers after submission.")) {
+      state.examSubmissionInFlight = false;
+      return;
+    }
     clearInterval(state.timerId);
     try {
       // Answers are graded by the trusted server-side RPC; the browser never receives the answer key.
@@ -889,6 +899,7 @@
       toast(result?.replaced_previous_score ? scoreMessage + " Previous score replaced." : scoreMessage, "success");
       switchView("grades");
     } catch (e) {
+      state.examSubmissionInFlight = false;
       toast(`Submission failed: ${e.message}. Your attempt may remain in progress; retry submission when ready.`, "error");
       if (state.secondsLeft > 0) startTimer();
       else updateTimer();
