@@ -1942,3 +1942,35 @@ select option { color:var(--text); background:var(--panel); }
   background: var(--panel2);
   font-size: .78rem;
 }
+
+/* Keep sign-out reachable beside the fixed mobile navigation as well. */
+@media (max-width: 700px) {
+  .sidebar { justify-content: flex-start; gap: 6px; }
+  #main-nav { flex: 1 1 auto; width: auto; min-width: 0; }
+  .sidebar-bottom {
+    display: flex !important;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 0 2px 0 6px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+  }
+  .sidebar-bottom .online-dot,
+  .sidebar-bottom > span { display: none !important; }
+  .sidebar-bottom .signout {
+    display: inline-flex;
+    grid-column: auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: .66rem;
+    white-space: nowrap;
+  }
+}
