@@ -109,7 +109,8 @@ test("semester GWA clearly identifies limited course coverage and explains conve
 
 test("quiz cards are labeled by assessment category instead of calling every assessment an exam", () => {
   assert.match(app, /assessmentCategoryLabel\(exam\.assessment_category\)/);
-  assert.match(app, /Assigned \+category\.toLowerCase\(\)/);
+  assert.match(app, /quiz:"Quiz",long_test:"Long test",midterm:"Midterm examination",final:"Final examination",other:"Other coursework"/);
+  assert.match(app, /badge\.textContent=assessmentCategoryLabel\(exam\.assessment_category\)/);
   assert.match(app, /assessment_category/);
 });
 test("teacher published assessments are scoped to assigned course offerings and split by type", () => {
