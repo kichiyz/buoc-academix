@@ -1275,6 +1275,83 @@
       });
     }catch(e){status.textContent="Course outcomes are unavailable. Apply the final launch database migration, then refresh. "+e.message;}
   }
+  function setStudentAssessmentTab(tab){
+    const selected=tab==="evaluations"?"evaluations":"grades";
+    document.querySelectorAll("[data-student-assessment-tab]").forEach(button=>{
+      const active=button.dataset.studentAssessmentTab===selected;
+      button.classList.toggle("is-active",active);button.setAttribute("aria-selected",String(active));
+    });
+    $("#student-assessment-grades")?.classList.toggle("hidden",selected!=="grades");
+    $("#student-assessment-evaluations")?.classList.toggle("hidden",selected!=="evaluations");
+  }
+  async function loadStudentAssessmentOverview(){
+    if(state.profile?.role!=="student")return;
+    const status=$("#student-course-grade-status"),body=$("#student-course-grade-body");
+    if(!status||!body)return;
+    status.textContent="Loading your enrolled courses…";body.replaceChildren();
+    try{
+      const [{data:terms,error:termError},{data:targets,error:targetError}]=await Promise.all([
+        state.supabase.from("academic_terms").select("id,academic_year,semester").eq("is_active",true).limit(1),
+        state.supabase.rpc("academix_student_evaluation_targets")
+      ]);
+      if(termError)throw termError;if(targetError)throw targetError;
+      const term=terms?.[0]||null,items=targets||[],completed=items.filter(x=>x.submitted).length,total=items.length,percent=total?Math.round(completed/total*100):0;
+      const count=$("#student-faculty-count"),pct=$("#student-faculty-percent"),fill=$("#student-faculty-progress-fill"),track=$("#student-faculty-progress"),badge=$("#student-faculty-complete-badge"),termLabel=$("#student-faculty-term"),cards=$("#student-faculty-cards");
+      if(count)count.textContent=completed+" of "+total+" completed";
+      if(pct)pct.textContent=percent+"%";
+      if(fill)fill.style.width=percent+"%";
+      if(track)track.setAttribute("aria-valuenow",String(percent));
+      if(badge){badge.textContent=total&&completed===total?"All complete":total?"Action required":"No evaluations";badge.classList.toggle("is-complete",Boolean(total&&completed===total));}
+      if(termLabel)termLabel.textContent=term?term.academic_year+" · "+term.semester+" semester":"No active academic term";
+      if(cards){
+        cards.replaceChildren();
+        if(!items.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="No instructor evaluations are assigned for the active semester.";cards.append(empty);}
+        items.forEach(item=>{
+          const card=document.createElement("article");card.className="student-faculty-card";
+          const icon=document.createElement("span");icon.className="student-faculty-icon"+(item.submitted?" is-complete":"");icon.textContent=item.submitted?"✓":"○";
+          const info=document.createElement("div"),name=document.createElement("strong"),course=document.createElement("small"),stateLabel=document.createElement("span");
+          name.textContent=item.instructor_name||"Assigned instructor";course.textContent=item.courses||"Enrolled course";
+          stateLabel.className="student-faculty-state"+(item.submitted?" is-complete":"");stateLabel.textContent=item.submitted?"Evaluated":"Required";
+          info.append(name,course);card.append(icon,info,stateLabel);cards.append(card);
+        });
+      }
+      const evalStatus=$("#student-assessment-evaluation-status");
+      if(evalStatus)evalStatus.textContent=completed+" of "+total+" instructor evaluation(s) completed. Use Semestral Evaluation to submit or review your confidential evaluations.";
+      const evalList=$("#student-assessment-evaluation-list");
+      if(evalList){
+        evalList.replaceChildren();
+        items.forEach(item=>{
+          const row=document.createElement("article");row.className="phase8-evaluation-card";
+          const title=document.createElement("h3");title.textContent=item.instructor_name||"Assigned instructor";
+          const courses=document.createElement("p");courses.className="muted";courses.textContent=item.courses||"Assigned course(s)";
+          const stateLabel=document.createElement("span");stateLabel.className="badge "+(item.submitted?"badge-success":"badge-warning");stateLabel.textContent=item.submitted?"Completed":"Evaluation required";
+          row.append(title,courses,stateLabel);evalList.append(row);
+        });
+        if(!items.length)evalList.innerHTML='<div class="empty-state">No instructor evaluations are assigned for this semester.</div>';
+      }
+      const note=$("#student-grade-eligibility-note");
+      if(note)note.classList.toggle("hidden",!total||completed===total);
+      const caption=$("#student-semester-grade-caption");
+      if(caption)caption.textContent=term?"Academic year "+term.academic_year+" · "+term.semester+" semester":"No active semester selected";
+      const query=state.supabase.from("course_enrollments").select("id,course_offerings!inner(term_id,section,academic_courses!inner(course_code,course_title,units)),course_final_grades(percentage,remarks,finalized_at)").eq("student_id",state.user.id);
+      if(term)query.eq("course_offerings.term_id",term.id);
+      const {data:enrollments,error}=await query;if(error)throw error;
+      if(!enrollments?.length){status.textContent="No enrolled courses were found for the active semester.";body.innerHTML='<tr><td colspan="5">No course records available.</td></tr>';return;}
+      status.textContent=enrollments.length+" enrolled course(s) in this semester.";
+      enrollments.forEach(enrollment=>{
+        const offering=enrollment.course_offerings,course=offering?.academic_courses;
+        const final=(enrollment.course_final_grades||[]).sort((a,b)=>new Date(b.finalized_at||0)-new Date(a.finalized_at||0))[0];
+        const row=document.createElement("tr");
+        const values=[course?.course_code||"—",(course?.course_title||"Course")+(offering?.section?" · "+offering.section:""),course?.units==null?"—":Number(course.units).toFixed(1),final?Number(final.percentage).toFixed(2)+"%":"Not Yet Posted",final?.remarks||"—"];
+        values.forEach((value,index)=>{const cell=document.createElement("td");cell.textContent=value;if(index===3)cell.className=final?"student-grade-posted":"student-grade-pending";row.append(cell);});
+        body.append(row);
+      });
+    }catch(error){
+      status.textContent="Student assessment data could not be loaded: "+(error.message||"Unknown database error.");
+      body.innerHTML='<tr><td colspan="5">Course grades are temporarily unavailable. Please refresh or contact your administrator.</td></tr>';
+      const cards=$("#student-faculty-cards");if(cards)cards.textContent="Faculty evaluation progress is unavailable.";
+    }
+  }
   async function loadStudentEvaluations(){
     const status=$("#phase8-evaluation-status"),target=$("#phase8-evaluation-list");if(!status||!target)return;
     status.textContent="Loading your assigned instructors…";target.replaceChildren();
@@ -1326,7 +1403,7 @@
     const target=$("#grades-list");
     if(state.profile?.role==="admin"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.remove("hidden");$("#teacher-grade-directory")?.classList.add("hidden");await loadAcademicDirectory();await loadAdminGradeDirectory();return;}
     if(state.profile?.role==="teacher"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.remove("hidden");await loadTeacherGradeOfferings();return;}
-    $("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.add("hidden");target.classList.remove("hidden");target.innerHTML='<div class="empty-state">Loading grades…</div>';
+    $("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.add("hidden");target.classList.remove("hidden");$("#student-assessment-hub")?.classList.remove("hidden");await loadStudentAssessmentOverview();target.innerHTML='<div class="section-heading"><div><h2>Assessment attempt history</h2><p class="muted">Individual quiz and examination results, including retakes.</p></div></div><div class="empty-state">Loading assessment attempts…</div>';
     try{const {data,error}=await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at",{ascending:false});if(error)throw error;target.innerHTML="";
       if(!data?.length)target.innerHTML='<div class="empty-state">No graded assessment submissions yet.</div>';
       (data||[]).forEach(g=>{const row=document.createElement("div");row.className="grade-row";const name=document.createElement("div"),b=document.createElement("b"),small=document.createElement("small");b.textContent=g.exams?.title||"Assessment";small.textContent=new Date(g.created_at).toLocaleString();name.append(b,small);
@@ -1755,6 +1832,8 @@
     $("#phase8-teacher-offering")?.addEventListener("change",loadTeacherPhase8Roster);
     $("#phase8-teacher-refresh")?.addEventListener("click",loadTeacherPhase8Offerings);
     $("#refresh-student-courses")?.addEventListener("click",loadStudentCourseOutcomes);
+    $("#student-assessment-refresh")?.addEventListener("click",async()=>{await loadStudentAssessmentOverview();await loadGrades();});
+    document.querySelectorAll("[data-student-assessment-tab]").forEach(button=>button.addEventListener("click",()=>setStudentAssessmentTab(button.dataset.studentAssessmentTab)));
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
