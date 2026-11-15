@@ -1283,6 +1283,7 @@
     });
     $("#student-assessment-grades")?.classList.toggle("hidden",selected!=="grades");
     $("#student-assessment-evaluations")?.classList.toggle("hidden",selected!=="evaluations");
+    if(selected==="evaluations")loadStudentEvaluations();
   }
   async function loadStudentAssessmentOverview(){
     if(state.profile?.role!=="student")return;
@@ -1340,7 +1341,8 @@
       status.textContent=enrollments.length+" enrolled course(s) in this semester.";
       enrollments.forEach(enrollment=>{
         const offering=enrollment.course_offerings,course=offering?.academic_courses;
-        const final=(enrollment.course_final_grades||[]).sort((a,b)=>new Date(b.finalized_at||0)-new Date(a.finalized_at||0))[0];
+        const finalRows=Array.isArray(enrollment.course_final_grades)?enrollment.course_final_grades:(enrollment.course_final_grades?[enrollment.course_final_grades]:[]);
+        const final=finalRows.sort((a,b)=>new Date(b.finalized_at||0)-new Date(a.finalized_at||0))[0];
         const row=document.createElement("tr");
         const values=[course?.course_code||"—",(course?.course_title||"Course")+(offering?.section?" · "+offering.section:""),course?.units==null?"—":Number(course.units).toFixed(1),final?Number(final.percentage).toFixed(2)+"%":"Not Yet Posted",final?.remarks||"—"];
         values.forEach((value,index)=>{const cell=document.createElement("td");cell.textContent=value;if(index===3)cell.className=final?"student-grade-posted":"student-grade-pending";row.append(cell);});
@@ -1353,7 +1355,7 @@
     }
   }
   async function loadStudentEvaluations(){
-    const status=$("#phase8-evaluation-status"),target=$("#phase8-evaluation-list");if(!status||!target)return;
+    const inAssessmentHub=state.view==="grades";const status=$(inAssessmentHub?"#student-assessment-evaluation-status":"#phase8-evaluation-status"),target=$(inAssessmentHub?"#student-assessment-evaluation-list":"#phase8-evaluation-list");if(!status||!target)return;
     status.textContent="Loading your assigned instructors…";target.replaceChildren();
     try{
       const {data,error}=await state.supabase.rpc("academix_student_evaluation_targets");if(error)throw error;
