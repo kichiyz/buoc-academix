@@ -903,10 +903,21 @@
     if(state.profile?.role!=="admin")return;const status=$("#academic-placement-status"),list=$("#unassigned-student-list");if(!status||!list)return;
     status.textContent="Checking student accounts for missing academic placement…";
     try{const {data,error}=await state.supabase.rpc("academix_admin_list_unassigned_students");if(error)throw error;
-      fillAcademicSelect("#placement-student",(data||[]).map(x=>({...x,id:x.student_id})),x=>(x.full_name||"Student")+" · "+(x.bu_id||x.email||x.student_id.slice(0,8)),"Choose unassigned student");
-      status.textContent=(data||[]).length+" student account(s) need placement.";list.replaceChildren();
-      (data||[]).slice(0,50).forEach(x=>{const row=document.createElement("div");row.className="grade-directory-row";const n=document.createElement("strong");n.textContent=x.full_name||"Student";const m=document.createElement("small");m.textContent=(x.bu_id||"No BU ID")+" · "+(x.email||"");row.append(n,m);list.append(row);});
-      if(!(data||[]).length)list.textContent="All verified student accounts have complete academic placement.";
+      const unassigned=data||[];
+      fillAcademicSelect("#placement-student",unassigned.map(x=>({...x,id:x.student_id})),x=>(x.full_name||"Student")+" · "+(x.bu_id||x.email||x.student_id.slice(0,8)),"Choose unassigned student");
+      const panel=$("#academic-placement-admin");
+      const assignmentForm=panel?.querySelector(".form-grid");
+      const assignButton=$("#force-assign-student");
+      const helper=panel?.querySelector(".fine-print");
+      const needsAssignment=unassigned.length>0;
+      assignmentForm?.classList.toggle("hidden",!needsAssignment);
+      assignButton?.classList.toggle("hidden",!needsAssignment);
+      helper?.classList.toggle("hidden",!needsAssignment);
+      status.textContent=needsAssignment
+        ? unassigned.length+" student account(s) need placement. Select a student below to assign their academic class."
+        : "No student accounts currently need placement. All verified student accounts have complete academic placement.";
+      list.replaceChildren();
+      unassigned.slice(0,50).forEach(x=>{const row=document.createElement("div");row.className="grade-directory-row";const n=document.createElement("strong");n.textContent=x.full_name||"Student";const m=document.createElement("small");m.textContent=(x.bu_id||"No BU ID")+" · "+(x.email||"");row.append(n,m);list.append(row);});
     }catch(e){status.textContent="Placement checker failed: "+e.message;}
   }
   async function forceAssignStudent(){
@@ -918,11 +929,50 @@
     }catch(e){toast(e.message||"Could not assign student.","error");}
   }
   function renderGradeDirectory(target,rows,admin=false){
-    target.replaceChildren();if(!rows?.length){target.innerHTML='<div class="empty-state">No grade records match this class filter.</div>';return;}
-    rows.forEach(x=>{const row=document.createElement("article");row.className="grade-directory-row";const who=document.createElement("div"),name=document.createElement("strong"),meta=document.createElement("small");
-      name.textContent=x.full_name||"Student";meta.textContent=(x.bu_id||"No BU ID")+(admin?" · "+[x.campus_name,x.college_name,x.program_name,x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" / "):" · "+[x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" "));
-      who.append(name,meta);const course=document.createElement("div");course.textContent=(x.course_code||"Course")+" · "+(x.course_title||"");const exam=document.createElement("div");exam.textContent=x.record_type==="course_final"?"Final course grade":(x.exam_title||"Assessment");
-      const score=document.createElement("div");score.textContent=Number(x.score).toFixed(2)+" / "+Number(x.max_score).toFixed(2)+" ("+Number(x.percentage).toFixed(2)+"%)"+(x.gwa_value==null?"":" · GWA "+Number(x.gwa_value).toFixed(2));row.append(who,course,exam,score);target.append(row);});
+    target.replaceChildren();
+    if(!rows?.length){target.innerHTML='<div class="empty-state">No grade records match this class filter.</div>';return;}
+    // A retake creates another immutable grade record. Keep every attempt visible,
+    // but present one latest-result row per student and assessment in the directory.
+    const grouped=new Map();
+    rows.forEach(record=>{
+      const key=record.record_type==="course_final"
+        ? "course_final|"+record.student_id
+        : [record.record_type,record.student_id,record.course_code,record.exam_title].join("|");
+      if(!grouped.has(key))grouped.set(key,[]);
+      grouped.get(key).push(record);
+    });
+    const latestRows=[...grouped.values()].map(attempts=>{
+      attempts.sort((left,right)=>new Date(right.graded_at||0)-new Date(left.graded_at||0));
+      return {latest:attempts[0],history:attempts.slice(1),attemptCount:attempts.length};
+    }).sort((left,right)=>(left.latest.full_name||"").localeCompare(right.latest.full_name||"")||
+      new Date(right.latest.graded_at||0)-new Date(left.latest.graded_at||0));
+    latestRows.forEach(({latest:x,history,attemptCount})=>{
+      const row=document.createElement("article");row.className="grade-directory-row";
+      const who=document.createElement("div"),name=document.createElement("strong"),meta=document.createElement("small");
+      name.textContent=x.full_name||"Student";
+      meta.textContent=(x.bu_id||"No BU ID")+(admin?" · "+[x.campus_name,x.college_name,x.program_name,x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" / "):" · "+[x.year_level?x.year_level+" Year":null,x.block_code].filter(Boolean).join(" "));
+      who.append(name,meta);
+      const course=document.createElement("div");course.textContent=(x.course_code||"Course")+" · "+(x.course_title||"");
+      const exam=document.createElement("div");exam.textContent=x.record_type==="course_final"?"Final course grade":(x.exam_title||"Assessment");
+      const score=document.createElement("div");
+      const value=Number(x.score),maximum=Number(x.max_score),percentage=Number(x.percentage);
+      score.textContent=(Number.isFinite(value)?value.toFixed(2):"—")+" / "+(Number.isFinite(maximum)?maximum.toFixed(2):"—")+" ("+(Number.isFinite(percentage)?percentage.toFixed(2):"—")+"%)"+(x.gwa_value==null?"":" · GWA "+Number(x.gwa_value).toFixed(2));
+      if(attemptCount>1){
+        const attemptNote=document.createElement("small");attemptNote.className="grade-attempt-note";
+        attemptNote.textContent="Latest of "+attemptCount+" graded attempts";
+        score.append(attemptNote);
+        const details=document.createElement("details");details.className="grade-attempt-history";
+        const summary=document.createElement("summary");summary.textContent="View earlier attempts ("+history.length+")";details.append(summary);
+        history.forEach((attempt,index)=>{
+          const entry=document.createElement("small");
+          const date=attempt.graded_at?new Date(attempt.graded_at).toLocaleString():"Date unavailable";
+          entry.textContent="Earlier result "+(index+1)+": "+Number(attempt.score).toFixed(2)+" / "+Number(attempt.max_score).toFixed(2)+" ("+Number(attempt.percentage).toFixed(2)+"%) · "+date;
+          details.append(entry);
+        });
+        score.append(details);
+      }
+      row.append(who,course,exam,score);target.append(row);
+    });
   }
   async function loadAdminGradeDirectory(){
     const status=$("#admin-grade-directory-status"),list=$("#admin-grade-directory-list");if(!status||!list||state.profile?.role!=="admin")return;
@@ -972,7 +1022,7 @@
       const [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR]=await Promise.all([
         state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
         state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
-        state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section").order("created_at",{ascending:false}),
+        state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section,campus_id,college_id,program_id,year_level,block_code").order("created_at",{ascending:false}),
         state.supabase.from("term_grade_bands").select("term_id,label,min_percentage,max_percentage,gwa_value").order("min_percentage"),
         state.supabase.rpc("academix_admin_list_people"),
         state.supabase.from("academic_campuses").select("id,campus_code,campus_name").eq("is_active",true).order("display_order"),
@@ -995,9 +1045,35 @@
       fill("#phase8-instructor-id",people.filter(p=>p.role==="teacher"),p=>(p.full_name||"Teacher")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified instructor");
       fill("#phase8-student-id",people.filter(p=>p.role==="student"),p=>(p.full_name||"Student")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified student");
       records.replaceChildren();
-      const summary=document.createElement("p");summary.textContent=terms.length+" term(s), "+courses.length+" course(s), "+offerings.length+" offering(s) configured.";records.append(summary);
-      const list=document.createElement("div");list.className="phase8-record-list";
-      offerings.forEach(o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id),teacher=people.find(p=>p.id===o.instructor_id);const row=document.createElement("div");row.className="phase8-record-row";row.textContent=(c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+o.section+" · Instructor: "+(teacher?.full_name||"Assigned teacher");list.append(row);});
+      const active=terms.find(term=>term.is_active);
+      const stats=document.createElement("div");stats.className="phase8-admin-summary-grid";
+      [[terms.length,"Academic terms"],[courses.length,"Courses in catalog"],[offerings.length,"Class offerings"],[bands.length,"GWA conversion bands"]].forEach(([value,label])=>{
+        const card=document.createElement("div");card.className="phase8-admin-summary-card";
+        const strong=document.createElement("strong");strong.textContent=String(value);
+        const caption=document.createElement("span");caption.textContent=label;card.append(strong,caption);stats.append(card);
+      });
+      records.append(stats);
+      const activeTerm=document.createElement("p");activeTerm.className="phase8-admin-active-term";
+      activeTerm.textContent=active?"Active term: "+active.academic_year+" · "+active.semester:"No active academic term is configured.";
+      records.append(activeTerm);
+      const list=document.createElement("div");list.className="phase8-record-list phase8-offering-list";
+      if(!offerings.length){const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No class offerings configured yet.";list.append(empty);}
+      offerings.forEach(o=>{
+        const course=courses.find(x=>x.id===o.course_id),term=terms.find(x=>x.id===o.term_id),teacher=people.find(p=>p.id===o.instructor_id);
+        const campus=campusRows.find(x=>x.id===o.campus_id),college=collegeRows.find(x=>x.id===o.college_id),program=programRows.find(x=>x.id===o.program_id);
+        const row=document.createElement("article");row.className="phase8-record-row phase8-offering-record";
+        const heading=document.createElement("strong");heading.textContent=(course?.course_code||"Course")+" — "+(course?.course_title||"");
+        const details=document.createElement("div");details.className="phase8-offering-details";
+        [
+          ["Academic term",(term?.academic_year||"Term not set")+" · "+(term?.semester||"Semester not set")+(term?.is_active?" · Active":"")],
+          ["Class section",o.section||"Section not set"],
+          ["Campus / college",[campus?.campus_name,college?.college_name].filter(Boolean).join(" · ")||"Academic unit not set"],
+          ["Program / block",[program?.program_name,o.year_level?o.year_level+" Year":null,o.block_code?"Block "+o.block_code:null].filter(Boolean).join(" · ")||"Class placement not set"],
+          ["Instructor",teacher?.full_name||"Instructor not assigned"],
+          ["Configured GWA bands",bands.filter(b=>b.term_id===o.term_id).length+" for this term"]
+        ].forEach(([label,value])=>{const item=document.createElement("div");const caption=document.createElement("small");caption.textContent=label;const valueText=document.createElement("span");valueText.textContent=value;item.append(caption,valueText);details.append(item);});
+        row.append(heading,details);list.append(row);
+      });
       records.append(list);
 
       // The catalog-level delete action intentionally removes every offering
@@ -1048,7 +1124,28 @@
         }
       }
       const bandSummary=document.createElement("p");bandSummary.textContent=bands.length+" grading conversion band(s) configured.";records.append(bandSummary);
-      const progress=$("#phase8-evaluation-progress");if(progress){progress.replaceChildren();const active=terms.find(t=>t.is_active);if(!active){progress.textContent="No active academic term."; }else{const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:active.id});if(progressError)throw progressError;if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for the active term.";else rows.forEach(x=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=x.instructor_name+" — "+x.completed_count+"/"+x.student_count+" completed ("+x.completion_percent+"%)";progress.append(row);});}}
+      const progress=$("#phase8-evaluation-progress");if(progress){
+        progress.replaceChildren();
+        const activeTerm=terms.find(t=>t.is_active);
+        if(!activeTerm){progress.textContent="No active academic term. Evaluation progress cannot be summarized yet.";}
+        else{
+          const termLabel=document.createElement("p");termLabel.className="phase8-admin-active-term";
+          termLabel.textContent="Aggregate completion · "+activeTerm.academic_year+" · "+activeTerm.semester;progress.append(termLabel);
+          const {data:rows,error:progressError}=await state.supabase.rpc("academix_admin_evaluation_progress",{p_term_id:activeTerm.id});
+          if(progressError)throw progressError;
+          if(!rows?.length)progress.textContent="No instructor evaluation targets have been created for "+activeTerm.academic_year+" "+activeTerm.semester+".";
+          else rows.forEach(x=>{
+            const row=document.createElement("article");row.className="phase8-record-row phase8-evaluation-progress-row";
+            const header=document.createElement("div");header.className="phase8-evaluation-progress-header";
+            const name=document.createElement("strong");name.textContent=x.instructor_name;
+            const count=document.createElement("span");count.textContent=x.completed_count+" / "+x.student_count+" completed · "+x.completion_percent+"%";
+            header.append(name,count);
+            const track=document.createElement("div");track.className="phase8-progress-track";track.setAttribute("role","progressbar");track.setAttribute("aria-label","Evaluation completion for "+x.instructor_name);track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax","100");track.setAttribute("aria-valuenow",String(Math.max(0,Math.min(100,Number(x.completion_percent)||0))));
+            const fill=document.createElement("span");fill.style.width=Math.max(0,Math.min(100,Number(x.completion_percent)||0))+"%";track.append(fill);
+            row.append(header,track);progress.append(row);
+          });
+        }
+      }
       status.textContent="Academic configuration loaded. Use the forms to add or update records.";
     } catch(e){status.textContent="Could not load academic configuration: "+(e.message||"Unknown database error.");records.textContent="Check administrator verification, table permissions, RLS policies, and the database error above; then refresh.";}
   }
@@ -1100,11 +1197,16 @@
         const breakdown=document.createElement("div");breakdown.className="weighted-grade-breakdown";
         const gwaText=value=>value==null?"Pending":Number(value).toFixed(2);
         const pctText=value=>value==null?"Pending":Number(value).toFixed(2)+"%";
+        const missingParts=[];
+        if(computed?.midterm_percentage==null)missingParts.push("midterm exam");
+        if(computed?.final_percentage==null)missingParts.push("final exam");
+        if(Number(computed?.missing_coursework_assessments||0)>0)missingParts.push(computed.missing_coursework_assessments+" ungraded coursework assessment(s)");
+        if(computed?.coursework_percentage==null&&Number(computed?.missing_coursework_assessments||0)===0)missingParts.push("graded coursework");
         const items=[
-          ["Midterm GWA",gwaText(computed?.midterm_gwa),pctText(computed?.midterm_percentage)],
-          ["Final exam GWA",gwaText(computed?.final_gwa),pctText(computed?.final_percentage)],
-          ["Coursework (55%)",pctText(computed?.coursework_percentage),computed?.missing_coursework_assessments?computed.missing_coursework_assessments+" assessment(s) ungraded":"All published coursework graded"],
-          ["Computed final",pctText(computed?.computed_final_percentage),computed?.computed_final_gwa==null?"GWA pending":"GWA "+gwaText(computed.computed_final_gwa)]
+          ["Midterm GWA",gwaText(computed?.midterm_gwa),computed?.midterm_percentage==null?"Awaiting a graded midterm exam · 20%":pctText(computed.midterm_percentage)+" · 20%"],
+          ["Final exam GWA",gwaText(computed?.final_gwa),computed?.final_percentage==null?"Awaiting a graded final exam · 25%":pctText(computed.final_percentage)+" · 25%"],
+          ["Coursework (55%)",pctText(computed?.coursework_percentage),Number(computed?.missing_coursework_assessments||0)>0?computed.missing_coursework_assessments+" published assessment(s) still need grading":computed?.coursework_percentage==null?"No graded coursework assessment yet":"All published coursework graded · 55%"],
+          ["Computed final",pctText(computed?.computed_final_percentage),computed?.computed_final_gwa==null?(missingParts.length?"Waiting for "+missingParts.join(", "):"GWA conversion band not found for this percentage"):"GWA "+gwaText(computed.computed_final_gwa)]
         ];
         items.forEach(([label,value,note])=>{const item=document.createElement("div");item.className="weighted-grade-item";const small=document.createElement("small");small.textContent=label;const strong=document.createElement("strong");strong.textContent=value;const hint=document.createElement("span");hint.textContent=note;item.append(small,strong,hint);breakdown.append(item);});
         const grade=document.createElement("input");grade.type="number";grade.min="0";grade.max="100";grade.step="0.01";grade.required=true;grade.placeholder="Final computed %";
