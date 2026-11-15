@@ -1977,3 +1977,72 @@ select option { color:var(--text); background:var(--panel); }
 
 /* Print document seal fallback when the remote seal host is unavailable. */
 .seal-fallback{width:18mm;height:18mm;border:1px solid #174d70;border-radius:50%;color:#174d70;display:grid;place-content:center;text-align:center;font:700 10pt Georgia,serif;line-height:1}.seal-fallback small{font:600 5.5pt Arial,sans-serif;letter-spacing:.12em;margin-top:1mm}.seal-fallback[hidden]{display:none!important}@media print{.seal-fallback{width:14mm;height:14mm}}
+
+
+/* Mobile-first usability pass across the entire AcademiX workspace. */
+:root { --mobile-safe-bottom: env(safe-area-inset-bottom, 0px); --mobile-safe-top: env(safe-area-inset-top, 0px); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { min-width: 320px; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+button, .btn, .nav-item, .answer-option, .question-jump { touch-action: manipulation; }
+img, video, canvas, svg { max-width: 100%; }
+pre, code, .json-code-editor, .json-example { overflow-wrap: anywhere; }
+.table-wrap, .table-scroll, .student-course-grade-table-wrap, .data-table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { max-width: 100%; }
+input, select, textarea { max-width: 100%; min-width: 0; }
+@media (max-width: 700px) {
+  html, body { width: 100%; overflow-x: clip; }
+  .app-shell { width: 100%; max-width: 100%; }
+  .dashboard { width: 100%; min-width: 0; padding-left: 0; padding-bottom: calc(76px + var(--mobile-safe-bottom)); }
+  .main-area { width: 100%; min-width: 0; padding: 0 14px calc(28px + var(--mobile-safe-bottom)); }
+  .topbar { gap: 10px; padding: 12px 0; min-width: 0; }
+  .topbar h1, .section-heading h2, .panel h2, .panel h3 { overflow-wrap: anywhere; }
+  .topbar-actions { min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .profile-chip { max-width: 52vw; min-width: 0; }
+  .profile-chip > div { min-width: 0; }
+  .profile-chip strong, .profile-chip small { overflow-wrap: anywhere; }
+  .panel, .metric-card, .exam-card, .tool-card, .account-panel, .phase8-evaluation-card { min-width: 0; max-width: 100%; }
+  .panel { padding: 16px; }
+  .section-heading { gap: 10px; flex-wrap: wrap; }
+  .section-heading > * { min-width: 0; }
+  .btn, button { min-height: 42px; }
+  input, select, textarea { font-size: 16px; }
+  .form-grid, .metric-grid, .dev-tool-grid, .dev-bottom-grid, .platform-grid { grid-template-columns: minmax(0,1fr) !important; }
+  .form-grid > *, .metric-grid > *, .dev-tool-grid > *, .dev-bottom-grid > * { min-width: 0; }
+  .grade-row, .admin-user-card, .student-course-row, .phase8-grade-row { min-width: 0; overflow-wrap: anywhere; }
+  .grade-row { grid-template-columns: minmax(0,1fr) auto; }
+  .exam-grid { grid-template-columns: minmax(0,1fr); }
+  .exam-card-actions { display: grid; grid-template-columns: minmax(0,1fr); }
+  .exam-card-actions > * { width: 100%; }
+  .question-navigator { display: grid; grid-template-columns: repeat(auto-fit,minmax(36px,1fr)); }
+  .question-jump { width: 100%; min-width: 36px; min-height: 40px; }
+  .answer-option { align-items: flex-start; min-height: 48px; }
+  .exam-controls { position: sticky; bottom: calc(68px + var(--mobile-safe-bottom)); z-index: 8; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb,var(--panel) 94%,transparent); backdrop-filter: blur(14px); }
+  .exam-screen { padding-bottom: calc(24px + var(--mobile-safe-bottom)); }
+  .sidebar { padding-bottom: calc(7px + var(--mobile-safe-bottom)); min-height: calc(68px + var(--mobile-safe-bottom)); height: auto; }
+  .sidebar-bottom .signout { min-height: 42px; }
+  .modal, .modal-card, .workflow-modal { max-width: calc(100vw - 20px); max-height: calc(100dvh - 24px - var(--mobile-safe-top) - var(--mobile-safe-bottom)); overflow-y: auto; }
+  .toast { max-width: calc(100vw - 28px); overflow-wrap: anywhere; bottom: calc(82px + var(--mobile-safe-bottom)); }
+}
+@media (max-width: 420px) {
+  .main-area { padding-left: 10px; padding-right: 10px; }
+  .panel { padding: 13px; border-radius: 14px; }
+  .topbar h1 { font-size: 1.2rem; }
+  .topbar-actions { gap: 6px; }
+  .theme-toggle { padding: 8px; }
+  .profile-chip { max-width: 46vw; }
+  #main-nav .nav-item { min-width: 0; flex: 1 1 0; padding-inline: 3px; }
+  .sidebar-bottom .signout { padding-inline: 7px; font-size: .62rem; }
+  .exam-top .btn { width: 100%; }
+  .exam-paper { padding: 14px 11px; }
+  .exam-controls { grid-template-columns: 1fr 1fr; }
+  .exam-controls .btn { padding-inline: 6px; font-size: .8rem; }
+}
+@media (max-height: 520px) and (max-width: 900px) {
+  .sidebar { min-height: 58px; }
+  #main-nav .nav-item { min-height: 42px; }
+  .exam-controls { position: static; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-view, .panel, .metric-card, .exam-card { animation: none !important; transition: none !important; }
+}
