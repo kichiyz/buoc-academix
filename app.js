@@ -1145,7 +1145,7 @@
     if(!status||!records)return;
     status.textContent="Loading academic configuration…";
     try {
-      const [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR]=await Promise.all([
+      const [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR,enrollmentsR]=await Promise.all([
         state.supabase.from("academic_terms").select("id,academic_year,semester,starts_on,ends_on,is_active").order("starts_on",{ascending:false}),
         state.supabase.from("academic_courses").select("id,course_code,course_title,units").order("course_code"),
         state.supabase.from("course_offerings").select("id,term_id,course_id,instructor_id,section,campus_id,college_id,program_id,year_level,block_code").order("created_at",{ascending:false}),
@@ -1153,10 +1153,11 @@
         state.supabase.rpc("academix_admin_list_people"),
         state.supabase.from("academic_campuses").select("id,campus_code,campus_name").eq("is_active",true).order("display_order"),
         state.supabase.from("academic_colleges").select("id,campus_id,college_name").eq("is_active",true).order("college_name"),
-        state.supabase.from("academic_programs").select("id,college_id,program_name,program_code").eq("is_active",true).order("program_name")
+        state.supabase.from("academic_programs").select("id,college_id,program_name,program_code").eq("is_active",true).order("program_name"),
+        state.supabase.from("course_enrollments").select("id,offering_id,student_id,enrolled_at").order("enrolled_at",{ascending:false})
       ]);
-      for(const r of [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR])if(r.error)throw r.error;
-      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[],people=peopleR.data||[];
+      for(const r of [termsR,coursesR,offeringsR,bandsR,peopleR,campusesR,collegesR,programsR,enrollmentsR])if(r.error)throw r.error;
+      const terms=termsR.data||[],courses=coursesR.data||[],offerings=offeringsR.data||[],bands=bandsR.data||[],people=peopleR.data||[],enrollments=enrollmentsR.data||[];
       const campusRows=campusesR.data||[],collegeRows=collegesR.data||[],programRows=programsR.data||[];
       academicDirectory={campuses:campusRows,colleges:collegeRows,programs:programRows};
       const fill=(selector,items,label,placeholder)=>{const el=$(selector);if(!el)return;el.replaceChildren();const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);items.forEach(item=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);el.append(o);});};
@@ -1170,6 +1171,50 @@
       fill("#phase8-enrollment-offering",offerings,o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);return (c?.course_code||"Course")+" / "+(t?.academic_year||"Term")+" / "+o.section+" / "+o.id.slice(0,8);},"Select offering");
       fill("#phase8-instructor-id",people.filter(p=>p.role==="teacher"),p=>(p.full_name||"Teacher")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified instructor");
       fill("#phase8-student-id",people.filter(p=>p.role==="student"),p=>(p.full_name||"Student")+" · "+(p.bu_id||p.id.slice(0,8)),"Select verified student");
+      const enrollmentOffering=$("#phase8-enrollment-manager-offering");
+      if(enrollmentOffering){
+        const previousOffering=enrollmentOffering.value;
+        fill("#phase8-enrollment-manager-offering",offerings,o=>{const c=courses.find(x=>x.id===o.course_id),t=terms.find(x=>x.id===o.term_id);return (c?.course_code||"Course")+" — "+(c?.course_title||"")+" · "+(t?.academic_year||"")+" "+(t?.semester||"")+" · "+(o.section||"");},"Choose a class to manage");
+        if(offerings.some(o=>o.id===previousOffering))enrollmentOffering.value=previousOffering;
+        const renderEnrollmentManager=()=>{
+          const target=$("#phase8-enrollment-manager-list"),managerStatus=$("#phase8-enrollment-manager-status");
+          if(!target||!managerStatus)return;
+          const offeringId=enrollmentOffering.value;
+          target.replaceChildren();
+          if(!offeringId){managerStatus.textContent="Choose a class offering to view its enrolled students.";return;}
+          const selectedOffering=offerings.find(o=>o.id===offeringId);
+          const rows=enrollments.filter(e=>e.offering_id===offeringId);
+          managerStatus.textContent=rows.length+" student(s) enrolled in "+(courses.find(c=>c.id===selectedOffering?.course_id)?.course_code||"this class")+".";
+          if(!rows.length){const empty=document.createElement("p");empty.className="empty-state";empty.textContent="No students are enrolled in this class.";target.append(empty);return;}
+          rows.forEach(enrollment=>{
+            const student=people.find(p=>p.id===enrollment.student_id);
+            const row=document.createElement("article");row.className="phase8-record-row phase8-enrollment-row";
+            const identity=document.createElement("div");
+            const name=document.createElement("strong");name.textContent=student?.full_name||"Student account";
+            const meta=document.createElement("small");meta.textContent=(student?.bu_id||student?.email||enrollment.student_id.slice(0,8))+" · Enrolled "+new Date(enrollment.enrolled_at).toLocaleDateString();
+            identity.append(name,meta);
+            const remove=document.createElement("button");remove.type="button";remove.className="btn btn-danger";remove.textContent="Unenroll";
+            remove.addEventListener("click",async()=>{
+              const label=student?.full_name||"this student";
+              const confirmed=window.confirm("Unenroll "+label+" from "+(courses.find(c=>c.id===selectedOffering?.course_id)?.course_code||"this class")+" · "+(selectedOffering?.section||"") +"?\n\nOnly this class enrollment will be removed. The student's account and other class enrollments remain. The associated course-final-grade record will also be deleted. Exam submissions and assessment records are not intentionally deleted by this action.");
+              if(!confirmed)return;
+              remove.disabled=true;remove.textContent="Removing…";
+              try{
+                const {data,error}=await state.supabase.rpc("academix_admin_unenroll_student",{p_enrollment_id:enrollment.id});
+                if(error)throw error;
+                toast("Student unenrolled from the selected class.","success");
+                await loadPhase8Admin();
+              }catch(error){
+                remove.disabled=false;remove.textContent="Unenroll";
+                toast("Could not unenroll student: "+(error.message||"Database operation failed."),"error");
+              }
+            });
+            row.append(identity,remove);target.append(row);
+          });
+        };
+        enrollmentOffering.onchange=renderEnrollmentManager;
+        renderEnrollmentManager();
+      }
       records.replaceChildren();
       const active=terms.find(term=>term.is_active);
       const stats=document.createElement("div");stats.className="phase8-admin-summary-grid";
