@@ -1848,3 +1848,39 @@ select option { color:var(--text); background:var(--panel); }
  .phase8-admin-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:420px){.phase8-offering-details{grid-template-columns:1fr}}
+
+
+/* Student assessment dashboard */
+.student-assessment-hub{display:grid;gap:18px;margin-bottom:20px}
+.student-faculty-status{padding:26px 28px}
+.student-faculty-heading,.student-faculty-progress-copy{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.student-faculty-heading h2{margin:0 0 5px;font:600 1.25rem "Space Grotesk"}
+.student-faculty-heading .eyebrow{margin-bottom:7px}
+.student-completion-badge{border-radius:999px;padding:7px 12px;background:#f6ce5818;color:var(--gold);font-size:.76rem;font-weight:700;white-space:nowrap}
+.student-completion-badge.is-complete{background:#16a34a20;color:#4ade80}
+.student-faculty-progress-copy{margin:20px 0 9px;color:var(--muted);font-size:.85rem}
+.student-faculty-progress-copy strong{color:var(--success);font-family:"Space Grotesk"}
+.student-faculty-progress-track{height:9px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.student-faculty-progress-track span{display:block;height:100%;width:0;border-radius:inherit;background:#16c767;transition:width .25s ease}
+.student-faculty-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.student-faculty-card{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding:13px;border:1px solid var(--line);border-radius:13px;background:var(--panel2);min-width:0}
+.student-faculty-icon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f6ce5818;color:var(--gold);font-weight:800}
+.student-faculty-icon.is-complete{background:#16a34a20;color:#4ade80}
+.student-faculty-card strong,.student-faculty-card small{display:block;overflow:hidden;text-overflow:ellipsis}
+.student-faculty-card strong{font-size:.86rem}.student-faculty-card small{font-size:.72rem;color:var(--muted);margin-top:3px}
+.student-faculty-state{font-size:.7rem;color:var(--gold);background:#f6ce5815;border-radius:999px;padding:5px 8px;white-space:nowrap}
+.student-faculty-state.is-complete{color:#4ade80;background:#16a34a20}
+.student-assessment-tabs{display:flex;gap:5px;padding:5px;border:1px solid var(--line);border-radius:13px;background:var(--panel);width:max-content;max-width:100%}
+.student-assessment-tab{border:0;border-radius:9px;padding:10px 16px;color:var(--muted);background:transparent;font-weight:600;font-size:.84rem}
+.student-assessment-tab.is-active{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.student-assessment-tab-panel{min-width:0}
+.student-course-grade-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:13px}
+.student-course-grade-table{width:100%;border-collapse:collapse;min-width:650px;font-size:.84rem}
+.student-course-grade-table th{background:var(--panel2);color:var(--muted);font-size:.76rem;text-align:left;padding:13px 14px}
+.student-course-grade-table td{padding:13px 14px;border-top:1px solid var(--line);vertical-align:middle}
+.student-course-grade-table tbody tr:hover{background:var(--panel2)}
+.student-grade-posted{font-weight:700;color:var(--success);white-space:nowrap}
+.student-grade-pending{font-weight:700;color:var(--muted);white-space:nowrap}
+.student-grade-eligibility-note{margin:0 0 18px}
+@media(max-width:850px){.student-faculty-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.student-faculty-status{padding:19px}.student-faculty-cards{grid-template-columns:1fr}.student-faculty-heading{align-items:flex-start;flex-direction:column}.student-assessment-tabs{width:100%}.student-assessment-tab{flex:1;padding:10px 8px}}
