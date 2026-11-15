@@ -504,6 +504,7 @@
       if (submissionError) throw submissionError;
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
 
+      state.examSubmissionInFlight = false;
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       document.body.classList.add("exam-active");$("#exam-view").classList.add("exam-integrity-active");installIntegrityMonitoring();
       if(fullscreenRequest)Promise.resolve(fullscreenRequest).catch(()=>toast("Full-screen mode was blocked by your browser. The attempt will still be monitored.","error"));else toast("Your browser does not support full-screen mode. The attempt will still be monitored.","error");
@@ -828,7 +829,7 @@
   }
   async function stopIntegrityMonitoring() {
     document.body.classList.remove("exam-active");$("#exam-view")?.classList.remove("exam-integrity-active");
-    state.integrityFullscreenRequested=false;state.currentExam=null;
+    state.integrityFullscreenRequested=false;state.currentExam=null;state.examSubmissionInFlight=false;
     if(document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}}
   }
 
