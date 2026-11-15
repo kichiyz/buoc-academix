@@ -73,6 +73,24 @@ BEGIN
   INTO v_gwa, v_units, v_course_count, v_term_count, v_disqualifying, v_courses
   FROM counted;
 
+  WITH enrolled AS (
+    SELECT COALESCE(s.outcome, 'active') AS outcome,
+           fg.percentage,
+           band.gwa_value
+    FROM public.course_enrollments e
+    JOIN public.course_offerings o ON o.id = e.offering_id
+    LEFT JOIN public.course_enrollment_statuses s ON s.enrollment_id = e.id
+    LEFT JOIN public.course_final_grades fg ON fg.enrollment_id = e.id
+    LEFT JOIN LATERAL (
+      SELECT b.gwa_value
+      FROM public.term_grade_bands b
+      WHERE b.term_id = o.term_id
+        AND fg.percentage BETWEEN b.min_percentage AND b.max_percentage
+      ORDER BY b.min_percentage DESC
+      LIMIT 1
+    ) band ON true
+    WHERE e.student_id = v_user
+  )
   SELECT
     COUNT(*) FILTER (WHERE outcome NOT IN ('drp','inc') AND percentage IS NULL),
     COUNT(*) FILTER (WHERE outcome = 'inc'),
