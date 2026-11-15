@@ -1408,12 +1408,24 @@
         if(data.missing_evaluations?.length){const list=document.createElement("ul");data.missing_evaluations.forEach(x=>{const li=document.createElement("li");li.textContent=x.instructor_name+" — evaluation required";list.append(li);});target.append(list);const go=document.createElement("button");go.type="button";go.className="btn btn-primary";go.textContent="Complete instructor evaluations";go.addEventListener("click",()=>switchView("evaluations"));target.append(go);}
         return;
       }
+      const courses=Array.isArray(data.courses)?data.courses:[];
+      const courseCount=courses.length;
       const heading=document.createElement("div");heading.className="phase8-gwa-result";
-      const term=document.createElement("p");term.className="eyebrow";term.textContent="FINAL GWA · "+(data.total_units||0)+" CREDIT UNITS";
+      const summary=document.createElement("div");
+      const term=document.createElement("p");term.className="eyebrow";term.textContent="SEMESTER GWA · "+(data.total_units||0)+" CREDIT UNITS";
+      const coverage=document.createElement("p");coverage.className="muted";coverage.textContent=courseCount+" finalized course"+(courseCount===1?"":"s")+" currently included";
       const score=document.createElement("strong");score.textContent=Number(data.gwa).toFixed(2);
-      heading.append(term,score);target.append(heading);
+      summary.append(term,coverage);heading.append(summary,score);target.append(heading);
+      if(courseCount===1){
+        const note=document.createElement("p");note.className="notice";
+        note.textContent="This result currently reflects only 1 course. It represents your complete semester GWA only if this is the only course you are enrolled in for this term. If you have other subjects, ask your administrator to verify that all of your course offerings and enrollments are recorded.";
+        target.append(note);
+      }
+      const explanation=document.createElement("p");explanation.className="muted";
+      explanation.textContent="The percentage is converted to a GWA using the grading bands configured for this academic term. With only one included course, its converted GWA is also the semester average.";
+      target.append(explanation);
       const list=document.createElement("div");list.className="phase8-record-list";
-      (data.courses||[]).forEach(c=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=c.course_code+" — "+c.course_title+" · "+c.units+" units · "+c.percentage+"% → GWA "+c.gwa;list.append(row);});target.append(list);
+      courses.forEach(c=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=c.course_code+" — "+c.course_title+" · "+c.units+" units · "+c.percentage+"% → Converted GWA "+c.gwa;list.append(row);});target.append(list);
     }catch(e){target.textContent="Final GWA could not be loaded: "+e.message+" Check student verification, course enrollment, and database permissions.";}
   }
 

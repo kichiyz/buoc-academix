@@ -94,3 +94,15 @@ test("students can view cumulative unit-weighted GWA and provisional BU Latin-ho
   assert.match(cumulativeMigration, /regular load/i);
   assert.match(cumulativeMigration, /Registrar verification/i);
 });
+
+test("semester GWA clearly identifies limited course coverage and explains conversion", () => {
+  const start = app.indexOf("async function loadSemesterGwa");
+  const end = app.indexOf("async function loadCumulativeGwa", start);
+  const renderer = app.slice(start, end);
+  assert.match(renderer, /SEMESTER GWA/);
+  assert.match(renderer, /finalized course/);
+  assert.match(renderer, /This result currently reflects only 1 course/);
+  assert.match(renderer, /grading bands configured for this academic term/);
+  assert.match(renderer, /Converted GWA/);
+  assert.doesNotMatch(renderer, /FINAL GWA ·/);
+});
