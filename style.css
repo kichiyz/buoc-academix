@@ -1974,3 +1974,6 @@ select option { color:var(--text); background:var(--panel); }
     white-space: nowrap;
   }
 }
+
+/* Print document seal fallback when the remote seal host is unavailable. */
+.seal-fallback{width:18mm;height:18mm;border:1px solid #174d70;border-radius:50%;color:#174d70;display:grid;place-content:center;text-align:center;font:700 10pt Georgia,serif;line-height:1}.seal-fallback small{font:600 5.5pt Arial,sans-serif;letter-spacing:.12em;margin-top:1mm}.seal-fallback[hidden]{display:none!important}@media print{.seal-fallback{width:14mm;height:14mm}}
