@@ -87,6 +87,7 @@
     if (view === "evaluations" && role === "student") loadStudentEvaluations();
     if (view === "developer" && role === "admin") { loadPhase8Admin(); loadAcademicDirectory(); loadUnassignedStudents(); }
     if (view === "teacher-home" && role === "teacher") loadTeacherPhase8Offerings();
+    if (view === "generator" && role === "teacher") loadTeacherPhase8Offerings();
     if (view === "developer") { loadAdminUsers(); loadExamRegistry(); loadResultsInspector(); }
     if (view === "generator") { const sandbox = role === "admin"; $("#publish-quiz").classList.toggle("hidden", sandbox); $("#draft-mode-note").textContent = sandbox ? "SANDBOX MODE — generated drafts stay in this browser and are never published to real exam tables." : "AI output is a draft. Review every question, option, answer, and explanation before publishing."; }
   }
