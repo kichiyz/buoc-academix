@@ -1416,14 +1416,20 @@
     if(state.profile?.role==="admin"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.remove("hidden");$("#teacher-grade-directory")?.classList.add("hidden");await loadAcademicDirectory();await loadAdminGradeDirectory();return;}
     if(state.profile?.role==="teacher"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.remove("hidden");await loadTeacherGradeOfferings();return;}
     $("#admin-grade-directory")?.classList.add("hidden");$("#teacher-grade-directory")?.classList.add("hidden");target.classList.remove("hidden");$("#student-assessment-hub")?.classList.remove("hidden");await loadStudentAssessmentOverview();target.innerHTML='<div class="section-heading"><div><h2>Assessment attempt history</h2><p class="muted">Individual quiz and examination results, including retakes.</p></div></div><div class="empty-state">Loading assessment attempts…</div>';
-    try{const {data,error}=await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at",{ascending:false});if(error)throw error;target.innerHTML="";
-      if(!data?.length)target.innerHTML='<div class="empty-state">No graded assessment submissions yet.</div>';
-      (data||[]).forEach(g=>{const row=document.createElement("div");row.className="grade-row";const name=document.createElement("div"),b=document.createElement("b"),small=document.createElement("small");b.textContent=g.exams?.title||"Assessment";small.textContent=new Date(g.created_at).toLocaleString();name.append(b,small);
-        const score=document.createElement("div");score.className="score";score.textContent=g.score+" / "+g.max_score;const pct=Number(g.max_score)>0?Number(g.score)/Number(g.max_score)*100:null;
-        const status=document.createElement("span");status.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");status.textContent=pct==null?"Awaiting grade":pct>=75?"Passed":"Failed";
-        const detail=document.createElement("small");detail.className="muted";detail.textContent=(pct==null?"":pct.toFixed(2)+"%")+(g.feedback?" · "+g.feedback:"");name.append(detail);row.append(name,score,status);target.append(row);});
+    try{const {data,error}=await state.supabase.from("grades").select("id,score,max_score,feedback,created_at,exams(title)").order("created_at",{ascending:false});if(error)throw error;target.replaceChildren();
+      const heading=document.createElement("div");heading.className="section-heading student-assessment-history-heading";
+      const headingCopy=document.createElement("div"),title=document.createElement("h2"),intro=document.createElement("p");
+      title.textContent="Assessment history";intro.className="muted";intro.textContent="Individual quiz and examination scores. These are not your finalized course grades.";headingCopy.append(title,intro);heading.append(headingCopy);target.append(heading);
+      const guide=document.createElement("div");guide.className="student-grade-explainer";
+      guide.innerHTML='<strong>How to read these results</strong><p><span class="result-status status-passed">At / above 75%</span> meets the current assessment benchmark. <span class="result-status status-failed">Below 75%</span> is below that benchmark for this individual quiz or exam; it does not by itself mean you failed the course.</p><p>Your official course grade appears under <b>Semester grades</b> after your instructor posts it. Your semester GWA is shown separately when all required course grades and instructor evaluations are complete.</p>';
+      target.append(guide);
+      if(!data?.length){const empty=document.createElement("div");empty.className="empty-state";empty.textContent="No graded assessment submissions yet. Completed assessments will appear here after grading.";target.append(empty);}
+      (data||[]).forEach(g=>{const row=document.createElement("div");row.className="grade-row student-assessment-result-row";const name=document.createElement("div"),b=document.createElement("b"),small=document.createElement("small");b.textContent=g.exams?.title||"Assessment";small.textContent="Submitted / graded "+new Date(g.created_at).toLocaleString();name.append(b,small);
+        const score=document.createElement("div");score.className="score";score.textContent=(g.score??"—")+" / "+(g.max_score??"—");const pct=Number(g.max_score)>0?Number(g.score)/Number(g.max_score)*100:null;
+        const status=document.createElement("span");status.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");status.textContent=pct==null?"Awaiting grade":pct>=75?"At / above 75%":"Below 75%";
+        const detail=document.createElement("small");detail.className="muted";detail.textContent=(pct==null?"Percentage unavailable":pct.toFixed(2)+"% of assessment points")+(g.feedback?" · "+g.feedback:"");name.append(detail);row.append(name,score,status);target.append(row);});
       await loadStudentCourseOutcomes();await loadSemesterGwa();
-    }catch(e){target.innerHTML='<div class="empty-state">Could not load grades. Check your Supabase policies.</div>';toast(e.message,"error");}
+    }catch(e){target.innerHTML='<div class="empty-state">Could not load assessment history. Check your Supabase policies or contact your administrator.</div>';toast(e.message,"error");}
   }
   async function exportGrades() {
     try {
