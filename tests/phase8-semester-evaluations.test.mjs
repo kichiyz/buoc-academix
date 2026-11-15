@@ -130,3 +130,15 @@ test("teacher published assessments are scoped to assigned course offerings and 
 });
 
 test("teacher year labels use ordinal format", () => { assert.match(app, /academicYearLevelLabel/); assert.match(app, /2:"nd"/); });
+
+test("admins can view class rosters and unenroll one student through a protected RPC", async () => {
+  const migration = await readFile("supabase/migrations/20261115000000_admin_student_unenrollment.sql", "utf8");
+  assert.match(html, /id="phase8-enrollment-manager-offering"/);
+  assert.match(html, /id="phase8-enrollment-manager-list"/);
+  assert.match(app, /from\("course_enrollments"\)\.select\("id,offering_id,student_id,enrolled_at"\)/);
+  assert.match(app, /academix_admin_unenroll_student/);
+  assert.match(app, /Only this class enrollment will be removed/);
+  assert.match(migration, /academix_is_active_admin\(\)/);
+  assert.match(migration, /delete from public\.course_enrollments/);
+  assert.match(migration, /grant execute on function public\.academix_admin_unenroll_student\(uuid\) to authenticated/);
+});
