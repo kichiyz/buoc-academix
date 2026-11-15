@@ -1820,3 +1820,31 @@ select option { color:var(--text); background:var(--panel); }
   .account-session-panel { align-items:stretch; flex-direction:column; gap:16px; padding:17px; }
   .account-signout { width:100%; justify-content:center; }
 }
+
+
+/* Phase 8 usability: grade attempts, academic configuration, and empty placement state. */
+.grade-attempt-note{display:block;margin-top:5px;color:var(--muted);font-size:.72rem}
+.grade-attempt-history{margin-top:6px;font-size:.76rem;color:var(--muted)}
+.grade-attempt-history summary{cursor:pointer;color:var(--purple);font-weight:700}
+.grade-attempt-history small{display:block;margin-top:5px;line-height:1.45}
+.phase8-admin-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.phase8-admin-summary-card{display:grid;gap:4px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.phase8-admin-summary-card strong{font:700 1.45rem "Space Grotesk",sans-serif}
+.phase8-admin-summary-card span,.phase8-offering-details small{color:var(--muted);font-size:.76rem}
+.phase8-admin-active-term{margin:12px 0;color:var(--muted);font-size:.86rem}
+.phase8-offering-list{gap:12px}
+.phase8-offering-record{display:grid;gap:12px;padding:16px}
+.phase8-offering-record>strong{font-size:.96rem}
+.phase8-offering-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.phase8-offering-details>div{display:grid;gap:4px;min-width:0}
+.phase8-offering-details span{font-size:.84rem;overflow-wrap:anywhere}
+.phase8-evaluation-progress-row{display:grid;gap:10px}
+.phase8-evaluation-progress-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.phase8-evaluation-progress-header span{color:var(--muted);font-size:.8rem}
+.phase8-progress-track{height:9px;border-radius:99px;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
+.phase8-progress-track span{display:block;height:100%;border-radius:inherit;background:var(--success);transition:width .2s ease}
+@media(max-width:700px){
+ .phase8-offering-details{grid-template-columns:1fr 1fr}
+ .phase8-admin-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){.phase8-offering-details{grid-template-columns:1fr}}
