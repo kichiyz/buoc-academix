@@ -213,12 +213,7 @@
         <section class="page-view hidden" id="view-grades">
           <div class="section-heading"><div><h2>Grades & results</h2><p class="muted">View assessed attempts or export results for offline review.</p></div><button id="export-grades" class="btn btn-primary teacher-only hidden">↓ Export CSV</button></div>
           <section id="student-assessment-hub" class="student-only student-assessment-hub">
-<section class="panel student-faculty-status">
-<div class="student-faculty-heading"><div><p class="eyebrow">STUDENT ASSESSMENT</p><h2>Faculty evaluation status</h2><p id="student-faculty-term" class="muted">Current semester evaluation progress</p></div><span id="student-faculty-complete-badge" class="student-completion-badge">Loading</span></div>
-<div class="student-faculty-progress-copy"><span id="student-faculty-count">Checking assigned instructors…</span><strong id="student-faculty-percent">—</strong></div>
-<div id="student-faculty-progress" class="student-faculty-progress-track" role="progressbar" aria-label="Faculty evaluation completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="student-faculty-progress-fill"></span></div>
-<div id="student-faculty-cards" class="student-faculty-cards"><div class="empty-state">Loading assigned faculty…</div></div>
-</section>
+
 <div class="student-assessment-tabs" role="tablist" aria-label="Student assessment sections">
 <button type="button" class="student-assessment-tab is-active" role="tab" aria-selected="true" aria-controls="student-assessment-grades" data-student-assessment-tab="grades">Grades</button>
 <button type="button" class="student-assessment-tab" role="tab" aria-selected="false" aria-controls="student-assessment-evaluations" data-student-assessment-tab="evaluations">Faculty Evaluations</button>
@@ -231,6 +226,12 @@
 <div class="student-course-grade-table-wrap"><table class="student-course-grade-table"><thead><tr><th>Code</th><th>Course</th><th>Units</th><th>Grade</th><th>Remarks</th></tr></thead><tbody id="student-course-grade-body"><tr><td colspan="5">Loading course grades…</td></tr></tbody></table></div>
 </section>
 <section id="student-assessment-evaluations" class="student-assessment-tab-panel hidden" role="tabpanel">
+<section class="panel student-faculty-status">
+<div class="student-faculty-heading"><div><p class="eyebrow">STUDENT ASSESSMENT</p><h2>Faculty evaluation status</h2><p id="student-faculty-term" class="muted">Current semester evaluation progress</p></div><span id="student-faculty-complete-badge" class="student-completion-badge">Loading</span></div>
+<div class="student-faculty-progress-copy"><span id="student-faculty-count">Checking assigned instructors…</span><strong id="student-faculty-percent">—</strong></div>
+<div id="student-faculty-progress" class="student-faculty-progress-track" role="progressbar" aria-label="Faculty evaluation completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="student-faculty-progress-fill"></span></div>
+<div id="student-faculty-cards" class="student-faculty-cards"><div class="empty-state">Loading assigned faculty…</div></div>
+</section>
 <div class="section-heading"><div><h2>Faculty evaluations</h2><p class="muted">Submit one confidential evaluation for each instructor teaching your enrolled courses this semester.</p></div></div>
 <div class="notice">Your individual ratings remain confidential. Only completion totals are used for semester GWA eligibility.</div>
 <div id="student-assessment-evaluation-status" class="muted">Loading assigned instructors…</div>
