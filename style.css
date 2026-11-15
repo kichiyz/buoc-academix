@@ -1979,6 +1979,16 @@ select option { color:var(--text); background:var(--panel); }
 .seal-fallback{width:18mm;height:18mm;border:1px solid #174d70;border-radius:50%;color:#174d70;display:grid;place-content:center;text-align:center;font:700 10pt Georgia,serif;line-height:1}.seal-fallback small{font:600 5.5pt Arial,sans-serif;letter-spacing:.12em;margin-top:1mm}.seal-fallback[hidden]{display:none!important}@media print{.seal-fallback{width:14mm;height:14mm}}
 
 
+/* Student grade clarity: distinguish assessment benchmarks from official course outcomes. */
+.student-grade-publication-note,.student-grade-explainer{display:grid;gap:6px;padding:14px 16px;border:1px solid var(--line);border-left:3px solid var(--role-accent,var(--gold));border-radius:12px;background:var(--panel2);color:var(--muted);font-size:.82rem;line-height:1.55;margin:12px 0 16px}
+.student-grade-publication-note strong,.student-grade-explainer strong{color:var(--text);font-size:.86rem}
+.student-grade-explainer p{margin:0}
+.student-grade-explainer .result-status{margin:2px 4px 2px 0;vertical-align:middle;font-size:.66rem;padding:4px 8px}
+.student-assessment-history-heading{margin-top:8px}
+.student-assessment-result-row{grid-template-columns:minmax(0,1fr) auto auto}
+.student-assessment-result-row .score{min-width:76px;text-align:right}
+@media(max-width:600px){.student-assessment-result-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}.student-assessment-result-row .result-status{grid-column:1/-1;justify-self:start}.student-assessment-result-row .score{text-align:right}}
+
 /* Mobile-first usability pass across the entire AcademiX workspace. */
 :root { --mobile-safe-bottom: env(safe-area-inset-bottom, 0px); --mobile-safe-top: env(safe-area-inset-top, 0px); }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
