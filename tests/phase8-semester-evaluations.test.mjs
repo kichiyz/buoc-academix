@@ -91,6 +91,6 @@ test("students can view cumulative unit-weighted GWA and provisional BU Latin-ho
   assert.match(cumulativeMigration, /ROUND\(v_gwa, 4\)/);
   assert.match(cumulativeMigration, /gwa_value > 3\.00/);
   assert.match(cumulativeMigration, /outcome NOT IN \('drp','inc'\)/);
-  assert.match(cumulativeMigration, /regular academic load/i);
+  assert.match(cumulativeMigration, /regular load/i);
   assert.match(cumulativeMigration, /Registrar verification/i);
 });
