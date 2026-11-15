@@ -758,6 +758,16 @@
         typeSelect.append(option);
       });
       typeLabel.append(typeSelect);
+      const attemptPolicy = document.createElement("p");
+      attemptPolicy.className = "muted retake-policy-note";
+      attemptPolicy.setAttribute("role", "status");
+      const updateAttemptPolicy = () => {
+        attemptPolicy.textContent = typeSelect.value === "retake"
+          ? "Retake policy: after the student submits this retake, the new score replaces the previous score for this exam. The old attempt remains in the audit trail without a score. If the retake is not submitted, the current score is unchanged."
+          : "Remedial policy: the remedial result is recorded separately; the previous exam score is retained.";
+      };
+      typeSelect.addEventListener("change", updateAttemptPolicy);
+      updateAttemptPolicy();
       const reasonLabel = document.createElement("label");
       reasonLabel.textContent = "Reason (optional)";
       const reason = document.createElement("textarea");
@@ -765,7 +775,7 @@
       reason.maxLength = 1000;
       reason.placeholder = "Add a brief reason for this authorization…";
       reasonLabel.append(reason);
-      form.append(studentLabel, typeLabel, reasonLabel);
+      form.append(studentLabel, typeLabel, attemptPolicy, reasonLabel);
       body.append(form);
       footer.append(
         workflowButton("Cancel", "btn-quiet", closeWorkflowModal),
@@ -876,7 +886,7 @@
       const percentage = result && Number(result.max_score) > 0 ? (Number(result.score) / Number(result.max_score)) * 100 : null;
       const outcome = percentage == null ? "Submitted — awaiting grade" : percentage >= 75 ? "Passed" : "Failed";
       const scoreMessage = result?.requires_manual_grading ? "Exam submitted successfully. Your essay response is awaiting teacher review." : percentage == null ? "Exam submitted successfully. Your result will appear after grading." : `Exam submitted: ${result.score} / ${result.max_score} (${percentage.toFixed(2)}%). ${outcome}.`;
-      toast(scoreMessage, "success");
+      toast(result?.replaced_previous_score ? scoreMessage + " Previous score replaced." : scoreMessage, "success");
       switchView("grades");
     } catch (e) {
       toast(`Submission failed: ${e.message}. Your attempt may remain in progress; retry submission when ready.`, "error");
@@ -966,7 +976,7 @@
         history.forEach((attempt,index)=>{
           const entry=document.createElement("small");
           const date=attempt.graded_at?new Date(attempt.graded_at).toLocaleString():"Date unavailable";
-          entry.textContent="Earlier result "+(index+1)+": "+Number(attempt.score).toFixed(2)+" / "+Number(attempt.max_score).toFixed(2)+" ("+Number(attempt.percentage).toFixed(2)+"%) · "+date;
+          entry.textContent=attempt.score==null?"Earlier attempt "+(index+1)+": score superseded by an authorized retake · "+date:"Earlier result "+(index+1)+": "+Number(attempt.score).toFixed(2)+" / "+Number(attempt.max_score).toFixed(2)+" ("+Number(attempt.percentage).toFixed(2)+"%) · "+date;
           details.append(entry);
         });
         score.append(details);
