@@ -80,3 +80,17 @@ test("Phase 8 workflows have responsive layouts and accessible status regions", 
   assert.match(css, /\.phase8-evaluation-list/);
   assert.match(css, /@media\(max-width:760px\)/);
 });
+
+test("students can view cumulative unit-weighted GWA and provisional BU Latin-honors standing", async () => {
+  const cumulativeMigration = await readFile("supabase/migrations/20261122000000_student_cumulative_gwa_latin_honors.sql", "utf8");
+  assert.match(html, /id="phase8-cumulative-gwa-panel"/);
+  assert.match(html, /Cumulative GWA &amp; Latin Honors Outlook/);
+  assert.match(app, /academix_student_cumulative_gwa/);
+  assert.match(app, /toFixed\(4\)/);
+  assert.match(cumulativeMigration, /SUM\(gwa_value \* units\) \/ NULLIF\(SUM\(units\), 0\)/);
+  assert.match(cumulativeMigration, /ROUND\(v_gwa, 4\)/);
+  assert.match(cumulativeMigration, /gwa_value > 3\.00/);
+  assert.match(cumulativeMigration, /outcome NOT IN \('drp','inc'\)/);
+  assert.match(cumulativeMigration, /regular academic load/i);
+  assert.match(cumulativeMigration, /Registrar verification/i);
+});
