@@ -162,6 +162,11 @@
       }
     } catch (e) { toast(e.message || "Authentication failed.", "error"); }
   }
+  function academicYearLevelLabel(value) {
+    const level=Number(value);
+    const suffix=(level%100>=11&&level%100<=13)?"th":(({1:"st",2:"nd",3:"rd"})[level%10]||"th");
+    return Number.isInteger(level)&&level>0?level+suffix+" Year":"Year level not set";
+  }
   function assessmentCategoryLabel(category) {
     return ({quiz:"Quiz",long_test:"Long test",midterm:"Midterm examination",final:"Final examination",other:"Other coursework"})[category]||"Assessment";
   }
@@ -174,7 +179,7 @@
       offering.academic_campuses?.campus_name||"Campus not set",
       offering.academic_colleges?.college_name||"College not set",
       offering.academic_programs?.program_name||"Program not set",
-      offering.year_level?"Year "+offering.year_level:"Year not set",
+      academicYearLevelLabel(offering.year_level),
       offering.block_code||offering.section||"Block not set",
       term.academic_year||"",
       term.semester||""
@@ -204,7 +209,7 @@
         ["course","Course / class","id",o=>teacherAssessmentContext(o)],
         ["campus","Campus","campus_id",o=>o.academic_campuses?.campus_name||"Campus not set"],
         ["college","College / institute","college_id",o=>o.academic_colleges?.college_name||"College not set"],
-        ["year","Year level","year_level",o=>o.year_level?"Year "+o.year_level:"Year not set"]
+        ["year","Year level","year_level",o=>academicYearLevelLabel(o.year_level)]
       ];
       filters.replaceChildren();
       const controls={};

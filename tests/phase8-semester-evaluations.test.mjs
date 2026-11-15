@@ -128,3 +128,5 @@ test("teacher published assessments are scoped to assigned course offerings and 
   assert.match(html, /id="teacher-unscoped-assessments"/);
   assert.match(css, /\.teacher-assessment-filters/);
 });
+
+test("teacher year labels use ordinal format", () => { assert.match(app, /academicYearLevelLabel/); assert.match(app, /2:"nd"/); });
