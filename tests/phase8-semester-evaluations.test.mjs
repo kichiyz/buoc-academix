@@ -106,3 +106,24 @@ test("semester GWA clearly identifies limited course coverage and explains conve
   assert.match(renderer, /Converted GWA/);
   assert.doesNotMatch(renderer, /FINAL GWA ·/);
 });
+
+test("quiz cards are labeled by assessment category instead of calling every assessment an exam", () => {
+  assert.match(app, /assessmentCategoryLabel\(exam\.assessment_category\)/);
+  assert.match(app, /Assigned \+category\.toLowerCase\(\)/);
+  assert.match(app, /assessment_category/);
+});
+test("teacher published assessments are scoped to assigned course offerings and split by type", () => {
+  assert.match(app, /loadTeacherPublishedAssessments/);
+  assert.match(app, /eq\("teacher_id",state\.user\.id\)/);
+  assert.match(app, /course_offering_id/);
+  assert.match(app, /academic_campuses\(campus_name\)/);
+  assert.match(app, /academic_colleges\(college_name\)/);
+  assert.match(app, /year_level/);
+  assert.match(app, /Midterm &amp; final examinations/);
+  assert.match(app, /Quizzes &amp; coursework/);
+  assert.match(html, /id="teacher-assessment-filters"/);
+  assert.match(html, /id="teacher-published-exams"/);
+  assert.match(html, /id="teacher-published-coursework"/);
+  assert.match(html, /id="teacher-unscoped-assessments"/);
+  assert.match(css, /\.teacher-assessment-filters/);
+});

@@ -172,6 +172,15 @@
           <div class="welcome-banner"><div><p class="eyebrow">YOUR LEARNING SPACE</p><h2>Ready to show what you know?</h2><p class="muted">Your assigned assessments and recent activity appear here.</p></div><div class="banner-icon">✦</div></div>
           <div class="section-heading"><div><h2>Available assessments</h2><p class="muted">Exams assigned to your account</p></div><button class="btn btn-quiet" id="refresh-exams">↻ Refresh</button></div>
           <div id="exam-list" class="exam-grid"><div class="empty-state">Loading assessments…</div></div>
+          <section id="teacher-published-assessments" class="teacher-only hidden">
+            <div class="panel teacher-assessment-panel">
+              <div class="section-heading"><div><p class="eyebrow">TEACHER WORKSPACE</p><h2>Published assessments by academic class</h2><p class="muted">Filter your own published assessments by course/class, campus, college, and year level. Results are separated into examinations and coursework.</p></div></div>
+              <div id="teacher-assessment-filters" class="teacher-assessment-filters"><div class="empty-state">Choose a filter to narrow your classes.</div></div>
+              <section class="teacher-assessment-group"><div class="section-heading"><div><h3>Midterm &amp; final examinations</h3><p class="muted">Formal examinations for your assigned course offerings.</p></div></div><div id="teacher-published-exams" class="exam-grid"><div class="empty-state">No examinations loaded.</div></div></section>
+              <section class="teacher-assessment-group"><div class="section-heading"><div><h3>Quizzes &amp; coursework</h3><p class="muted">Quizzes, long tests, and other published course assessments.</p></div></div><div id="teacher-published-coursework" class="exam-grid"><div class="empty-state">No coursework loaded.</div></div></section>
+              <section class="teacher-assessment-group"><div class="section-heading"><div><h3>Needs academic class assignment</h3><p class="muted">Older or unlinked assessments are kept separate because their class scope cannot be confirmed.</p></div></div><div id="teacher-unscoped-assessments"></div></section>
+            </div>
+          </section>
           <div class="section-heading teacher-only hidden"><div><h2>Teacher tools</h2><p class="muted">Create and publish assessments</p></div></div>
           <div class="teacher-only hidden tool-card"><div class="tool-icon">✦</div><div><b>AI Quiz Studio</b><p class="muted">Turn study notes into a draft quiz, review it, then publish it.</p></div><button class="btn btn-primary" data-go="generator">Open studio →</button></div>
         </section>

@@ -2068,3 +2068,16 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 .phase8-honors-checklist li small{color:var(--muted);line-height:1.45}
 .phase8-honors-checklist li.is-met strong{color:var(--success)}
 .phase8-honors-checklist li.is-pending strong{color:var(--gold)}
+
+/* Teacher assessment workspace: academic filters and separate assessment types. */
+.teacher-assessment-panel{display:grid;gap:22px}
+.teacher-assessment-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:12px;align-items:end}
+.teacher-assessment-filters label{display:grid;gap:7px;font-weight:650;font-size:.86rem;min-width:0}
+.teacher-assessment-filters select{width:100%;min-width:0}
+.teacher-assessment-group{padding-top:18px;border-top:1px solid var(--line)}
+.teacher-assessment-group h3{margin:0}
+.teacher-assessment-scope{font-size:.8rem;line-height:1.5;margin:10px 0 0}
+.teacher-published-assessment-card{min-width:0}
+#teacher-unscoped-assessments>p:not(.notice){padding:10px 12px;border-bottom:1px solid var(--line);margin:0}
+@media(max-width:900px){.teacher-assessment-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.teacher-assessment-filters{grid-template-columns:minmax(0,1fr)}.teacher-assessment-filters>.btn{width:100%}}

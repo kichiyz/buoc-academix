@@ -162,53 +162,157 @@
       }
     } catch (e) { toast(e.message || "Authentication failed.", "error"); }
   }
+  function assessmentCategoryLabel(category) {
+    return ({quiz:"Quiz",long_test:"Long test",midterm:"Midterm examination",final:"Final examination",other:"Other coursework"})[category]||"Assessment";
+  }
+  function teacherAssessmentContext(offering) {
+    if(!offering)return "No academic class assigned";
+    const course=offering.academic_courses||{},term=offering.academic_terms||{};
+    return [
+      course.course_code||"Course",
+      course.course_title||"",
+      offering.academic_campuses?.campus_name||"Campus not set",
+      offering.academic_colleges?.college_name||"College not set",
+      offering.academic_programs?.program_name||"Program not set",
+      offering.year_level?"Year "+offering.year_level:"Year not set",
+      offering.block_code||offering.section||"Block not set",
+      term.academic_year||"",
+      term.semester||""
+    ].filter(Boolean).join(" · ");
+  }
+  async function loadTeacherPublishedAssessments() {
+    const panel=$("#teacher-published-assessments");
+    const filters=$("#teacher-assessment-filters");
+    const examTarget=$("#teacher-published-exams");
+    const courseworkTarget=$("#teacher-published-coursework");
+    const unscopedTarget=$("#teacher-unscoped-assessments");
+    if(!panel||!filters||!examTarget||!courseworkTarget)return;
+    panel.classList.remove("hidden");
+    filters.innerHTML='<div class="empty-state">Loading your assigned academic classes…</div>';
+    examTarget.innerHTML=courseworkTarget.innerHTML='<div class="empty-state">Loading published assessments…</div>';
+    unscopedTarget?.replaceChildren();
+    try{
+      const [{data:offeringsData,error:offeringError},{data:examData,error:examError}]=await Promise.all([
+        state.supabase.from("course_offerings").select("id,section,year_level,block_code,campus_id,college_id,program_id,academic_terms(academic_year,semester),academic_courses(course_code,course_title),academic_campuses(campus_name),academic_colleges(college_name),academic_programs(program_name)").eq("instructor_id",state.user.id),
+        state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id,course_offering_id,exam_mode,assessment_category,grade_weight_percent").eq("teacher_id",state.user.id).eq("status","published").order("published_at",{ascending:false})
+      ]);
+      if(offeringError)throw offeringError;
+      if(examError)throw examError;
+      const offerings=offeringsData||[],exams=examData||[];
+      const offeringMap=new Map(offerings.map(o=>[o.id,o]));
+      const selectSpecs=[
+        ["course","Course / class","id",o=>teacherAssessmentContext(o)],
+        ["campus","Campus","campus_id",o=>o.academic_campuses?.campus_name||"Campus not set"],
+        ["college","College / institute","college_id",o=>o.academic_colleges?.college_name||"College not set"],
+        ["year","Year level","year_level",o=>o.year_level?"Year "+o.year_level:"Year not set"]
+      ];
+      filters.replaceChildren();
+      const controls={};
+      selectSpecs.forEach(([key,labelText,valueOf,labelOf])=>{
+        const label=document.createElement("label");label.textContent=labelText;
+        const select=document.createElement("select");select.setAttribute("aria-label",labelText);
+        const all=document.createElement("option");all.value="";all.textContent="All "+labelText.toLowerCase()+"s";select.append(all);
+        const options=new Map();
+        offerings.forEach(o=>{const value=o[valueOf];const keyValue=value==null?"__missing":String(value);if(!options.has(keyValue))options.set(keyValue,labelOf(o));});
+        [...options.entries()].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([value,label])=>{const option=document.createElement("option");option.value=value;option.textContent=label;select.append(option);});
+        label.append(select);filters.append(label);controls[key]=select;
+      });
+      const clear= document.createElement("button");clear.type="button";clear.className="btn btn-quiet";clear.textContent="Clear filters";
+      clear.addEventListener("click",()=>Object.values(controls).forEach(s=>s.value=""));
+      filters.append(clear);
+      const legacy=exams.filter(e=>!e.course_offering_id||!offeringMap.has(e.course_offering_id));
+      function filteredOffering(exam){
+        const o=offeringMap.get(exam.course_offering_id);
+        if(!o)return false;
+        return selectSpecs.every(([key,,field])=>{
+          const selected=controls[key].value;if(!selected)return true;
+          const value=o[field];return (value==null?"__missing":String(value))===selected;
+        });
+      }
+      function createCard(exam,offering,count){
+        const card=document.createElement("article");card.className="exam-card teacher-published-assessment-card";
+        const badge=document.createElement("span");badge.className="badge";badge.textContent=assessmentCategoryLabel(exam.assessment_category);
+        const title=document.createElement("h3");title.textContent=exam.title;
+        const meta=document.createElement("div");meta.className="exam-meta";
+        const duration=document.createElement("span");duration.textContent="Duration: "+exam.duration_minutes+" min";
+        const questions=document.createElement("span");questions.textContent=count==null?"Question count unavailable":count+" question(s)";
+        const scope=document.createElement("p");scope.className="muted teacher-assessment-scope";scope.textContent=teacherAssessmentContext(offering);
+        meta.append(duration,questions);card.append(badge,title,meta,scope);
+        const actions=document.createElement("div");actions.className="exam-card-actions";
+        const assign=document.createElement("button");assign.type="button";assign.className="btn btn-primary";assign.textContent="Manage assigned students";assign.addEventListener("click",()=>manageAssignments(exam));
+        const retake=document.createElement("button");retake.type="button";retake.className="btn btn-quiet";retake.textContent="Authorize retake / remedial";retake.addEventListener("click",()=>authorizeAttempt(exam));
+        const remove=document.createElement("button");remove.type="button";remove.className="btn btn-danger";remove.textContent="Delete assessment";
+        remove.addEventListener("click",async()=>{
+          const {count:submissionCount,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
+          if(countError)return toast(countError.message,"error");
+          const warning=submissionCount?" This permanently deletes "+submissionCount+" student submission(s) and their associated scores.":"";
+          if(!confirm("Delete “"+exam.title+"” permanently?"+warning+" This cannot be undone."))return;
+          remove.disabled=true;
+          try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
+          catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
+        });
+        actions.append(assign,retake,remove);card.append(actions);return card;
+      }
+      function render(){
+        examTarget.replaceChildren();courseworkTarget.replaceChildren();unscopedTarget?.replaceChildren();
+        const visible=exams.filter(filteredOffering);
+        const examRows=visible.filter(e=>["midterm","final"].includes(e.assessment_category));
+        const courseworkRows=visible.filter(e=>!["midterm","final"].includes(e.assessment_category));
+        const addEmpty=(target,message)=>{const empty=document.createElement("div");empty.className="empty-state";empty.textContent=message;target.append(empty);};
+        if(!examRows.length)addEmpty(examTarget,"No published midterm or final examinations match these filters.");
+        if(!courseworkRows.length)addEmpty(courseworkTarget,"No published quizzes, long tests, or other coursework match these filters.");
+        [...examRows,...courseworkRows].forEach(exam=>{
+          const offering=offeringMap.get(exam.course_offering_id);
+          const countRow=state.supabase.from("questions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
+          countRow.then(({count,error})=>{
+            const card=createCard(exam,offering,error?null:count);
+            (["midterm","final"].includes(exam.assessment_category)?examTarget:courseworkTarget).append(card);
+          }).catch(()=>{const card=createCard(exam,offering,null);(["midterm","final"].includes(exam.assessment_category)?examTarget:courseworkTarget).append(card);});
+        });
+        if(legacy.length&&unscopedTarget){
+          const heading=document.createElement("p");heading.className="notice";heading.textContent=legacy.length+" published assessment(s) are missing a matching course offering. They are separated here and cannot be reliably filtered by campus, college, or year until their class assignment is corrected.";
+          unscopedTarget.append(heading);
+          legacy.forEach(exam=>{const row=document.createElement("p");row.textContent=assessmentCategoryLabel(exam.assessment_category)+" · "+exam.title;unscopedTarget.append(row);});
+        }
+      }
+      Object.values(controls).forEach(select=>select.addEventListener("change",render));
+      render();
+      if(!offerings.length){
+        const note=document.createElement("p");note.className="notice";note.textContent="No course offerings are assigned to your teacher account. Ask an administrator to assign your classes before publishing or managing scoped assessments.";
+        filters.append(note);
+      }
+    }catch(error){
+      filters.innerHTML='<div class="empty-state">Could not load teacher academic filters: '+String(error.message||"Unknown error").replace(/[<>]/g,"")+'</div>';
+      examTarget.textContent="Published examinations could not be loaded.";
+      courseworkTarget.textContent="Published coursework could not be loaded.";
+    }
+  }
   async function loadExams() {
-    const target = $("#exam-list"); target.innerHTML = '<div class="empty-state">Loading assessments…</div>';
+    const target=$("#exam-list");
+    const teacherPanel=$("#teacher-published-assessments");
+    if(state.profile?.role==="teacher"){
+      target?.classList.add("hidden");
+      await loadTeacherPublishedAssessments();
+      return;
+    }
+    teacherPanel?.classList.add("hidden");
+    target?.classList.remove("hidden");
+    target.innerHTML = '<div class="empty-state">Loading assessments…</div>';
     try {
       const { data, error } = await state.supabase.from("exams").select("id,title,duration_minutes,status,published_at,teacher_id,exam_mode,assessment_category,grade_weight_percent").eq("status", "published").order("published_at", { ascending: false });
       if (error) throw error;
-      // RLS limits students to assigned exams. Teachers only see their own via the policies.
       if (!data?.length) { target.innerHTML = '<div class="empty-state">No published assessments found for this account.</div>'; return; }
       target.innerHTML = "";
       for (const exam of data) {
         const { count } = await state.supabase.from("questions").select("*", { count: "exact", head: true }).eq("exam_id", exam.id);
+        const category=assessmentCategoryLabel(exam.assessment_category);
         const card = document.createElement("article"); card.className = "exam-card";
-        card.innerHTML = `<span class="badge">${state.profile.role === "teacher" ? "Published" : "Assigned exam"}</span><h3></h3><div class="exam-meta"><span>Duration: ${exam.duration_minutes} min</span><span>Questions: ${count ?? "—"}</span></div><button class="btn ${state.profile.role === "teacher" ? "btn-quiet" : "btn-primary"}">${state.profile.role === "teacher" ? "Exam ID: " + exam.id.slice(0, 8) : "Start exam →"}</button>`;
+        card.innerHTML = `<span class="badge">${state.profile.role === "student" ? "Assigned "+category.toLowerCase() : "Published "+category.toLowerCase()}</span><h3></h3><div class="exam-meta"><span>Duration: ${exam.duration_minutes} min</span><span>Questions: ${count ?? "—"}</span></div><button class="btn btn-primary">Start assessment →</button>`;
         card.querySelector("h3").textContent = exam.title;
-        if (state.profile.role === "student") {
-          card.querySelector("button").addEventListener("click", () => startExam(exam));
-        } else {
-          const actions = document.createElement("div");
-          actions.className = "exam-card-actions";
-          const assign = document.createElement("button");
-          assign.className = "btn btn-primary";
-          assign.textContent = "Manage assigned students";
-          assign.addEventListener("click", () => manageAssignments(exam));
-          const attempts = document.createElement("button");
-          attempts.className = "btn btn-quiet";
-          attempts.textContent = "Authorize retake / remedial";
-          attempts.addEventListener("click", () => authorizeAttempt(exam));
-          actions.append(assign, attempts);
-          if (state.profile.role === "teacher") {
-            const remove = document.createElement("button");
-            remove.className = "btn btn-danger";
-            remove.textContent = "Delete assessment";
-            remove.addEventListener("click", async () => {
-              const {count,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
-              if(countError)return toast(countError.message,"error");
-              const warning=count? " This permanently deletes "+count+" student submission(s) and their associated scores.":"";
-              if(!confirm("Delete “"+exam.title+"” permanently?"+warning+" This cannot be undone."))return;
-              remove.disabled=true;
-              try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
-              catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
-            });
-            actions.append(remove);
-          }
-          card.querySelector("button").replaceWith(actions);
-        }
+        card.querySelector("button").addEventListener("click", () => startExam(exam));
         target.append(card);
       }
-    } catch (e) { target.innerHTML = '<div class="empty-state">Could not load exams. Check your connection and Supabase policies.</div>'; toast(e.message, "error"); }
+    } catch (e) { target.innerHTML = '<div class="empty-state">Could not load assessments. Check your connection and Supabase policies.</div>'; toast(e.message, "error"); }
   }
   async function generateQuiz(event) {
     event.preventDefault();
