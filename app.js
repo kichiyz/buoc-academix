@@ -1281,19 +1281,55 @@
   async function loadTeacherPhase8Offerings() {
     const select=$("#phase8-teacher-offering"),target=$("#phase8-teacher-roster"),authoring=$("#assessment-course-offering");
     if(!select||!target)return;
+    const setPlaceholder=(el,message)=>{
+      if(!el)return;
+      el.replaceChildren();
+      const option=document.createElement("option");option.value="";option.textContent=message;el.append(option);
+    };
+    setPlaceholder(select,"Loading your assigned classes…");
+    setPlaceholder(authoring,"Loading your assigned classes…");
+    target.textContent="Loading your assigned classes…";
     try{
-      const {data,error}=await state.supabase.from("course_offerings")
-        .select("id,section,academic_terms(academic_year,semester),academic_courses(course_code,course_title)")
-        .eq("instructor_id",state.user.id);
+      // Read the offering rows without PostgREST relationship embedding. This
+      // keeps the teacher dashboard working even when FK relationship metadata
+      // is stale or ambiguous after academic-directory migrations.
+      const {data:rows,error}=await state.supabase.from("course_offerings")
+        .select("id,section,term_id,course_id")
+        .eq("instructor_id",state.user.id)
+        .order("created_at",{ascending:false});
       if(error)throw error;
-      const offerings=data||[];
-      const label=o=>(o.academic_courses?.course_code||"Course")+" — "+(o.academic_courses?.course_title||"")+" · "+(o.academic_terms?.academic_year||"")+" "+(o.academic_terms?.semester||"")+" · "+o.section;
-      select.replaceChildren();const first=document.createElement("option");first.value="";first.textContent="Choose an assigned class";select.append(first);
-      offerings.forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=label(o);select.append(opt);});
-      if(authoring){const keep=authoring.value;authoring.replaceChildren();const prompt=document.createElement("option");prompt.value="";prompt.textContent="Choose the class for this assessment";authoring.append(prompt);offerings.forEach(o=>{const opt=document.createElement("option");opt.value=o.id;opt.textContent=label(o);authoring.append(opt);});if(offerings.some(o=>o.id===keep))authoring.value=keep;}
+      const offerings=rows||[];
+      const courseIds=[...new Set(offerings.map(o=>o.course_id).filter(Boolean))];
+      const termIds=[...new Set(offerings.map(o=>o.term_id).filter(Boolean))];
+      const [coursesResult,termsResult]=await Promise.all([
+        courseIds.length?state.supabase.from("academic_courses").select("id,course_code,course_title").in("id",courseIds):Promise.resolve({data:[],error:null}),
+        termIds.length?state.supabase.from("academic_terms").select("id,academic_year,semester").in("id",termIds):Promise.resolve({data:[],error:null})
+      ]);
+      if(coursesResult.error)throw coursesResult.error;
+      if(termsResult.error)throw termsResult.error;
+      const courses=new Map((coursesResult.data||[]).map(x=>[x.id,x]));
+      const terms=new Map((termsResult.data||[]).map(x=>[x.id,x]));
+      offerings.forEach(o=>{o.academic_courses=courses.get(o.course_id)||null;o.academic_terms=terms.get(o.term_id)||null;});
+      const label=o=>(o.academic_courses?.course_code||"Course")+" — "+(o.academic_courses?.course_title||"")+" · "+(o.academic_terms?.academic_year||"")+" "+(o.academic_terms?.semester||"")+" · "+(o.section||"Unsectioned");
+      const fill=(el,placeholder)=>{
+        if(!el)return;
+        const keep=el.value;
+        el.replaceChildren();
+        const first=document.createElement("option");first.value="";first.textContent=placeholder;el.append(first);
+        offerings.forEach(o=>{const option=document.createElement("option");option.value=o.id;option.textContent=label(o);el.append(option);});
+        if(offerings.some(o=>o.id===keep))el.value=keep;
+      };
+      fill(select,"Choose an assigned class");
+      fill(authoring,"Choose the class for this assessment");
       target.textContent=offerings.length?"Select a class to load its roster.":"No course offerings are assigned to your account yet.";
       if(offerings.length)await loadTeacherPhase8Roster();
-    }catch(e){target.textContent="Could not load course offerings: "+e.message;}
+    }catch(e){
+      const message="Could not load assigned classes: "+(e?.message||"Unknown database error");
+      setPlaceholder(select,message);
+      setPlaceholder(authoring,message);
+      target.textContent=message;
+      console.error("[AcademiX] Teacher course-offering load failed:",e);
+    }
   }
   async function loadTeacherPhase8Roster(){
     const offering=$("#phase8-teacher-offering")?.value,target=$("#phase8-teacher-roster");if(!target)return;
