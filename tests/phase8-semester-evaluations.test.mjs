@@ -119,8 +119,8 @@ test("teacher published assessments are scoped to assigned course offerings and 
   assert.match(app, /academic_campuses\(campus_name\)/);
   assert.match(app, /academic_colleges\(college_name\)/);
   assert.match(app, /year_level/);
-  assert.match(app, /Midterm &amp; final examinations/);
-  assert.match(app, /Quizzes &amp; coursework/);
+  assert.match(html, /Midterm &amp; final examinations/);
+  assert.match(html, /Quizzes &amp; coursework/);
   assert.match(html, /id="teacher-assessment-filters"/);
   assert.match(html, /id="teacher-published-exams"/);
   assert.match(html, /id="teacher-published-coursework"/);
