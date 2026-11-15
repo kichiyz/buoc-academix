@@ -980,7 +980,7 @@
     if(!campus||!college||!program||!year||!block){status.textContent="Select a campus, college, degree program, year level, and block before viewing grade records.";list.replaceChildren();return;}
     status.textContent="Loading grade records for this academic scope…";
     try{const {data,error}=await state.supabase.rpc("academix_admin_grade_directory",{p_campus_id:campus,p_college_id:college,p_program_id:program,p_year_level:Number(year),p_block_code:block,p_term_id:null});if(error)throw error;
-      status.textContent=(data||[]).length+" grade record(s) found.";renderGradeDirectory(list,data||[],true);
+      status.textContent=(data||[]).length+" graded attempt record(s) found. Retakes are grouped under each student's latest result.";renderGradeDirectory(list,data||[],true);
     }catch(e){status.textContent="Could not load scoped grades: "+e.message;list.replaceChildren();}
   }
   async function loadTeacherGradeOfferings(){
@@ -994,7 +994,7 @@
     const id=$("#teacher-grade-offering")?.value,status=$("#teacher-grade-directory-status"),list=$("#teacher-grade-directory-list");if(!id||!status||!list)return;
     status.textContent="Loading grades for your assigned class…";
     try{const [{data,error},{data:events,error:eventError},{data:reviews,error:reviewError}]=await Promise.all([state.supabase.rpc("academix_teacher_grade_directory",{p_offering_id:id}),state.supabase.rpc("academix_teacher_integrity_events",{p_offering_id:id}),state.supabase.rpc("academix_teacher_pending_manual_reviews",{p_offering_id:id})]);if(error)throw error;
-      status.textContent=(data||[]).length+" grade record(s) in this class.";renderGradeDirectory(list,data||[]);
+      status.textContent=(data||[]).length+" graded attempt record(s) in this class. Retakes are grouped under each student's latest result.";renderGradeDirectory(list,data||[]);
       const panel=document.createElement("section"),h=document.createElement("h3"),note=document.createElement("p");panel.className="integrity-events-panel";h.textContent="Exam integrity activity";note.className="muted";note.textContent="Tab changes, focus loss, and full-screen exits are review signals, not proof of misconduct.";panel.append(h,note);
       if(eventError){const e=document.createElement("p");e.textContent="Integrity events unavailable: "+eventError.message;panel.append(e);}
       else if(!(events||[]).length){const e=document.createElement("p");e.className="muted";e.textContent="No integrity events recorded for this class.";panel.append(e);}
@@ -1188,6 +1188,11 @@
       const statuses=new Map(statusRows.map(x=>[x.enrollment_id,x]));
       target.replaceChildren();
       if(!data?.length){target.textContent="No students are enrolled in this offering.";return;}
+      if(summaryError){
+        const warning=document.createElement("div");warning.className="notice phase8-summary-error";
+        warning.textContent="Weighted grade calculations are unavailable. Quiz attempts and scores remain intact, but the component totals below cannot be confirmed. Database response: "+summaryError.message;
+        target.append(warning);
+      }
       data.forEach(student=>{
         const current=statuses.get(student.enrollment_id)||{outcome:"active",drop_requested_at:null};
         const computed=summaryByStudent.get(student.enrollment_id);
@@ -1202,7 +1207,12 @@
         if(computed?.final_percentage==null)missingParts.push("final exam");
         if(Number(computed?.missing_coursework_assessments||0)>0)missingParts.push(computed.missing_coursework_assessments+" ungraded coursework assessment(s)");
         if(computed?.coursework_percentage==null&&Number(computed?.missing_coursework_assessments||0)===0)missingParts.push("graded coursework");
-        const items=[
+        const items=summaryError?[
+          ["Midterm GWA","Unavailable","Grade summary request failed"],
+          ["Final exam GWA","Unavailable","Grade summary request failed"],
+          ["Coursework (55%)","Unavailable","Grade summary request failed"],
+          ["Computed final","Unavailable","No final calculation returned"]
+        ]:[
           ["Midterm GWA",gwaText(computed?.midterm_gwa),computed?.midterm_percentage==null?"Awaiting a graded midterm exam · 20%":pctText(computed.midterm_percentage)+" · 20%"],
           ["Final exam GWA",gwaText(computed?.final_gwa),computed?.final_percentage==null?"Awaiting a graded final exam · 25%":pctText(computed.final_percentage)+" · 25%"],
           ["Coursework (55%)",pctText(computed?.coursework_percentage),Number(computed?.missing_coursework_assessments||0)>0?computed.missing_coursework_assessments+" published assessment(s) still need grading":computed?.coursework_percentage==null?"No graded coursework assessment yet":"All published coursework graded · 55%"],
