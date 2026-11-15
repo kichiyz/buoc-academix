@@ -1914,7 +1914,7 @@ select option { color:var(--text); background:var(--panel); }
   }
   .main-area { min-width: 0; }
 }
-@media (min-width: 601px) and (max-width: 900px) {
+@media (min-width: 701px) and (max-width: 900px) {
   .dashboard {
     display: block;
     min-height: 100vh;
