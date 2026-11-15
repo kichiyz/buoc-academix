@@ -1417,6 +1417,65 @@
     }catch(e){target.textContent="Final GWA could not be loaded: "+e.message+" Check student verification, course enrollment, and database permissions.";}
   }
 
+
+  async function loadCumulativeGwa(){
+    const panel=$("#phase8-cumulative-gwa-panel"),target=$("#phase8-cumulative-gwa-content"),badge=$("#phase8-cumulative-gwa-status");
+    if(!panel||!target||state.profile?.role!=="student")return;
+    panel.classList.remove("hidden");target.textContent="Calculating cumulative GWA from finalized course records…";
+    try{
+      const {data,error}=await state.supabase.rpc("academix_student_cumulative_gwa");
+      if(error)throw error;
+      target.replaceChildren();
+      if(!data||data.available!==true){
+        badge.textContent="Unavailable";badge.className="result-status status-pending";
+        const note=document.createElement("p");note.className="notice";note.textContent=data?.reason||"Cumulative GWA is not available yet.";
+        target.append(note);return;
+      }
+      const gwa=Number(data.gwa),hasGradeIssue=Number(data.disqualifying_grade_count||0)>0;
+      const honors=gwa<=1.25?"Summa Cum Laude":gwa<=1.45?"Magna Cum Laude":gwa<=1.75?"Cum Laude":null;
+      const summary=document.createElement("div");summary.className="phase8-gwa-result";
+      const copy=document.createElement("div"),label=document.createElement("p"),detail=document.createElement("p"),score=document.createElement("strong");
+      label.className="eyebrow";label.textContent="CUMULATIVE GWA · "+Number(data.total_units||0).toFixed(2)+" CREDIT UNITS";
+      detail.className="muted";detail.textContent=Number(data.graded_courses||0)+" finalized courses across "+Number(data.term_count||0)+" recorded terms";
+      score.textContent=gwa.toFixed(4);copy.append(label,detail);summary.append(copy,score);target.append(summary);
+      const verdict=document.createElement("div");verdict.className="phase8-honors-verdict";
+      const verdictTitle=document.createElement("h3"),verdictText=document.createElement("p");
+      if(hasGradeIssue){
+        badge.textContent="Grade condition not met";badge.className="result-status status-failed";
+        verdictTitle.textContent="Latin-honor grade condition not met";
+        verdictText.textContent=Number(data.disqualifying_grade_count)+" finalized course grade(s) convert to a BU GWA value worse than 3.00. The handbook requires no grade lower than 3.0.";
+      }else if(!honors){
+        badge.textContent="Outside honors range";badge.className="result-status status-failed";
+        verdictTitle.textContent="No Latin-honor GWA bracket at present";
+        verdictText.textContent="The current cumulative GWA is above 1.7500.";
+      }else{
+        badge.textContent="Potential "+honors;badge.className="result-status status-passed";
+        verdictTitle.textContent="Potential "+honors+" GWA bracket";
+        verdictText.textContent="Your recorded cumulative GWA falls within the "+honors+" range. This is not a final eligibility decision.";
+      }
+      verdict.append(verdictTitle,verdictText);
+      const checks=document.createElement("ul");checks.className="phase8-honors-checklist";
+      const pending=Number(data.pending_courses||0),inc=Number(data.incomplete_courses||0);
+      const items=[
+        [!hasGradeIssue,"No finalized grade worse than 3.00",hasGradeIssue?"At least one disqualifying grade is recorded":"No disqualifying finalized grade is currently recorded"],
+        [pending===0,"All enrolled course grades finalized",pending+" course(s) still have no finalized grade"],
+        [inc===0,"No unresolved INC outcomes",inc+" unresolved INC course(s)"],
+        [false,"Regular academic load and curriculum compliance","Requires review of official enrollment and curriculum records"],
+        [false,"Required college residence completed","Requires verification by the College/Campus Registrar"]
+      ];
+      items.forEach(([ok,titleText,description])=>{const li=document.createElement("li");li.className=ok?"is-met":"is-pending";const strong=document.createElement("strong"),small=document.createElement("small");strong.textContent=(ok?"✓ ":"• ")+titleText;small.textContent=description;li.append(strong,small);checks.append(li);});
+      verdict.append(checks);target.append(verdict);
+      if(pending>0||inc>0){const caveat=document.createElement("p");caveat.className="notice";caveat.textContent="This cumulative figure covers finalized, mapped course grades only. It may change when pending or incomplete courses are resolved.";target.append(caveat);}
+      const heading=document.createElement("h3");heading.textContent="Included course grades";target.append(heading);
+      const list=document.createElement("div");list.className="phase8-record-list";
+      (data.courses||[]).forEach(course=>{const row=document.createElement("div");row.className="phase8-record-row";row.textContent=course.academic_year+" · "+course.semester+" — "+course.course_code+" · "+course.course_title+" · "+Number(course.units).toFixed(2)+" units · "+Number(course.gwa).toFixed(2)+" GWA";list.append(row);});
+      target.append(list);
+    }catch(error){
+      badge.textContent="Could not calculate";badge.className="result-status status-failed";
+      target.textContent="Cumulative GWA could not be loaded: "+(error.message||"Unknown error")+". Ensure the cumulative GWA migration has been applied.";
+    }
+  }
+
   async function loadGrades() {
     const target=$("#grades-list");
     if(state.profile?.role==="admin"){target.classList.add("hidden");$("#admin-grade-directory")?.classList.remove("hidden");$("#teacher-grade-directory")?.classList.add("hidden");await loadAcademicDirectory();await loadAdminGradeDirectory();return;}
@@ -1434,7 +1493,7 @@
         const score=document.createElement("div");score.className="score";score.textContent=(g.score??"—")+" / "+(g.max_score??"—");const pct=Number(g.max_score)>0?Number(g.score)/Number(g.max_score)*100:null;
         const status=document.createElement("span");status.className="result-status "+(pct==null?"status-pending":pct>=75?"status-passed":"status-failed");status.textContent=pct==null?"Awaiting grade":pct>=75?"At / above 75%":"Below 75%";
         const detail=document.createElement("small");detail.className="muted";detail.textContent=(pct==null?"Percentage unavailable":pct.toFixed(2)+"% of assessment points")+(g.feedback?" · "+g.feedback:"");name.append(detail);row.append(name,score,status);target.append(row);});
-      await loadStudentCourseOutcomes();await loadSemesterGwa();
+      await loadStudentCourseOutcomes();await loadSemesterGwa();await loadCumulativeGwa();
     }catch(e){target.innerHTML='<div class="empty-state">Could not load assessment history. Check your Supabase policies or contact your administrator.</div>';toast(e.message,"error");}
   }
   async function exportGrades() {

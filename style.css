@@ -2056,3 +2056,15 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 @media (prefers-reduced-motion: reduce) {
   .page-view, .panel, .metric-card, .exam-card { animation: none !important; transition: none !important; }
 }
+
+/* Cumulative GWA and provisional Latin-honors outlook */
+.phase8-honors-disclaimer{font-size:.82rem;line-height:1.55;margin:14px 0 0}
+.phase8-honors-verdict{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}
+.phase8-honors-verdict h3{margin:0 0 8px}
+.phase8-honors-verdict p{margin:0 0 12px;color:var(--muted);line-height:1.55}
+.phase8-honors-checklist{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:10px}
+.phase8-honors-checklist li{display:grid;gap:3px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.phase8-honors-checklist li strong{font-size:.9rem}
+.phase8-honors-checklist li small{color:var(--muted);line-height:1.45}
+.phase8-honors-checklist li.is-met strong{color:var(--success)}
+.phase8-honors-checklist li.is-pending strong{color:var(--gold)}
