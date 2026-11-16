@@ -95,13 +95,13 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   expect(appResponse.ok(), "The application script should load").toBeTruthy();
   expect(stylesheetResponse.ok(), "The stylesheet should load").toBeTruthy();
   expect(seal.ok(), "The locally hosted Bicol University seal must load").toBeTruthy();
-  expect(app).toContain('new URL("assets/bicol-university-seal.png",window.location.href).href');
+  expect(app).toContain('new URL("assets/bicol-university-seal-print.jpg",window.location.href).href');
   expect(app).toContain("@page{size:A4 portrait;margin:20mm 17mm 20mm 17mm}");
-  expect(app).toContain(".masthead{display:flex;gap:4mm;padding-bottom:5mm;margin-bottom:3.5mm;min-height:31mm;overflow:visible}");
+  expect(app).toContain(".masthead{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4mm;min-height:31mm;border-bottom:2px solid #174d70;padding:0 0 5mm;margin:0 0 4mm;overflow:visible}");
   expect(app).toContain(".seal{flex:0 0 27mm;width:27mm;height:27mm;max-width:27mm;object-fit:contain;object-position:center;align-self:center}");
-  expect(app).toContain(".signature-row{break-inside:avoid;page-break-inside:avoid;margin:13mm 8mm 0;gap:18mm}");
+  expect(app).toContain(".signature-row{display:grid;grid-template-columns:1fr 1fr;gap:18mm;margin:12mm 8mm 0}");
   expect(app).toContain(".signature-field{height:76.2mm;min-height:76.2mm;padding:0 0 2mm}");
-  expect(app).toContain(".end-note{break-inside:avoid;page-break-inside:avoid;margin:7mm 0 0;padding-top:2.5mm}");
+  expect(app).toContain(".end-note{margin:5mm 0 0;padding-top:2.5mm;border-top:1px solid #aebdc7;text-align:center;color:#617482;font-size:7pt}");
   expect(app).not.toContain("position:fixed;top:-15mm");
   expect(app).not.toContain("position:fixed;bottom:-15mm");
   expect(app).not.toContain('class="running-footer"');
