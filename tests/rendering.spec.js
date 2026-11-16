@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { readFile } from "node:fs/promises";
 
 const viewports = [
   { name: "small phone", width: 320, height: 740 },
@@ -85,10 +84,16 @@ test("core page containers and asset cache versions exist", async ({ page }) => 
 
 
 test("print documents load the local BU seal and reserve non-overlapping A4 header/footer space", async ({ request }) => {
-  const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
-  const stylesheet = await readFile(new URL("../style.css", import.meta.url), "utf8");
-  const seal = await request.get("/assets/bicol-university-seal.png");
+  const [appResponse, stylesheetResponse, seal] = await Promise.all([
+    request.get("/app.js"),
+    request.get("/style.css"),
+    request.get("/assets/bicol-university-seal.png"),
+  ]);
+  const app = await appResponse.text();
+  const stylesheet = await stylesheetResponse.text();
 
+  expect(appResponse.ok(), "The application script should load").toBeTruthy();
+  expect(stylesheetResponse.ok(), "The stylesheet should load").toBeTruthy();
   expect(seal.ok(), "The locally hosted Bicol University seal must load").toBeTruthy();
   expect(app).toContain('new URL("assets/bicol-university-seal.png",window.location.href).href');
   expect(app).toContain("@page{size:A4 portrait;margin:20mm 17mm 20mm 17mm}");
