@@ -247,6 +247,8 @@
         const actions=document.createElement("div");actions.className="exam-card-actions";
         const assign=document.createElement("button");assign.type="button";assign.className="btn btn-primary";assign.textContent="Manage assigned students";assign.addEventListener("click",()=>manageAssignments(exam));
         const retake=document.createElement("button");retake.type="button";retake.className="btn btn-quiet";retake.textContent="Authorize retake / remedial";retake.addEventListener("click",()=>authorizeAttempt(exam));
+        const printExam=document.createElement("button");printExam.type="button";printExam.className="btn btn-quiet";printExam.textContent="Print assessment";printExam.addEventListener("click",()=>printPublishedAssessment(exam,offering,false));
+        const printKey=document.createElement("button");printKey.type="button";printKey.className="btn btn-quiet";printKey.textContent="Print answer key";printKey.addEventListener("click",()=>printPublishedAssessment(exam,offering,true));
         const remove=document.createElement("button");remove.type="button";remove.className="btn btn-danger";remove.textContent="Delete assessment";
         remove.addEventListener("click",async()=>{
           const {count:submissionCount,error:countError}=await state.supabase.from("submissions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
@@ -257,7 +259,7 @@
           try{const {error}=await state.supabase.rpc("academix_teacher_delete_exam",{p_exam_id:exam.id});if(error)throw error;toast("Assessment deleted.","success");await loadExams();}
           catch(err){toast(err.message||"Could not delete assessment.","error");remove.disabled=false;}
         });
-        actions.append(assign,retake,remove);card.append(actions);return card;
+        actions.append(assign,retake,printExam,printKey,remove);card.append(actions);return card;
       }
       function render(){
         examTarget.replaceChildren();courseworkTarget.replaceChildren();unscopedTarget?.replaceChildren();
@@ -407,16 +409,40 @@
   }
   function printDraft(answerKey) {
     if(!state.draft?.questions?.length)return toast("Create or import a draft first.","error");
+    return printAssessmentDocument(state.draft,answerKey,{
+      duration:Number($("#publish-duration")?.value)||0,
+      offeringLabel:$("#publish-offering")?.selectedOptions?.[0]?.textContent?.trim()||"",
+      assessmentType:$("#publish-type")?.selectedOptions?.[0]?.textContent?.trim()||"Assessment"
+    });
+  }
+  async function printPublishedAssessment(exam,offering,answerKey) {
+    if(!exam?.id)return toast("Published assessment record is unavailable.","error");
+    if(!["teacher","admin"].includes(state.profile?.role))return toast("Only the assigned instructor can print assessment materials.","error");
+    if(state.profile.role==="teacher"&&exam.teacher_id!==state.user?.id)return toast("You can only print materials for your own published assessments.","error");
+    try{
+      const {data,error}=await state.supabase.from("questions")
+        .select("position,question_type,prompt,options,correct_answer,explanation,points,image_url")
+        .eq("exam_id",exam.id).order("position",{ascending:true});
+      if(error)throw error;
+      if(!data?.length)throw new Error("No questions were found for this published assessment.");
+      const questions=data.map(q=>({...q,image_preview_url:q.image_url||""}));
+      return printAssessmentDocument({title:exam.title,questions},answerKey,{
+        duration:Number(exam.duration_minutes)||0,
+        offeringLabel:offering?teacherAssessmentContext(offering):"Course offering not assigned",
+        assessmentType:assessmentCategoryLabel(exam.assessment_category)
+      });
+    }catch(error){toast(error.message||"Could not load published assessment for printing.","error");}
+  }
+  function printAssessmentDocument(draft,answerKey,metadata={}) {
+    if(!draft?.questions?.length)return toast("This assessment has no printable questions.","error");
     const buSealUrl=new URL("assets/Bicol University Logo.png",document.baseURI).href;
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    const draft=state.draft;
     const title=esc(draft.title||"Untitled assessment");
     const questions=draft.questions;
     const totalPoints=questions.reduce((sum,q)=>sum+(Number(q.points)||0),0);
-    const duration=Number($("#publish-duration")?.value)||0;
-    const offering=$("#publish-offering");
-    const offeringLabel=offering?.selectedOptions?.[0]?.textContent?.trim()||"";
-    const assessmentType=$("#publish-type")?.selectedOptions?.[0]?.textContent?.trim()||"Assessment";
+    const duration=Number(metadata.duration)||0;
+    const offeringLabel=metadata.offeringLabel||"";
+    const assessmentType=metadata.assessmentType||"Assessment";
     const dateLabel=new Intl.DateTimeFormat("en-PH",{year:"numeric",month:"long",day:"numeric"}).format(new Date());
     const items=questions.map((q,i)=>{
       const marks='<span class="marks">'+(Number(q.points)||0)+' '+((Number(q.points)||0)===1?"point":"points")+'</span>';
