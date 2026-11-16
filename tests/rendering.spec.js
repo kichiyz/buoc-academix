@@ -87,7 +87,7 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   const [appResponse, stylesheetResponse, seal] = await Promise.all([
     request.get("/app.js"),
     request.get("/style.css"),
-    request.get("/assets/bicol-university-seal.png"),
+    request.get("/assets/Bicol University Logo.png"),
   ]);
   const app = await appResponse.text();
   const stylesheet = await stylesheetResponse.text();
@@ -100,7 +100,9 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   expect(app).toContain(".masthead{display:grid;grid-template-columns:minmax(0,1fr) auto 24mm;align-items:center;column-gap:6mm;padding:0 0 4mm;margin-bottom:3.5mm;min-height:30mm;overflow:visible}");
   expect(app).toContain(".seal{position:static;display:block;width:24mm;height:24mm;max-width:100%;max-height:24mm;min-width:0;min-height:0;object-fit:contain;object-position:center center;clip-path:none;overflow:visible;background:transparent;justify-self:end;align-self:center}");
   expect(app).toContain('alt="Official Bicol University seal" loading="eager" decoding="sync"');
-  expect(app).toContain('const buSealUrl=new URL("assets/bicol-university-seal.png",document.baseURI).href;');
+  expect(app).toContain("width:28mm;height:28mm;max-width:100%;max-height:28mm");
+  expect(app).toContain("min-height:34mm;border-bottom:2px solid #174d70");
+  expect(app).toContain('const buSealUrl=new URL("assets/Bicol University Logo.png",document.baseURI).href;');
   expect(app).toContain("const imageSource=q.image_preview_url||q.image_url;");
   expect(app).toContain('isTrueFalse?" choices-unlettered":""');
   expect(app).toContain('isTrueFalse?"":" type=\\"A\\"');
