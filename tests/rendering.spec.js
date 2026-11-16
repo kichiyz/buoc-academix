@@ -101,6 +101,9 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   expect(app).toContain(".seal{position:static;display:block;width:24mm;height:24mm;max-width:100%;max-height:24mm;min-width:0;min-height:0;object-fit:contain;object-position:center center;clip-path:none;overflow:visible;background:transparent;justify-self:end;align-self:center}");
   expect(app).toContain('alt="Official Bicol University seal" loading="eager" decoding="sync"');
   expect(app).toContain('const buSealUrl=new URL("assets/bicol-university-seal.png",document.baseURI).href;');
+  expect(app).toContain("const imageSource=q.image_preview_url||q.image_url;");
+  expect(app).toContain('class="choices-unlettered"');
+  expect(app).toContain(".choices.choices-unlettered{list-style:none;padding-left:0}");
   expect(app).not.toContain("clip-path:inset");
   expect(app).toContain(".signature-row{display:grid;grid-template-columns:1fr 1fr;gap:18mm;margin:76.2mm 8mm 0;break-inside:avoid;page-break-inside:avoid}");
   expect(app).toContain(".signature-field{height:auto;min-height:0;border-top:1px solid #536777;border-bottom:0;padding:1mm 0 0}");
