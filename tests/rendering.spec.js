@@ -98,8 +98,10 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   expect(app).toContain('const buSealDataUri="data:image/png;base64,');
   expect(app).toContain("buSealDataUri+'\" alt=\"Official Bicol University seal\"");
   expect(app).toContain("@page{size:A4 portrait;margin:20mm 17mm 20mm 17mm}");
-  expect(app).toContain(".masthead{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4mm;min-height:31mm;border-bottom:2px solid #174d70;padding:0 0 5mm;margin:0 0 4mm;overflow:visible}");
-  expect(app).toContain(".seal{display:block;flex:0 0 auto;width:30mm;height:auto;max-width:30mm;max-height:none;min-width:0;object-fit:unset;object-position:unset;align-self:center;overflow:visible;background:transparent}");
+  expect(app).toContain(".masthead{position:relative;display:block;min-height:36mm;border-bottom:2px solid #174d70;padding:0 31mm 5mm 0;margin:0 0 4mm;overflow:visible}");
+  expect(app).toContain(".masthead{display:block;padding:0 31mm 5mm 0;margin-bottom:3.5mm;min-height:36mm;overflow:visible}");
+  expect(app).toContain(".seal{position:absolute;top:0;right:0;display:block;width:26mm;height:28.55mm;max-width:none;max-height:none;min-width:0;object-fit:contain;object-position:center center;overflow:visible;background:transparent}");
+  expect(app).toContain('alt="Official Bicol University seal" loading="eager" decoding="sync"');
   expect(app).toContain(".signature-row{display:grid;grid-template-columns:1fr 1fr;gap:18mm;margin:76.2mm 8mm 0;break-inside:avoid;page-break-inside:avoid}");
   expect(app).toContain(".signature-field{height:auto;min-height:0;border-top:1px solid #536777;border-bottom:0;padding:1mm 0 0}");
   expect(app).toContain(".end-note{margin:5mm 0 0;padding-top:2.5mm;border-top:1px solid #aebdc7;text-align:center;color:#617482;font-size:7pt}");
