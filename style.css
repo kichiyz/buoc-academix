@@ -1975,8 +1975,6 @@ select option { color:var(--text); background:var(--panel); }
   }
 }
 
-/* Print document seal fallback when the remote seal host is unavailable. */
-.seal-fallback{width:18mm;height:18mm;border:1px solid #174d70;border-radius:50%;color:#174d70;display:grid;place-content:center;text-align:center;font:700 10pt Georgia,serif;line-height:1}.seal-fallback small{font:600 5.5pt Arial,sans-serif;letter-spacing:.12em;margin-top:1mm}.seal-fallback[hidden]{display:none!important}@media print{.seal-fallback{width:14mm;height:14mm}}
 
 
 /* Student grade clarity: distinguish assessment benchmarks from official course outcomes. */
@@ -2192,3 +2190,20 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 .phase8-enrollment-row small{color:var(--muted,#777);overflow-wrap:anywhere}
 .phase8-enrollment-row .btn{flex:0 0 auto}
 @media(max-width:600px){.phase8-enrollment-row{align-items:flex-start;flex-direction:column}.phase8-enrollment-row .btn{width:100%}}
+
+
+/* Final visual polish: short, compositor-friendly transitions and accessible motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .page-view:not(.hidden), .role-home { animation-duration:180ms; animation-timing-function:cubic-bezier(.2,.65,.3,1); }
+  .btn,.nav-item,.text-link,.metric-card,.exam-card,.dev-tool { transition-duration:160ms; transition-timing-function:cubic-bezier(.2,.65,.3,1); }
+  .ambient { width:300px; height:300px; filter:blur(88px); opacity:.11; animation:academix-ambient-drift 28s ease-in-out infinite alternate; }
+  @keyframes academix-ambient-drift { from{transform:translate3d(0,0,0) scale(1)} to{transform:translate3d(0,-10px,0) scale(1.015)} }
+}
+@media (prefers-reduced-motion: reduce) { .ambient { animation:none!important; } }
+.section-heading>div { min-width:0; }
+.section-heading p,.panel p.muted,.form-panel p.muted { line-height:1.6; text-wrap:pretty; }
+@media print {
+  .running-header,.running-footer { z-index:2; }
+  .masthead,.meta-grid,.candidate-panel,.instructions { break-inside:avoid; page-break-inside:avoid; }
+  .question { orphans:3; widows:3; }
+}

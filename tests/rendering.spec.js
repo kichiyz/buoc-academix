@@ -81,3 +81,27 @@ test("core page containers and asset cache versions exist", async ({ page }) => 
   expect(appScript, "app.js should use a versioned URL to reduce stale-cache bugs").toMatch(/app\.js\?v=/);
   expect(stylesheet, "style.css should use a versioned URL to reduce stale-cache bugs").toMatch(/style\.css\?v=/);
 });
+
+
+test("print documents load the local BU seal and reserve non-overlapping A4 header/footer space", async ({ request }) => {
+  const [appResponse, stylesheetResponse, seal] = await Promise.all([
+    request.get("/app.js"),
+    request.get("/style.css"),
+    request.get("/assets/bicol-university-seal.png"),
+  ]);
+  const app = await appResponse.text();
+  const stylesheet = await stylesheetResponse.text();
+
+  expect(appResponse.ok(), "The application script should load").toBeTruthy();
+  expect(stylesheetResponse.ok(), "The stylesheet should load").toBeTruthy();
+  expect(seal.ok(), "The locally hosted Bicol University seal must load").toBeTruthy();
+  expect(app).toContain('new URL("assets/bicol-university-seal.png",window.location.href).href');
+  expect(app).toContain("@page{size:A4 portrait;margin:20mm 17mm 20mm 17mm}");
+  expect(app).toContain(".masthead{grid-template-columns:minmax(0,1fr) 17mm");
+  expect(app).toContain(".running-header{position:fixed;top:-15mm;height:6mm}");
+  expect(app).toContain(".running-footer{position:fixed;bottom:-15mm;height:6mm");
+  expect(app).toContain("document.fonts?.ready");
+  expect(app).toContain("img.decode()");
+  expect(stylesheet).toContain("@media (prefers-reduced-motion: reduce)");
+  expect(stylesheet).toContain("@keyframes academix-ambient-drift");
+});
