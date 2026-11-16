@@ -420,12 +420,10 @@
     if(!["teacher","admin"].includes(state.profile?.role))return toast("Only the assigned instructor can print assessment materials.","error");
     if(state.profile.role==="teacher"&&exam.teacher_id!==state.user?.id)return toast("You can only print materials for your own published assessments.","error");
     try{
-      const {data,error}=await state.supabase.from("questions")
-        .select("position,question_type,prompt,options,correct_answer,explanation,points,image_url")
-        .eq("exam_id",exam.id).order("position",{ascending:true});
+      const {data,error}=await state.supabase.rpc("get_teacher_exam_answer_key",{p_exam_id:exam.id});
       if(error)throw error;
       if(!data?.length)throw new Error("No questions were found for this published assessment.");
-      const questions=data.map(q=>({...q,image_preview_url:q.image_url||""}));
+      const questions=data;
       return printAssessmentDocument({title:exam.title,questions},answerKey,{
         duration:Number(exam.duration_minutes)||0,
         offeringLabel:offering?teacherAssessmentContext(offering):"Course offering not assigned",
