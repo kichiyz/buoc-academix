@@ -87,7 +87,7 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   const [appResponse, stylesheetResponse, seal] = await Promise.all([
     request.get("/app.js"),
     request.get("/style.css"),
-    request.get("/assets/bicol-university-seal.png"),
+    request.get("/assets/bicol-university-seal-print.jpg"),
   ]);
   const app = await appResponse.text();
   const stylesheet = await stylesheetResponse.text();
@@ -97,10 +97,10 @@ test("print documents load the local BU seal and reserve non-overlapping A4 head
   expect(seal.ok(), "The locally hosted Bicol University seal must load").toBeTruthy();
   expect(app).toContain('new URL("assets/bicol-university-seal.png",window.location.href).href');
   expect(app).toContain("@page{size:A4 portrait;margin:20mm 17mm 20mm 17mm}");
-  expect(app).toContain(".masthead{grid-template-columns:minmax(0,1fr) 27mm");
-  expect(app).toContain(".seal{width:25mm;height:25mm");
+  expect(app).toContain(".masthead{display:flex;gap:4mm;padding-bottom:5mm;margin-bottom:3.5mm;min-height:31mm;overflow:visible}");
+  expect(app).toContain(".seal{flex:0 0 27mm;width:27mm;height:27mm;max-width:27mm;object-fit:contain;object-position:center;align-self:center}");
   expect(app).toContain(".signature-row{break-inside:avoid;page-break-inside:avoid;margin:13mm 8mm 0;gap:18mm}");
-  expect(app).toContain(".signature-field{padding-top:2.5mm;min-height:9mm}");
+  expect(app).toContain(".signature-field{height:76.2mm;min-height:76.2mm;padding:0 0 2mm}");
   expect(app).toContain(".end-note{break-inside:avoid;page-break-inside:avoid;margin:7mm 0 0;padding-top:2.5mm}");
   expect(app).not.toContain("position:fixed;top:-15mm");
   expect(app).not.toContain("position:fixed;bottom:-15mm");
