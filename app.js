@@ -139,6 +139,8 @@
     try {
       showOnly("#dashboard-view");
       await loadProfile();
+      try { await window.AcademixHybridAssessment?.mount({ supabase: state.supabase, user: state.user, profile: state.profile }); }
+      catch (hybridError) { console.warn("Hybrid assessment module could not initialize:", hybridError); }
       if (state.user?.id !== enteringUserId) return;
       switchView(state.profile.role === "admin" ? "developer" : state.profile.role === "teacher" ? "teacher-home" : "student-home");
     } finally {
