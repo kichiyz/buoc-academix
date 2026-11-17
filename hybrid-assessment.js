@@ -235,7 +235,7 @@
       const left=col===0?70:455,top=214+row*32;
       const centers=col===0?[155,187,219,251]:[548,580,612,644];
       const choices=["multiple_choice","true_false"].includes(q.question_type)
-        ?centers.map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")
+        ?centers.slice(0,q.question_type==="true_false"?2:4).map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")
         :'<span class="omr-choice" style="left:82px;width:130px">Manual grading</span>';
       return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b>'+choices+'</div>';
     }).join("");
