@@ -5,7 +5,7 @@
 (() => {
   "use strict";
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const $ = (root, selector) => root.querySelector(selector);
+  const $ = (selector, root=document) => root.querySelector(selector);
   const state = { client:null,user:null,profile:null,batches:[],activeBatch:null,questions:[],students:[],scans:[],activeScan:null };
   const BUCKET = "printed-assessments";
   const MAX_FILE = 15 * 1024 * 1024;
