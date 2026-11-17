@@ -262,6 +262,7 @@
     if(error)$("#hybrid-scan-preview-status").textContent="Preview unavailable: "+error.message;
     else $("#hybrid-scan-preview-status").innerHTML='<a href="'+esc(signed.signedUrl)+'" target="_blank" rel="noopener">Open original scanned paper (5-minute private link)</a>';
     renderQuestionScores(scan);
+    $("#hybrid-auto-grade",panel).hidden=state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr";
     $("#hybrid-auto-grade",panel).addEventListener("click",async()=>{try{const result=await rpc("academix_teacher_auto_grade_printed_scan",{p_scan_id:scan.id});await loadScans();state.activeScan=state.scans.find(x=>x.id===scan.id);renderQuestionScores(state.activeScan);notify("Objective questions processed. "+result.manual_review_questions+" question(s) still need manual review.","success");}catch(e){notify(e.message,"error");}});
     $("#hybrid-save-grade",panel).addEventListener("click",saveManualGrade);
     $("#hybrid-publish-grade",panel).addEventListener("click",publishGrade);
@@ -312,7 +313,7 @@
         state.activeBatch=state.batches[0].id;
         await loadBatchDetails();
         const batch=state.batches[0];
-        $("#hybrid-batch-status").textContent="Latest batch: "+batch.authorization_code_hint+" · "+batch.sheet_format+". Select an existing assessment above to create a new batch.";
+        $("#hybrid-batch-status").textContent="Latest batch: "+batch.authorization_code_hint+" · "+batch.sheet_format+". Enter the code printed on the paper to validate new scans.";
       }
     } else if(profile.role==="student"){
       ensureStudentUI();await loadStudentResults();
