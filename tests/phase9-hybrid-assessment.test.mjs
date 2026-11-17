@@ -143,3 +143,30 @@ test("approved authorized paper grading replaces an existing online submission a
   assert.doesNotMatch(migration, /already has an online or printed attempt/);
   assert.match(migration, /Only the assigned instructor who graded this paper may approve it/);
 });
+
+test("OMR and conventional print formats support true/false, multiple-choice options, and written response types", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /q\.question_type==="true_false"\?\["True","False"\]/);
+  assert.match(module, /\["T","F"\]/);
+  assert.match(module, /omr-booklet-options/);
+  assert.match(module, /ASSESSMENT QUESTION BOOKLET/);
+  assert.match(module, /Record your answer by shading the corresponding bubble on the OMR answer sheet/);
+  assert.match(module, /q\.question_type==="true_false"\?\["True","False"\]/);
+  assert.match(module, /manual-options/);
+  assert.match(module, /Written response · manual scoring/);
+  for (const type of ["identification", "enumeration", "short_answer", "essay"]) {
+    assert.ok(module.includes(type), `Missing printed or manual-review support for ${type}`);
+  }
+});
+
+test("handwritten responses are never guessed by OMR and remain available for instructor scoring", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /handwritten_response_requires_instructor/);
+  assert.match(module, /does not guess handwritten identification, enumeration, short-answer, or essay responses/);
+  assert.match(module, /Open the original uploaded scan or PDF/);
+  assert.match(module, /Instructor-awarded score for question/);
+  assert.match(module, /Save manual \/ reviewed scores/);
+  assert.match(module, /manual_pdf/);
+  assert.match(module, /requires_teacher_review:true/);
+});
+
