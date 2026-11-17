@@ -50,7 +50,7 @@ test("OMR recognizer flags uncertain marks and maps bubbles to answer-key values
   const module = await read("../hybrid-assessment.js");
   assert.match(module, /uncertain_count/);
   assert.match(module, /requires_teacher_review:true/);
-  assert.match(module, /Array\.isArray\(q\.options\)\?q\.options\[selected\]/);
+  assert.match(module, /optionValues\[selected\]/);
   assert.match(module, /manual_question_paper/);
 });
 
