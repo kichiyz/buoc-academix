@@ -58,6 +58,7 @@ test("OMR recognizer flags uncertain marks and maps bubbles to answer-key values
 test("online examination startup remains server-authorized and does not expose the answer key", async () => {
   const app = await read("../app.js");
   const start = app.slice(app.indexOf("async function startExam("), app.indexOf("let workflowReturnFocus"));
+  assert.doesNotMatch(start, /correct_answer/, "the student question payload must not include answer-key fields");
   assert.ok(start.indexOf('rpc("get_exam_questions"') < start.indexOf('rpc("start_exam_attempt"'),
     "questions must load before an attempt starts so loading time is not deducted");
   assert.match(start, /submission\.status !== "in_progress"/);
@@ -89,8 +90,8 @@ test("online examination timer uses the server deadline and submission cannot ru
   assert.match(app, /state\.examDeadlineAt - Date\.now\(\)/);
   assert.match(app, /state\.examSubmissionInFlight\) return/);
   assert.match(app, /Retry submission/);
-  assert.match(app, /state\\.submissionFailed = true/);
-  assert.match(app, /i!==total-1&&!state\\.submissionFailed/);
+  assert.match(app, /state\.submissionFailed = true/);
+  assert.match(app, /i!==total-1&&!state\.submissionFailed/);
   assert.match(app, /state\.examDeadlineAt=null/);
 });
 
