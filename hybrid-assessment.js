@@ -81,9 +81,10 @@
     if(!target)return;
     const {data,error}=await state.client.from("profiles").select("registered_signature_path,registered_signature_updated_at").eq("id",state.user.id).single();
     if(error){target.textContent="Signature registration status could not be loaded: "+error.message;return;}
-    target.textContent=data.registered_signature_path
-      ? "Registered · "+new Date(data.registered_signature_updated_at).toLocaleString()
-      : "No signature specimen registered yet.";
+    if(!data.registered_signature_path){target.textContent="No signature specimen registered yet.";return;}
+    const {data:signed,error:signedError}=await state.client.storage.from(BUCKET).createSignedUrl(data.registered_signature_path,300);
+    if(signedError){target.textContent="Registered, but the private specimen preview is unavailable: "+signedError.message;return;}
+    target.innerHTML='Registered · '+esc(new Date(data.registered_signature_updated_at).toLocaleString())+'<br><a href="'+esc(signed.signedUrl)+'" target="_blank" rel="noopener">View registered signature specimen</a><br><img class="hybrid-signature-preview" src="'+esc(signed.signedUrl)+'" alt="Registered instructor signature specimen">';
   }
   async function loadExams() {
     const select=document.querySelector("#hybrid-exam");
@@ -95,7 +96,7 @@
   }
   async function loadBatches() {
     const {data,error}=await state.client.from("printed_assessment_batches")
-      .select("id,exam_id,sheet_format,instructor_name_snapshot,authorization_code_hint,created_at,active")
+      .select("id,exam_id,sheet_format,instructor_name_snapshot,instructor_signature_path_snapshot,authorization_code_hint,created_at,active")
       .eq("instructor_id",state.user.id).eq("active",true).order("created_at",{ascending:false});
     if(error)throw error;
     state.batches=data||[];
@@ -274,8 +275,12 @@
     const panel=$("#hybrid-review-panel");panel.classList.remove("hidden");panel.innerHTML='<div class="section-heading"><div><p class="eyebrow">INSTRUCTOR REVIEW</p><h3>Review scanned paper</h3><p class="muted">Inspect the original scan and verify every item before saving.</p></div><button class="btn btn-quiet" id="hybrid-close-review" type="button">Close</button></div><p id="hybrid-scan-preview-status" class="muted">Loading private scan preview…</p><div id="hybrid-question-scores" class="hybrid-question-scores"></div><label>Feedback<textarea id="hybrid-feedback" rows="3">'+esc(scan.feedback||"")+'</textarea></label><div class="hybrid-actions"><button class="btn btn-quiet" id="hybrid-auto-grade" type="button">Run automatic OMR grading</button><button class="btn btn-primary" id="hybrid-save-grade" type="button">Save manual / reviewed scores</button><button class="btn btn-primary" id="hybrid-publish-grade" type="button">Approve and publish grade</button></div><p class="muted">Publishing is final for this paper. The database blocks a second attempt for the same student and assessment.</p>';
     $("#hybrid-close-review",panel).addEventListener("click",()=>panel.classList.add("hidden"));
     const {data:signed,error}=await state.client.storage.from(BUCKET).createSignedUrl(scan.object_path,300);
-    if(error)$("#hybrid-scan-preview-status").textContent="Preview unavailable: "+error.message;
-    else $("#hybrid-scan-preview-status").innerHTML='<a href="'+esc(signed.signedUrl)+'" target="_blank" rel="noopener">Open original scanned paper (5-minute private link)</a>';
+    const batch=state.batches.find(x=>x.id===state.activeBatch);
+    const signature=batch?.instructor_signature_path_snapshot
+      ?await state.client.storage.from(BUCKET).createSignedUrl(batch.instructor_signature_path_snapshot,300)
+      :{data:null,error:{message:"No signature specimen was attached to this batch."}};
+    if(error)$("#hybrid-scan-preview-status").textContent="Scan preview unavailable: "+error.message;
+    else $("#hybrid-scan-preview-status").innerHTML='<a href="'+esc(signed.signedUrl)+'" target="_blank" rel="noopener">Open original scanned paper (5-minute private link)</a>'+(signature.data?'<div class="hybrid-signature-review"><span>Registered signature reference for this batch</span><img src="'+esc(signature.data.signedUrl)+'" alt="Registered instructor signature reference"></div>':'<p class="muted">'+esc(signature.error.message)+'</p>');
     renderQuestionScores(scan);
     $("#hybrid-auto-grade",panel).hidden=state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr";
     $("#hybrid-auto-grade",panel).addEventListener("click",async()=>{try{const result=await rpc("academix_teacher_auto_grade_printed_scan",{p_scan_id:scan.id});await loadScans();state.activeScan=state.scans.find(x=>x.id===scan.id);renderQuestionScores(state.activeScan);notify("Objective questions processed. "+result.manual_review_questions+" question(s) still need manual review.","success");}catch(e){notify(e.message,"error");}});
