@@ -238,14 +238,15 @@
       const col=i<25?0:1,row=i%25;
       const left=col===0?70:455,top=214+row*32;
       const centers=col===0?[155,187,219,251]:[548,580,612,644];
+      const points=Number.isFinite(Number(q.points))?Number(q.points):0;
       const choices=["multiple_choice","true_false"].includes(q.question_type)
         ?centers.slice(0,Math.min(4,Array.isArray(q.options)?q.options.length:4)).map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")
         :'<span class="omr-choice" style="left:82px;width:130px">Manual grading</span>';
-      return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b>'+choices+'</div>';
+      return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b><span class="omr-points">'+esc(points)+' pts</span>'+choices+'</div>';
     }).join("");
     const w=window.open("","_blank");
     if(!w)return notify("Allow pop-ups to print the answer sheet.","error");
-    w.document.write('<!doctype html><html><head><title>BUOC AcademiX Answer Sheet</title><style>@page{size:A4;margin:0}*{box-sizing:border-box}body{font:12px Arial;color:#111;margin:0}.sheet{width:794px;height:1123px;position:relative;padding:38px;page-break-after:always;overflow:hidden}.head{text-align:center;border-bottom:1px solid #333;padding-bottom:22px}.head h1{font-size:18px;margin:0 0 5px}.head p{margin:3px}.meta{display:flex;gap:18px;margin:22px 0 12px}.meta span{flex:1;border-bottom:1px solid #555;padding:8px 0}.code{font:700 15px monospace;letter-spacing:2px;text-align:center;border:1px dashed #333;padding:10px}.instruction{font-size:10px;margin:12px 0}.omr-row{position:absolute;width:300px;height:20px;display:flex;align-items:center;font-size:11px}.omr-row b{width:20px}.omr-choice{position:absolute;top:0;width:28px;display:flex;align-items:center;gap:2px;font-size:9px}.omr-choice i{display:inline-block;width:10px;height:10px;border:1px solid #111;border-radius:50%;background:#fff}.signature{position:absolute;bottom:35px;left:38px;right:38px;border-top:1px solid #555;padding-top:8px;font-size:10px}</style></head><body><section class="sheet"><header class="head"><h1>BUOC ACADEMIX — OFFICIAL PRINTED ASSESSMENT</h1><p>'+esc(title)+'</p><p>Instructor: '+esc(batch.instructor_name_snapshot)+'</p></header><div class="meta"><span>Student name: __________________________</span><span>Student ID: __________________</span></div><div class="code">AUTHORIZATION: '+esc(code)+'</div><p class="instruction">Shade exactly one circle for each answer. Use a dark pencil or pen. Do not mark more than one option. Keep this page flat and scan it upright without cropping the page edges.</p>'+rows+'<div class="signature">Instructor signature: __________________________________________　Date: ______________</div></section></body></html>');
+    w.document.write('<!doctype html><html><head><title>BUOC AcademiX Answer Sheet</title><style>@page{size:A4;margin:0}*{box-sizing:border-box}body{font:12px Arial;color:#111;margin:0}.sheet{width:794px;height:1123px;position:relative;padding:38px;page-break-after:always;overflow:hidden}.head{text-align:center;border-bottom:1px solid #333;padding-bottom:22px}.head h1{font-size:18px;margin:0 0 5px}.head p{margin:3px}.meta{display:flex;gap:18px;margin:22px 0 12px}.meta span{flex:1;border-bottom:1px solid #555;padding:8px 0}.code{font:700 15px monospace;letter-spacing:2px;text-align:center;border:1px dashed #333;padding:10px}.instruction{font-size:10px;margin:12px 0}.omr-row{position:absolute;width:300px;height:20px;display:flex;align-items:center;font-size:11px}.omr-row b{width:20px}.omr-points{position:absolute;left:23px;width:48px;font-size:8px;color:#333}.omr-choice{position:absolute;top:0;width:28px;display:flex;align-items:center;gap:2px;font-size:9px}.omr-choice i{display:inline-block;width:10px;height:10px;border:1px solid #111;border-radius:50%;background:#fff}.signature{position:absolute;bottom:35px;left:38px;right:38px;border-top:1px solid #555;padding-top:8px;font-size:10px}</style></head><body><section class="sheet"><header class="head"><h1>BUOC ACADEMIX — OFFICIAL PRINTED ASSESSMENT</h1><p>'+esc(title)+'</p><p>Instructor: '+esc(batch.instructor_name_snapshot)+'</p></header><div class="meta"><span>Student name: __________________________</span><span>Student ID: __________________</span></div><div class="code">AUTHORIZATION: '+esc(code)+'</div><p class="instruction">Items: '+state.questions.length+' · Total possible score: '+state.questions.reduce((sum,q)=>sum+(Number(q.points)||0),0)+' points. The points printed beside each item are its maximum score. Shade exactly one circle for each objective answer. Items marked “Manual grading” must be scored by the instructor. Use a dark pencil or pen and keep the page flat and uncropped.</p>'+rows+'<div class="signature">Instructor signature: __________________________________________　Date: ______________</div></section></body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),400);
   }
   async function uploadScan() {
@@ -276,7 +277,7 @@
   async function openReview(scanId) {
     const scan=state.scans.find(x=>x.id===scanId);if(!scan)return;
     state.activeScan=scan;
-    const panel=$("#hybrid-review-panel");panel.classList.remove("hidden");panel.innerHTML='<div class="section-heading"><div><p class="eyebrow">INSTRUCTOR REVIEW</p><h3>Review scanned paper</h3><p class="muted">Inspect the original scan and verify every item before saving.</p></div><button class="btn btn-quiet" id="hybrid-close-review" type="button">Close</button></div><p id="hybrid-scan-preview-status" class="muted">Loading private scan preview…</p><div id="hybrid-question-scores" class="hybrid-question-scores"></div><label>Feedback<textarea id="hybrid-feedback" rows="3">'+esc(scan.feedback||"")+'</textarea></label><div class="hybrid-actions"><button class="btn btn-quiet" id="hybrid-auto-grade" type="button">Run automatic OMR grading</button><button class="btn btn-primary" id="hybrid-save-grade" type="button">Save manual / reviewed scores</button><button class="btn btn-primary" id="hybrid-publish-grade" type="button">Approve and publish grade</button></div><p class="muted">Publishing is final for this paper. The database blocks a second attempt for the same student and assessment.</p>';
+    const panel=$("#hybrid-review-panel");panel.classList.remove("hidden");panel.innerHTML='<div class="section-heading"><div><p class="eyebrow">INSTRUCTOR REVIEW</p><h3>Review scanned paper</h3><p class="muted">Inspect the original scan and verify every item before saving.</p></div><button class="btn btn-quiet" id="hybrid-close-review" type="button">Close</button></div><p id="hybrid-scan-preview-status" class="muted">Loading private scan preview…</p><p class="muted hybrid-manual-guide"><b>Manual grading:</b> Open the original scan, award each question from 0 up to its displayed maximum (partial credit is allowed), check the running total, then save the scores. Approve and publish only after reviewing the complete paper.</p><div id="hybrid-score-summary" class="hybrid-score-summary" aria-live="polite"></div><div id="hybrid-question-scores" class="hybrid-question-scores"></div><label>Feedback<textarea id="hybrid-feedback" rows="3">'+esc(scan.feedback||"")+'</textarea></label><div class="hybrid-actions"><button class="btn btn-quiet" id="hybrid-auto-grade" type="button">Run automatic OMR grading</button><button class="btn btn-primary" id="hybrid-save-grade" type="button">Save manual / reviewed scores</button><button class="btn btn-primary" id="hybrid-publish-grade" type="button">Approve and publish grade</button></div><p class="muted">Publishing is final for this paper. The database blocks a second attempt for the same student and assessment.</p>';
     $("#hybrid-close-review",panel).addEventListener("click",()=>panel.classList.add("hidden"));
     const {data:signed,error}=await state.client.storage.from(BUCKET).createSignedUrl(scan.object_path,300);
     const batch=state.batches.find(x=>x.id===state.activeBatch);
@@ -291,18 +292,28 @@
     $("#hybrid-save-grade",panel).addEventListener("click",saveManualGrade);
     $("#hybrid-publish-grade",panel).addEventListener("click",publishGrade);
   }
+  function updateScoreSummary() {
+    const host=$("#hybrid-score-summary");if(!host)return;
+    const inputs=[...document.querySelectorAll("[data-question-score]")];
+    const earned=inputs.reduce((sum,input)=>sum+(Number(input.value)||0),0);
+    const maximum=state.questions.reduce((sum,q)=>sum+(Number(q.points)||0),0);
+    host.textContent="Current score: "+earned.toFixed(2).replace(/\.00$/,"")+" / "+maximum+" points · "+state.questions.length+" items";
+  }
   function renderQuestionScores(scan) {
     const host=$("#hybrid-question-scores");if(!host)return;
     const items=new Map((scan.item_scores||[]).map(x=>[x.question_id,x]));
     host.innerHTML=state.questions.map(q=>{
-      const item=items.get(q.id)||{},detected=scan.detected_answers?.[q.id];
-      return '<label class="hybrid-score-row"><span><b>Q'+q.position+'.</b> '+esc(q.prompt)+'</span><small>'+esc(q.question_type.replaceAll("_"," "))+' · '+esc(q.points)+' pts'+(detected?' · OMR: '+esc(detected):'')+'</small><input type="number" min="0" max="'+esc(q.points)+'" step="0.01" data-question-score="'+esc(q.id)+'" value="'+esc(item.score??0)+'" aria-label="Score for question '+q.position+'"></label>';
+      const item=items.get(q.id)||{},detected=scan.detected_answers?.[q.id],max=Number(q.points)||0;
+      return '<label class="hybrid-score-row"><span><b>Q'+q.position+'.</b> '+esc(q.prompt)+'</span><small>'+esc(q.question_type.replaceAll("_"," "))+' · Maximum: '+esc(max)+' pts'+(detected?' · OMR: '+esc(detected):'')+'</small><input type="number" min="0" max="'+esc(max)+'" step="0.01" data-question-score="'+esc(q.id)+'" value="'+esc(item.score??0)+'" aria-label="Score for question '+q.position+' out of '+esc(max)+' points"></label>';
     }).join("");
+    host.querySelectorAll("[data-question-score]").forEach(input=>input.addEventListener("input",updateScoreSummary));
+    updateScoreSummary();
   }
   async function saveManualGrade() {
     const scan=state.activeScan;if(!scan)return;
     const itemScores=[...document.querySelectorAll("[data-question-score]")].map(input=>({question_id:input.dataset.questionScore,score:Number(input.value)}));
-    if(itemScores.some(x=>!Number.isFinite(x.score)))return notify("Enter a valid score for every question.","error");
+    const questionById=new Map(state.questions.map(q=>[q.id,Number(q.points)||0]));
+    if(itemScores.some(x=>!Number.isFinite(x.score)||x.score<0||x.score>questionById.get(x.question_id)))return notify("Every question score must be between zero and that question’s maximum points.","error");
     try{await rpc("academix_teacher_save_printed_grading",{p_scan_id:scan.id,p_item_scores:itemScores,p_feedback:$("#hybrid-feedback").value});await loadScans();notify("Per-question grading saved. Instructor approval is still required.","success");}
     catch(e){notify(e.message||"Could not save grading.","error");}
   }
