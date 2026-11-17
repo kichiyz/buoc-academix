@@ -215,7 +215,8 @@
     const batch=state.batches.find(x=>x.id===state.activeBatch);
     if(!batch)return;
     if(state.questions.length>50)return notify("The built-in OMR sheet supports up to 50 questions. Use a conventional paper for longer assessments.","error");
-    const code=$("#hybrid-auth-code").value;
+    const code=$("#hybrid-auth-code").value.trim();
+    if(!code)return notify("Enter the one-time authorization code printed on this batch before printing a replacement sheet.","error");
     const title=$("#hybrid-exam").selectedOptions[0]?.textContent||"Printed Assessment";
     const rows=state.questions.map((q,i)=>{
       const col=i<25?0:1,row=i%25;
@@ -313,6 +314,7 @@
         state.activeBatch=state.batches[0].id;
         await loadBatchDetails();
         const batch=state.batches[0];
+        showActiveBatch({batch_id:batch.id,authorization_code:"",instructor_name:batch.instructor_name_snapshot});
         $("#hybrid-batch-status").textContent="Latest batch: "+batch.authorization_code_hint+" · "+batch.sheet_format+". Enter the code printed on the paper to validate new scans.";
       }
     } else if(profile.role==="student"){
