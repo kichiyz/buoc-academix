@@ -106,12 +106,12 @@ test("motion remains enabled by default and respects reduced-motion preferences"
 test("printed assessment, answer key, OMR sheet, and manual grading use actual question point values", async () => {
   const app = await read("../app.js");
   const hybrid = await read("../hybrid-assessment.js");
-  assert.match(app, /questions\\.reduce\\(\\(sum,q\\)=>sum\\+\\(Number\\(q\\.points\\)\\|\\|0\\),0\\)/);
-  assert.match(app, /MARKING TOTAL/);
-  assert.match(app, /Total attainable score is/);
-  assert.match(hybrid, /Total possible score:/);
-  assert.match(hybrid, /omr-points/);
-  assert.match(hybrid, /Current score:/);
-  assert.match(hybrid, /x\\.score>questionById\\.get\\(x\\.question_id\\)/);
-  assert.match(hybrid, /Manual grading:/);
+  assert.ok(app.includes("questions.reduce((sum,q)=>sum+(Number(q.points)||0),0)"));
+  assert.ok(app.includes("MARKING TOTAL"));
+  assert.ok(app.includes("Total attainable score is"));
+  assert.ok(hybrid.includes("Total possible score:"));
+  assert.ok(hybrid.includes("omr-points"));
+  assert.ok(hybrid.includes("Current score:"));
+  assert.ok(hybrid.includes("x.score>questionById.get(x.question_id)"));
+  assert.ok(hybrid.includes("Manual grading:"));
 });
