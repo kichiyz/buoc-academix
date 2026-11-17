@@ -40,7 +40,7 @@ test("automatic grading remains provisional and requires per-question review and
   assert.match(sql, /status='graded'/);
   assert.match(sql, /status='published'/);
   assert.match(sql, /Only the assigned instructor who graded this paper may approve it/);
-  assert.match(module, /Run automatic OMR grading/);
+  assert.match(module, /Run automatic objective grading/);
   assert.match(module, /Save manual \/ reviewed scores/);
   assert.match(module, /Approve and publish grade/);
   assert.match(module, /signature_visually_confirmed:true/);
@@ -113,7 +113,7 @@ test("printed assessment, answer key, OMR sheet, and manual grading use actual q
   assert.ok(hybrid.includes("omr-points"));
   assert.ok(hybrid.includes("Current score:"));
   assert.ok(hybrid.includes("x.score>questionById.get(x.question_id)"));
-  assert.ok(hybrid.includes("Manual grading:"));
+  assert.ok(hybrid.includes("manual scoring"));
 });
 
 test("printed assessment batch RPC resolves pgcrypto from the Supabase extensions schema", async () => {
