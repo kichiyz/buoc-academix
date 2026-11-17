@@ -202,7 +202,7 @@
         if(!["multiple_choice","true_false"].includes(q.question_type)){items.push({question_id:q.id,detected:null,confidence:0,reason:"manual_question_type"});return;}
         const col=index<25?0:1,row=index%25;
         const y=224+row*32;
-        const xs=col===0?[155,187,219,251]:[548,580,612,644];
+        const xs=(col===0?[155,187,219,251]:[548,580,612,644]).slice(0,q.question_type==="true_false"?2:4);
         const darkness=xs.map(x=>{
           let dark=0,total=0;
           for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){
