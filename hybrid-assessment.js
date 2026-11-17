@@ -122,7 +122,9 @@
     box.classList.remove("hidden");
     box.innerHTML='<div class="hybrid-code-row"><div><span class="eyebrow">ONE-TIME PRINT AUTHORIZATION CODE</span><strong>'+esc(result.authorization_code)+'</strong><small>Batch '+esc(result.batch_id)+'</small></div><button class="btn btn-quiet" id="hybrid-copy-code" type="button">Copy code</button></div><button class="btn btn-primary" id="hybrid-print-sheet" type="button">Print authorized OMR answer sheet</button><p class="muted">The printed sheet includes the authorized instructor name, assessment title, student fields, and authorization code. Keep the code with the official assessment materials.</p>';
     $("#hybrid-copy-code",box).addEventListener("click",async()=>{try{await navigator.clipboard.writeText(result.authorization_code);notify("Authorization code copied.","success");}catch{notify("Clipboard unavailable; copy the code manually.","error");}});
-    const printButton=$("#hybrid-print-sheet",box);\n    if(state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr")printButton.hidden=true;\n    else printButton.addEventListener("click",printAnswerSheet);
+    const printButton=$("#hybrid-print-sheet",box);
+    if(state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr")printButton.hidden=true;
+    else printButton.addEventListener("click",printAnswerSheet);
   }
   async function loadBatchDetails() {
     if(!state.activeBatch)return;
