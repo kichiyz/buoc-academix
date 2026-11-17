@@ -40,7 +40,7 @@ test("automatic grading remains provisional and requires per-question review and
   assert.match(sql, /status='graded'/);
   assert.match(sql, /status='published'/);
   assert.match(sql, /Only the assigned instructor who graded this paper may approve it/);
-  assert.match(module, /Run automatic OMR grading/);
+  assert.match(module, /Run automatic objective grading/);
   assert.match(module, /Save manual \/ reviewed scores/);
   assert.match(module, /Approve and publish grade/);
   assert.match(module, /signature_visually_confirmed:true/);
@@ -50,7 +50,7 @@ test("OMR recognizer flags uncertain marks and maps bubbles to answer-key values
   const module = await read("../hybrid-assessment.js");
   assert.match(module, /uncertain_count/);
   assert.match(module, /requires_teacher_review:true/);
-  assert.match(module, /Array\.isArray\(q\.options\)\?q\.options\[selected\]/);
+  assert.match(module, /optionValues\[selected\]/);
   assert.match(module, /manual_question_paper/);
 });
 
@@ -113,7 +113,7 @@ test("printed assessment, answer key, OMR sheet, and manual grading use actual q
   assert.ok(hybrid.includes("omr-points"));
   assert.ok(hybrid.includes("Current score:"));
   assert.ok(hybrid.includes("x.score>questionById.get(x.question_id)"));
-  assert.ok(hybrid.includes("Manual grading:"));
+  assert.ok(hybrid.includes("manual scoring"));
 });
 
 test("printed assessment batch RPC resolves pgcrypto from the Supabase extensions schema", async () => {
@@ -143,3 +143,32 @@ test("approved authorized paper grading replaces an existing online submission a
   assert.doesNotMatch(migration, /already has an online or printed attempt/);
   assert.match(migration, /Only the assigned instructor who graded this paper may approve it/);
 });
+
+test("OMR and conventional print formats support true/false, multiple-choice options, and written response types", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /q\.question_type==="true_false"\?\["True","False"\]/);
+  assert.match(module, /\["T","F"\]/);
+  assert.match(module, /omr-booklet-options/);
+  assert.match(module, /ASSESSMENT QUESTION BOOKLET/);
+  assert.match(module, /Record your answer by shading the corresponding bubble on the OMR answer sheet/);
+  assert.match(module, /q\.question_type==="true_false"\?\["True","False"\]/);
+  assert.match(module, /manual-options/);
+  assert.match(module, /manual-tf-options/);
+  assert.match(module, /omr-booklet-tf-options/);
+  assert.match(module, /Written response · manual scoring/);
+  for (const type of ["identification", "enumeration", "short_answer", "essay"]) {
+    assert.ok(module.includes(type), `Missing printed or manual-review support for ${type}`);
+  }
+});
+
+test("handwritten responses are never guessed by OMR and remain available for instructor scoring", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /handwritten_response_requires_instructor/);
+  assert.match(module, /does not guess handwritten identification, enumeration, short-answer, or essay responses/);
+  assert.match(module, /Open the original uploaded scan or PDF/);
+  assert.match(module, /Instructor-awarded score for question/);
+  assert.match(module, /Save manual \/ reviewed scores/);
+  assert.match(module, /manual_pdf/);
+  assert.match(module, /requires_teacher_review:true/);
+});
+
