@@ -2254,3 +2254,8 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 .hybrid-admin-metrics strong{font:700 1.6rem "Space Grotesk";color:var(--gold)}
 .hybrid-admin-metrics small{font-size:.7rem;color:var(--muted);line-height:1.35}
 @media(max-width:800px){.hybrid-admin-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.hybrid-signature-preview{display:block;max-width:260px;max-height:110px;object-fit:contain;margin-top:8px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.hybrid-signature-review{display:grid;gap:7px;margin-top:12px;padding:12px;border:1px dashed var(--line);border-radius:10px}
+.hybrid-signature-review span{font-size:.75rem;color:var(--muted)}
+.hybrid-signature-review img{max-width:260px;max-height:110px;object-fit:contain;background:#fff;padding:8px;border-radius:8px}
