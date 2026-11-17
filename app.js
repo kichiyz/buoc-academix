@@ -215,8 +215,8 @@
       if(examIds.length){
         const {data:questionRows,error:questionError}=await state.supabase
           .from("questions").select("exam_id").in("exam_id",examIds);
-        if(questionError)throw questionError;
-        (questionRows||[]).forEach(row=>questionCounts.set(row.exam_id,(questionCounts.get(row.exam_id)||0)+1));
+        if(questionError)console.warn("Could not load assessment question counts:",questionError.message);
+        else (questionRows||[]).forEach(row=>questionCounts.set(row.exam_id,(questionCounts.get(row.exam_id)||0)+1));
       }
       const selectSpecs=[
         ["course","Course / class","id",o=>teacherAssessmentContext(o)],
