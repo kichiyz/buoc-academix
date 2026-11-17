@@ -1149,6 +1149,7 @@ FOR SELECT TO authenticated USING (
 
 -- Enforce academic class boundaries at the database layer, not only in the interface.
 DROP POLICY IF EXISTS "teachers manage assignments for own exams" ON public.exam_assignments;
+DROP POLICY IF EXISTS "Teachers manage assignments only in scoped classes" ON public.exam_assignments;
 CREATE POLICY "Teachers manage assignments only in scoped classes" ON public.exam_assignments
 FOR ALL TO authenticated
 USING (
@@ -1180,6 +1181,7 @@ WITH CHECK (
 );
 
 DROP POLICY IF EXISTS "teachers read submissions for own exams" ON public.submissions;
+DROP POLICY IF EXISTS "Teachers read submissions only in scoped classes" ON public.submissions;
 CREATE POLICY "Teachers read submissions only in scoped classes" ON public.submissions
 FOR SELECT TO authenticated USING (
   EXISTS(
@@ -1195,7 +1197,7 @@ FOR SELECT TO authenticated USING (
 );
 
 DROP POLICY IF EXISTS "teachers read grades for own exams" ON public.grades;
-CREATE POLICY "Teachers read grades only in scoped classes" ON public.grades
+DROP POLICY IF EXISTS "Teachers read grades only in scoped classes" ON public.grades; ON public.grades
 FOR SELECT TO authenticated USING (
   EXISTS(
     SELECT 1 FROM public.exams e JOIN public.course_offerings o ON o.id=e.course_offering_id
