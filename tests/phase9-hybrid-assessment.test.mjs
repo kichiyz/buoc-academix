@@ -172,3 +172,19 @@ test("handwritten responses are never guessed by OMR and remain available for in
   assert.match(module, /requires_teacher_review:true/);
 });
 
+
+
+test("printed OMR and manual booklets collect student identity once and consolidate handwritten answers", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /function buildWrittenAnswerPages\(questionSet, variant, title, sealUrl\)/);
+  assert.match(module, /WRITTEN ANSWERS — SHADE \/ WRITE YOUR ANSWERS HERE/);
+  assert.match(module, /Write your response in the numbered Written Answers section after the question pages/);
+  assert.match(module, /STUDENT NAME: __________________________________________ · STUDENT NUMBER:/);
+  assert.match(module, /Student details are recorded on the first booklet page/);
+  assert.doesNotMatch(module, /omr-booklet-student">Student name:/);
+  assert.match(module, /buildWrittenAnswerPages\(state\.questions,"manual-written",title,null\)/);
+  assert.match(module, /buildWrittenAnswerPages\(state\.questions,"omr-written","Written response section",sealUrl\)/);
+  for (const type of ["identification", "enumeration", "short_answer", "essay"]) {
+    assert.ok(module.includes(type), `Written answer section must support ${type}`);
+  }
+});
