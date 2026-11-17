@@ -333,7 +333,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.academix_admin_printed_assessment_overview()
 RETURNS TABLE(batch_count bigint,scan_count bigint,awaiting_review bigint,graded_pending_approval bigint,published_count bigint)
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
   IF NOT public.academix_is_active_admin() THEN
     RAISE EXCEPTION 'Administrator access required.' USING errcode='42501';
@@ -345,7 +345,7 @@ BEGIN
     (SELECT count(*) FROM public.printed_assessment_scans WHERE status IN ('uploaded','needs_review')),
     (SELECT count(*) FROM public.printed_assessment_scans WHERE status='graded'),
     (SELECT count(*) FROM public.printed_assessment_scans WHERE status='published');
-END $;
+END $$;
 
 REVOKE ALL ON FUNCTION public.academix_teacher_register_signature(text) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.academix_create_printed_assessment_batch(uuid,text) FROM PUBLIC,anon;
