@@ -1027,7 +1027,7 @@
     $("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";
     const sequential=state.currentExam?.exam_mode==="sequential";$("#previous-question").disabled=i===0;
     $("#previous-question").classList.toggle("hidden",sequential);$("#question-navigator").parentElement.classList.toggle("hidden",sequential);
-    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1&&!state.submissionFailed);$("#submit-exam").disabled=Boolean(state.examSubmissionInFlight);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
+    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.remove("hidden");$("#submit-exam").disabled=Boolean(state.examSubmissionInFlight);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
     const target=$("#question-container");target.replaceChildren();
     const num=document.createElement("p");num.className="question-number";num.textContent="QUESTION "+String(i+1).padStart(2,"0");target.append(num);
     const type=document.createElement("p");type.className="eyebrow";type.textContent=String(q.question_type).replaceAll("_"," ").toUpperCase()+" · "+Number(q.points||1)+" POINTS";target.append(type);
@@ -1114,7 +1114,8 @@
     state.timerId = null;
     try {
       // Flush the latest typed response before grading. At timeout the server uses the last saved snapshot.
-      if(!timedOut)await flushExamProgressSave();
+      if(timedOut)await flushExamProgressSave().catch(error=>console.warn("Final timed-out autosave was unavailable; submitting the last server-saved answers.",error));
+      else await flushExamProgressSave();
       const { data: result, error } = await state.supabase.rpc("submit_exam", {
         p_submission_id: state.currentExam.submissionId,
         p_answers: timedOut ? {} : state.answers
