@@ -96,7 +96,7 @@
   async function loadBatches() {
     const {data,error}=await state.client.from("printed_assessment_batches")
       .select("id,exam_id,sheet_format,instructor_name_snapshot,authorization_code_hint,created_at,active")
-      .eq("instructor_id",state.user.id).order("created_at",{ascending:false});
+      .eq("instructor_id",state.user.id).eq("active",true).order("created_at",{ascending:false});
     if(error)throw error;
     state.batches=data||[];
   }
@@ -122,7 +122,7 @@
     box.classList.remove("hidden");
     box.innerHTML='<div class="hybrid-code-row"><div><span class="eyebrow">ONE-TIME PRINT AUTHORIZATION CODE</span><strong>'+esc(result.authorization_code)+'</strong><small>Batch '+esc(result.batch_id)+'</small></div><button class="btn btn-quiet" id="hybrid-copy-code" type="button">Copy code</button></div><button class="btn btn-primary" id="hybrid-print-sheet" type="button">Print authorized OMR answer sheet</button><p class="muted">The printed sheet includes the authorized instructor name, assessment title, student fields, and authorization code. Keep the code with the official assessment materials.</p>';
     $("#hybrid-copy-code",box).addEventListener("click",async()=>{try{await navigator.clipboard.writeText(result.authorization_code);notify("Authorization code copied.","success");}catch{notify("Clipboard unavailable; copy the code manually.","error");}});
-    $("#hybrid-print-sheet",box).addEventListener("click",printAnswerSheet);
+    const printButton=$("#hybrid-print-sheet",box);\n    if(state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr")printButton.hidden=true;\n    else printButton.addEventListener("click",printAnswerSheet);
   }
   async function loadBatchDetails() {
     if(!state.activeBatch)return;
@@ -216,6 +216,7 @@
     if(!batch)return;
     if(state.questions.length>50)return notify("The built-in OMR sheet supports up to 50 questions. Use a conventional paper for longer assessments.","error");
     const code=$("#hybrid-auth-code").value.trim();
+    if(state.batches.find(x=>x.id===state.activeBatch)?.sheet_format!=="omr")return notify("This batch uses a conventional question paper. Use manual grading instead of the OMR answer sheet.","error");
     if(!code)return notify("Enter the one-time authorization code printed on this batch before printing a replacement sheet.","error");
     const title=$("#hybrid-exam").selectedOptions[0]?.textContent||"Printed Assessment";
     const rows=state.questions.map((q,i)=>{
