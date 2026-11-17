@@ -1,5 +1,5 @@
--- Phase 9: instructor-controlled regeneration of reusable printed-assessment batch codes.
--- A code remains valid for repeated student scan registrations until it is rotated or its batch is deactivated.
+-- Phase 9 hotfix: regenerate reusable printed-assessment batch codes without pgcrypto random-byte lookup.
+-- gen_random_uuid() is provided by PostgreSQL; pgcrypto digest remains explicitly schema-qualified.
 
 BEGIN;
 
@@ -40,11 +40,19 @@ BEGIN
       USING errcode='42501';
   END IF;
 
-  v_code:=upper(encode(gen_random_bytes(16),'hex'));
+  -- Two independent PostgreSQL UUIDs provide 256 bits of random material.
+  -- Strip hyphens to produce a 64-character hexadecimal authorization code.
+  v_code:=upper(
+    replace(gen_random_uuid()::text,'-','') ||
+    replace(gen_random_uuid()::text,'-','')
+  );
   v_hint:=right(v_code,4);
 
   UPDATE public.printed_assessment_batches
-  SET authorization_code_hash=encode(digest(v_code,'sha256'),'hex'),
+  SET authorization_code_hash=encode(
+        extensions.digest(convert_to(v_code,'UTF8'),'sha256'),
+        'hex'
+      ),
       authorization_code_hint=v_hint
   WHERE id=p_batch_id;
 
