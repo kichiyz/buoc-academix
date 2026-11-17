@@ -64,10 +64,7 @@ GRANT SELECT ON public.printed_assessment_batches,public.printed_assessment_scan
 
 DROP POLICY IF EXISTS "Teachers read own printed batches" ON public.printed_assessment_batches;
 CREATE POLICY "Teachers read own printed batches" ON public.printed_assessment_batches
-  FOR SELECT TO authenticated USING (
-    instructor_id=auth.uid() AND public.is_verified()
-    OR public.academix_is_active_admin()
-  );
+  FOR SELECT TO authenticated USING (instructor_id=auth.uid() AND public.is_verified());
 
 DROP POLICY IF EXISTS "Teachers read own printed scans" ON public.printed_assessment_scans;
 CREATE POLICY "Teachers read own printed scans" ON public.printed_assessment_scans
@@ -77,7 +74,6 @@ CREATE POLICY "Teachers read own printed scans" ON public.printed_assessment_sca
       SELECT 1 FROM public.printed_assessment_batches b
       WHERE b.id=batch_id AND b.instructor_id=auth.uid() AND public.is_verified()
     )
-    OR public.academix_is_active_admin()
     OR student_id=auth.uid() AND status='published'
   );
 
@@ -102,7 +98,6 @@ CREATE POLICY "Printed assessment owners read" ON storage.objects
     bucket_id='printed-assessments'
     AND (
       (storage.foldername(name))[1]=auth.uid()::text
-      OR public.academix_is_active_admin()
       OR EXISTS (
         SELECT 1 FROM public.printed_assessment_scans s
         JOIN public.printed_assessment_batches b ON b.id=s.batch_id
