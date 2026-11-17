@@ -333,6 +333,22 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
   ORDER BY s.approved_at DESC
 $$;
 
+CREATE OR REPLACE FUNCTION public.academix_admin_printed_assessment_overview()
+RETURNS TABLE(batch_count bigint,scan_count bigint,awaiting_review bigint,graded_pending_approval bigint,published_count bigint)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+  IF NOT public.academix_is_active_admin() THEN
+    RAISE EXCEPTION 'Administrator access required.' USING errcode='42501';
+  END IF;
+  RETURN QUERY
+  SELECT
+    (SELECT count(*) FROM public.printed_assessment_batches),
+    (SELECT count(*) FROM public.printed_assessment_scans),
+    (SELECT count(*) FROM public.printed_assessment_scans WHERE status IN ('uploaded','needs_review')),
+    (SELECT count(*) FROM public.printed_assessment_scans WHERE status='graded'),
+    (SELECT count(*) FROM public.printed_assessment_scans WHERE status='published');
+END $;
+
 REVOKE ALL ON FUNCTION public.academix_teacher_register_signature(text) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.academix_create_printed_assessment_batch(uuid,text) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.academix_register_printed_assessment_scan(uuid,uuid,text,text,text,boolean,jsonb,jsonb) FROM PUBLIC,anon;
@@ -340,6 +356,7 @@ REVOKE ALL ON FUNCTION public.academix_teacher_auto_grade_printed_scan(uuid) FRO
 REVOKE ALL ON FUNCTION public.academix_teacher_save_printed_grading(uuid,jsonb,text) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.academix_teacher_publish_printed_grade(uuid) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION public.academix_student_printed_assessment_results() FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.academix_admin_printed_assessment_overview() FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.academix_teacher_register_signature(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_create_printed_assessment_batch(uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_register_printed_assessment_scan(uuid,uuid,text,text,text,boolean,jsonb,jsonb) TO authenticated;
@@ -347,5 +364,6 @@ GRANT EXECUTE ON FUNCTION public.academix_teacher_auto_grade_printed_scan(uuid) 
 GRANT EXECUTE ON FUNCTION public.academix_teacher_save_printed_grading(uuid,jsonb,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_teacher_publish_printed_grade(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.academix_student_printed_assessment_results() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.academix_admin_printed_assessment_overview() TO authenticated;
 
 COMMIT;
