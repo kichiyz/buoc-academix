@@ -2247,3 +2247,10 @@ input, select, textarea { max-width: 100%; min-width: 0; }
  .hybrid-code-row .btn,.hybrid-scan-row .btn{width:100%}
  .hybrid-score-row{grid-template-columns:minmax(0,1fr) 86px}
 }
+
+.hybrid-admin-overview{margin-top:24px}
+.hybrid-admin-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.hybrid-admin-metrics article{display:grid;gap:5px;padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.hybrid-admin-metrics strong{font:700 1.6rem "Space Grotesk";color:var(--gold)}
+.hybrid-admin-metrics small{font-size:.7rem;color:var(--muted);line-height:1.35}
+@media(max-width:800px){.hybrid-admin-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
