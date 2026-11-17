@@ -41,3 +41,5 @@ jobs:
         run: node --check app.js
       - name: Run hybrid assessment contract tests
         run: node --test tests/phase9-hybrid-assessment.test.mjs
+      - name: Run online exam reliability tests
+        run: node --test tests/online-exam-reliability.test.mjs
