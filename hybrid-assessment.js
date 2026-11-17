@@ -121,6 +121,7 @@
       $("#hybrid-printed-instructor").value=result.instructor_name;
       $("#hybrid-batch-status").textContent="Batch created. Copy and keep the authorization code private; it is shown only once.";
       await loadBatches();
+      const batchSelect=$("#hybrid-batch-select");if(batchSelect)batchSelect.value=state.activeBatch;
       await loadBatchDetails();
       showActiveBatch(result);
       notify("Authorized printed assessment batch created.","success");
@@ -351,10 +352,13 @@
       $("#hybrid-create-batch",host).addEventListener("click",createBatch);
       $("#hybrid-upload-scan",host).addEventListener("click",uploadScan);
       $("#hybrid-refresh",host).addEventListener("click",()=>loadScans().catch(e=>notify(e.message,"error")));
+      $("#hybrid-batch-select",host).addEventListener("change",async event=>{state.activeBatch=event.target.value;const batch=state.batches.find(x=>x.id===state.activeBatch);if(!batch)return;try{$("#hybrid-exam").value=batch.exam_id;$("#hybrid-auth-code").value="";$("#hybrid-printed-instructor").value=batch.instructor_name_snapshot;showActiveBatch({batch_id:batch.id,authorization_code:"",instructor_name:batch.instructor_name_snapshot});await loadBatchDetails();}catch(e){notify(e.message,"error");}});
       if(state.batches.length){
         state.activeBatch=state.batches[0].id;
         await loadBatchDetails();
         const batch=state.batches[0];
+        const batchSelect=$("#hybrid-batch-select");if(batchSelect)batchSelect.value=batch.id;
+        $("#hybrid-exam").value=batch.exam_id;
         showActiveBatch({batch_id:batch.id,authorization_code:"",instructor_name:batch.instructor_name_snapshot});
         $("#hybrid-batch-status").textContent="Latest batch: "+batch.authorization_code_hint+" · "+batch.sheet_format+". Enter the code printed on the paper to validate new scans.";
       }
