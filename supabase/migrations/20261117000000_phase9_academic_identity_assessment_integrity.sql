@@ -1197,7 +1197,7 @@ FOR SELECT TO authenticated USING (
 );
 
 DROP POLICY IF EXISTS "teachers read grades for own exams" ON public.grades;
-DROP POLICY IF EXISTS "Teachers read grades only in scoped classes" ON public.grades; ON public.grades
+DROP POLICY IF EXISTS "Teachers read grades only in scoped classes" ON public.grades;
 FOR SELECT TO authenticated USING (
   EXISTS(
     SELECT 1 FROM public.exams e JOIN public.course_offerings o ON o.id=e.course_offering_id
