@@ -9,7 +9,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0, examSubmissionInFlight: false };
+    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0, examSubmissionInFlight: false, examDeadlineAt: null, startingExam: false, submissionFailed: false };
   const validSupabaseUrl = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) || (APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL));
   const configured = validSupabaseUrl && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
@@ -139,6 +139,8 @@
     try {
       showOnly("#dashboard-view");
       await loadProfile();
+      try { await window.AcademixHybridAssessment?.mount({ supabase: state.supabase, user: state.user, profile: state.profile }); }
+      catch (hybridError) { console.warn("Hybrid assessment module could not initialize:", hybridError); }
       if (state.user?.id !== enteringUserId) return;
       switchView(state.profile.role === "admin" ? "developer" : state.profile.role === "teacher" ? "teacher-home" : "student-home");
     } finally {
@@ -618,8 +620,10 @@
     }catch(e){toast(e.message||"Could not publish assessment.","error");}
   }
   async function startExam(exam) {
+    if (state.startingExam || state.currentExam) return;
     if (state.profile?.role !== "student") return toast("Only student accounts can take assessments.", "error");
     if (!state.profile.verified_at) return toast("Your account is awaiting institutional verification.", "error");
+    state.startingExam = true;
     let fullscreenRequest=null;try{if(document.fullscreenEnabled&&document.documentElement.requestFullscreen)fullscreenRequest=document.documentElement.requestFullscreen();}catch(_){}
     state.integrityFullscreenRequested=true;
     try {
@@ -640,14 +644,17 @@
       if (submissionError) throw submissionError;
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
 
+      const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
+      const startedAtMs = Date.parse(submission.started_at);
+      if (!Number.isFinite(startedAtMs)) throw new Error("The server returned an invalid attempt start time.");
       state.examSubmissionInFlight = false;
+      state.submissionFailed = false;
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       document.body.classList.add("exam-active");$("#exam-view").classList.add("exam-integrity-active");installIntegrityMonitoring();
       if(fullscreenRequest)Promise.resolve(fullscreenRequest).catch(()=>toast("Full-screen mode was blocked by your browser. The attempt will still be monitored.","error"));else toast("Your browser does not support full-screen mode. The attempt will still be monitored.","error");
       state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
-      const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
-      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(submission.started_at).getTime()) / 1000));
-      state.secondsLeft = Math.max(0, durationSeconds - elapsedSeconds);
+      state.examDeadlineAt = startedAtMs + durationSeconds * 1000;
+      state.secondsLeft = Math.max(0, Math.ceil((state.examDeadlineAt - Date.now()) / 1000));
       $("#taking-title").textContent = exam.title;
       showOnly("#exam-view"); renderQuestion();
       if (state.secondsLeft <= 0) {
@@ -660,6 +667,7 @@
         toast(`Started authorized ${attempt.attemptType} attempt #${attempt.attempt_number}.`, "success");
       }
     } catch (e) { if(!state.currentExam&&document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}} state.integrityFullscreenRequested=false; toast(e.message || "Could not start exam.", "error"); }
+    finally { state.startingExam = false; }
   }
 
   let workflowReturnFocus = null;
@@ -962,7 +970,7 @@
   }
   async function stopIntegrityMonitoring() {
     document.body.classList.remove("exam-active");$("#exam-view")?.classList.remove("exam-integrity-active");
-    state.integrityFullscreenRequested=false;state.currentExam=null;state.examSubmissionInFlight=false;
+    state.integrityFullscreenRequested=false;state.currentExam=null;state.examSubmissionInFlight=false;state.examDeadlineAt=null;state.secondsLeft=0;state.submissionFailed=false;
     if(document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}}
   }
 
@@ -972,7 +980,7 @@
     $("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";
     const sequential=state.currentExam?.exam_mode==="sequential";$("#previous-question").disabled=i===0;
     $("#previous-question").classList.toggle("hidden",sequential);$("#question-navigator").parentElement.classList.toggle("hidden",sequential);
-    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1);
+    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1&&!state.submissionFailed);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
     const target=$("#question-container");target.replaceChildren();
     const num=document.createElement("p");num.className="question-number";num.textContent="QUESTION "+String(i+1).padStart(2,"0");target.append(num);
     const type=document.createElement("p");type.className="eyebrow";type.textContent=String(q.question_type).replaceAll("_"," ").toUpperCase()+" · "+Number(q.points||1)+" POINTS";target.append(type);
@@ -993,28 +1001,70 @@
   }
   function renderQuestionNavigator() {
     const nav = $("#question-navigator"); if (!nav) return;
-    nav.innerHTML = "";
+    if (nav.children.length !== state.currentQuestions.length) {
+      const fragment = document.createDocumentFragment();
+      state.currentQuestions.forEach((q, i) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "question-jump";
+        button.textContent = String(i + 1);
+        button.setAttribute("aria-label", `Go to question ${i + 1}`);
+        button.addEventListener("click", () => {
+          const index = Number(button.dataset.questionIndex);
+          if (state.currentExam?.exam_mode === "sequential" || !Number.isInteger(index)) return;
+          state.questionIndex = index;
+          renderQuestion();
+        });
+        button.dataset.questionIndex = String(i);
+        fragment.append(button);
+      });
+      nav.replaceChildren(fragment);
+    }
     state.currentQuestions.forEach((q, i) => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "question-jump"; b.textContent = String(i + 1);
-      b.setAttribute("aria-label", `Go to question ${i + 1}`);
-      if (state.answers[q.id] !== undefined) b.classList.add("answered");
-      if (i === state.questionIndex) { b.classList.add("current"); b.setAttribute("aria-current", "step"); }
-      b.addEventListener("click", () => { if(state.currentExam?.exam_mode==="sequential")return;state.questionIndex = i; renderQuestion(); }); nav.append(b);
+      const button = nav.children[i];
+      button.classList.toggle("answered", state.answers[q.id] !== undefined);
+      button.classList.toggle("current", i === state.questionIndex);
+      if (i === state.questionIndex) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
     });
   }
   function startTimer() {
-    clearInterval(state.timerId); updateTimer();
-    state.timerId = setInterval(() => { state.secondsLeft--; updateTimer(); if (state.secondsLeft <= 0) { clearInterval(state.timerId); toast("Time is up. Submitting your answers.", "error"); submitExam(null, true); } }, 1000);
-  }
-  function updateTimer() { const m = Math.max(0, Math.floor(state.secondsLeft / 60)), s = Math.max(0, state.secondsLeft % 60); $("#exam-timer").textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
-  async function submitExam(event, timedOut = false) {
-    if (event) event.preventDefault();
-    state.examSubmissionInFlight = true;
-    if (!timedOut && !confirm("Submit this exam now? You cannot change answers after submission.")) {
-      state.examSubmissionInFlight = false;
+    clearInterval(state.timerId);
+    if (updateTimer() <= 0) {
+      toast("Time is up. Submitting your answers.", "error");
+      submitExam(null, true);
       return;
     }
+    // Use the server-created attempt deadline, not interval tick counts. This stays
+    // accurate after background-tab throttling, device sleep, or a delayed callback.
+    state.timerId = setInterval(() => {
+      if (updateTimer() <= 0) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+        toast("Time is up. Submitting your answers.", "error");
+        submitExam(null, true);
+      }
+    }, 1000);
+  }
+  function updateTimer() {
+    if (Number.isFinite(state.examDeadlineAt)) {
+      state.secondsLeft = Math.max(0, Math.ceil((state.examDeadlineAt - Date.now()) / 1000));
+    } else {
+      state.secondsLeft = Math.max(0, Number(state.secondsLeft) || 0);
+    }
+    const m = Math.floor(state.secondsLeft / 60), s = state.secondsLeft % 60;
+    $("#exam-timer").textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    return state.secondsLeft;
+  }
+  async function submitExam(event, timedOut = false) {
+    if (event) event.preventDefault();
+    if (!state.currentExam?.submissionId || state.examSubmissionInFlight) return;
+    if (!timedOut && !confirm("Submit this exam now? You cannot change answers after submission.")) return;
+    state.examSubmissionInFlight = true;
+    const submitButton = $("#submit-exam");
+    if (submitButton) { submitButton.disabled = true; submitButton.textContent = timedOut ? "Submitting…" : "Submitting…"; }
     clearInterval(state.timerId);
+    state.timerId = null;
     try {
       // Answers are graded by the trusted server-side RPC; the browser never receives the answer key.
       const { data: result, error } = await state.supabase.rpc("submit_exam", {
@@ -1031,9 +1081,14 @@
       switchView("grades");
     } catch (e) {
       state.examSubmissionInFlight = false;
+      state.submissionFailed = true;
       toast(`Submission failed: ${e.message}. Your attempt may remain in progress; retry submission when ready.`, "error");
-      if (state.secondsLeft > 0) startTimer();
-      else updateTimer();
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Retry submission";
+        submitButton.classList.remove("hidden");
+      }
+      if (updateTimer() > 0) startTimer();
     }
   }
 
