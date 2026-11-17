@@ -42,6 +42,7 @@
       <div id="hybrid-active-batch" class="hybrid-active-batch hidden"></div>
       <div class="hybrid-card hybrid-upload-card">
         <h3>3. Upload completed student papers</h3>
+        <label>Printed assessment batch <select id="hybrid-batch-select"><option value="">Choose an active batch</option></select></label>
         <div class="hybrid-grid">
           <label>Student <select id="hybrid-student"><option value="">Choose a batch first</option></select></label>
           <label>Scanned assessment <input id="hybrid-scan-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></label>
