@@ -153,8 +153,11 @@ BEGIN
   SELECT * INTO v_offering FROM public.course_offerings
   WHERE id=v_exam.course_offering_id AND instructor_id=auth.uid();
   IF NOT FOUND THEN RAISE EXCEPTION 'The course offering is not assigned to this instructor.' USING errcode='42501'; END IF;
-  IF v_profile.registered_signature_path IS NULL THEN
-    RAISE EXCEPTION 'Register your instructor signature before creating printed assessments.' USING errcode='55000';
+  IF v_profile.registered_signature_path IS NULL OR NOT EXISTS (
+    SELECT 1 FROM storage.objects WHERE bucket_id='printed-assessments'
+      AND name=v_profile.registered_signature_path AND owner_id=auth.uid()::text
+  ) THEN
+    RAISE EXCEPTION 'Register a valid private instructor signature specimen before creating printed assessments.' USING errcode='55000';
   END IF;
   IF EXISTS(SELECT 1 FROM public.printed_assessment_batches WHERE exam_id=p_exam_id) THEN
     RAISE EXCEPTION 'A printed assessment batch already exists for this examination.' USING errcode='23505';
