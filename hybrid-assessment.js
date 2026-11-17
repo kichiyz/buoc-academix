@@ -197,6 +197,7 @@
       const answers={},items=[];
       state.questions.forEach((q,index)=>{
         if(index>=50)return;
+        if(!["multiple_choice","true_false"].includes(q.question_type)){items.push({question_id:q.id,detected:null,confidence:0,reason:"manual_question_type"});return;}
         const col=index<25?0:1,row=index%25;
         const y=224+row*32;
         const xs=col===0?[155,187,219,251]:[548,580,612,644];
