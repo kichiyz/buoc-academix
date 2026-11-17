@@ -162,7 +162,7 @@ BEGIN
   IF EXISTS(SELECT 1 FROM public.printed_assessment_batches WHERE exam_id=p_exam_id) THEN
     RAISE EXCEPTION 'A printed assessment batch already exists for this examination.' USING errcode='23505';
   END IF;
-  v_code:=upper(encode(gen_random_bytes(6),'hex'));
+  v_code:=upper(encode(gen_random_bytes(16),'hex'));
   INSERT INTO public.printed_assessment_batches(
     exam_id,course_offering_id,instructor_id,instructor_name_snapshot,
     instructor_signature_path_snapshot,sheet_format,authorization_code_hash,authorization_code_hint
