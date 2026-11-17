@@ -2278,3 +2278,9 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 .hybrid-card, .hybrid-scan-row, .hybrid-result-list article {
   min-width: 0;
 }
+
+/* Online exam reliability: persistent save feedback and thumb-friendly mobile controls. */
+.exam-save-status{font-size:.76rem;color:var(--muted);text-align:right;min-height:1.2em;margin:0 2px 8px}
+.exam-controls #submit-exam{opacity:1;filter:none}
+.exam-controls #submit-exam:disabled{opacity:.72;cursor:wait}
+@media(max-width:600px){.exam-save-status{text-align:left;margin:0 2px 8px}.exam-controls{position:sticky;bottom:0;z-index:4;background:#21182ef2;padding:12px 0 calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}.exam-controls .btn{min-height:48px}.exam-paper input,.exam-paper textarea{font-size:16px;min-height:48px}}
