@@ -289,6 +289,25 @@
     try{await rpc("academix_teacher_publish_printed_grade",{p_scan_id:scan.id});await loadScans();$("#hybrid-review-panel").classList.add("hidden");notify("Grade approved and published to the official gradebook.","success");}
     catch(e){notify(e.message||"Could not publish grade.","error");}
   }
+  function ensureAdminUI() {
+    const host=document.querySelector("#view-developer");
+    if(!host || document.querySelector("#hybrid-admin-overview"))return;
+    const section=document.createElement("section");
+    section.id="hybrid-admin-overview";
+    section.className="dev-admin-panel phase-two-panel hybrid-admin-overview";
+    section.innerHTML='<div class="section-heading"><div><p class="eyebrow">PHASE 9 / ASSESSMENT OVERSIGHT</p><h2>Printed assessment monitoring</h2><p class="muted">Aggregate workflow status only. Student paper contents and confidential answer details are not exposed here.</p></div><button class="btn btn-quiet" id="hybrid-admin-refresh" type="button">Refresh</button></div><div id="hybrid-admin-metrics" class="hybrid-admin-metrics">Loading authorized assessment statistics…</div>';
+    host.append(section);
+    $("#hybrid-admin-refresh",section).addEventListener("click",loadAdminOverview);
+  }
+  async function loadAdminOverview() {
+    const host=$("#hybrid-admin-metrics");if(!host)return;
+    try{
+      const result=await rpc("academix_admin_printed_assessment_overview");
+      const row=Array.isArray(result)?result[0]:result;
+      const metrics=[["Batches",row.batch_count],["Scanned papers",row.scan_count],["Awaiting review",row.awaiting_review],["Graded / awaiting approval",row.graded_pending_approval],["Published grades",row.published_count]];
+      host.innerHTML=metrics.map(([label,value])=>'<article><strong>'+esc(value??0)+'</strong><small>'+esc(label)+'</small></article>').join("");
+    }catch(error){host.textContent="Administrative overview unavailable: "+error.message;}
+  }
   async function loadStudentResults() {
     const host=$("#hybrid-student-list");if(!host)return;
     host.textContent="Loading approved paper grades…";
@@ -319,6 +338,8 @@
       }
     } else if(profile.role==="student"){
       ensureStudentUI();await loadStudentResults();
+    } else if(profile.role==="admin"){
+      ensureAdminUI();await loadAdminOverview();
     }
   }
   window.AcademixHybridAssessment={mount};
