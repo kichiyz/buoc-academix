@@ -150,6 +150,7 @@
     }
     const select=$("#hybrid-student");
     select.innerHTML='<option value="">Choose an assigned student</option>'+state.students.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+(x.bu_id?' · '+esc(x.bu_id):'')+'</option>').join("");
+    const uploadButton=$("#hybrid-upload-scan");if(uploadButton)uploadButton.disabled=false;
     await loadScans();
   }
   async function loadScans() {
@@ -234,7 +235,7 @@
       const centers=col===0?[155,187,219,251]:[548,580,612,644];
       const choices=["multiple_choice","true_false"].includes(q.question_type)
         ?centers.map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")
-        :'<span class="omr-choice" style="left:82px">Manual grading</span>';
+        :'<span class="omr-choice" style="left:82px;width:130px">Manual grading</span>';
       return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b>'+choices+'</div>';
     }).join("");
     const w=window.open("","_blank");
