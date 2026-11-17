@@ -82,6 +82,8 @@ body.role-admin .teacher-only{display:none!important}body.role-teacher .develope
 
 
 /* Global rendering reliability layer: predictable sizing, wrapping, responsive grids, and reduced motion. */
+/* Avoid invisible text while the preferred typefaces are loading. */
+html{font-display:swap;}
 :root{color-scheme:dark;scrollbar-gutter:stable}
 html{scroll-behavior:smooth;overflow-x:hidden}
 body{overflow-x:hidden;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
