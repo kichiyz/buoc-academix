@@ -9,7 +9,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const state = { supabase: null, user: null, profile: null, authMode: "signin", view: "exams",
-    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0, examSubmissionInFlight: false, examDeadlineAt: null, startingExam: false };
+    draft: null, previewQuestionIndex: 0, adminUsers: [], currentExam: null, currentQuestions: [], answers: {}, questionIndex: 0, timerId: null, secondsLeft: 0, examSubmissionInFlight: false, examDeadlineAt: null, startingExam: false, submissionFailed: false };
   const validSupabaseUrl = /^https:\/\/[^\s]+\.supabase\.co$/.test(SUPABASE_URL) || (APP_ENVIRONMENT === "TEST" && /^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(SUPABASE_URL));
   const configured = validSupabaseUrl && /^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)$/.test(SUPABASE_ANON_KEY);
   // Phase 4 safety boundary: prevent TEST mode from connecting to production.
@@ -644,14 +644,15 @@
       if (submissionError) throw submissionError;
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
 
+      const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
+      const startedAtMs = Date.parse(submission.started_at);
+      if (!Number.isFinite(startedAtMs)) throw new Error("The server returned an invalid attempt start time.");
       state.examSubmissionInFlight = false;
+      state.submissionFailed = false;
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       document.body.classList.add("exam-active");$("#exam-view").classList.add("exam-integrity-active");installIntegrityMonitoring();
       if(fullscreenRequest)Promise.resolve(fullscreenRequest).catch(()=>toast("Full-screen mode was blocked by your browser. The attempt will still be monitored.","error"));else toast("Your browser does not support full-screen mode. The attempt will still be monitored.","error");
       state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
-      const durationSeconds = Math.max(0, Number(exam.duration_minutes) * 60);
-      const startedAtMs = Date.parse(submission.started_at);
-      if (!Number.isFinite(startedAtMs)) throw new Error("The server returned an invalid attempt start time.");
       state.examDeadlineAt = startedAtMs + durationSeconds * 1000;
       state.secondsLeft = Math.max(0, Math.ceil((state.examDeadlineAt - Date.now()) / 1000));
       $("#taking-title").textContent = exam.title;
@@ -969,7 +970,7 @@
   }
   async function stopIntegrityMonitoring() {
     document.body.classList.remove("exam-active");$("#exam-view")?.classList.remove("exam-integrity-active");
-    state.integrityFullscreenRequested=false;state.currentExam=null;state.examSubmissionInFlight=false;state.examDeadlineAt=null;state.secondsLeft=0;
+    state.integrityFullscreenRequested=false;state.currentExam=null;state.examSubmissionInFlight=false;state.examDeadlineAt=null;state.secondsLeft=0;state.submissionFailed=false;
     if(document.fullscreenElement&&document.exitFullscreen){try{await document.exitFullscreen();}catch(_){}}
   }
 
@@ -979,7 +980,7 @@
     $("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";
     const sequential=state.currentExam?.exam_mode==="sequential";$("#previous-question").disabled=i===0;
     $("#previous-question").classList.toggle("hidden",sequential);$("#question-navigator").parentElement.classList.toggle("hidden",sequential);
-    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1);
+    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1&&!state.submissionFailed);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
     const target=$("#question-container");target.replaceChildren();
     const num=document.createElement("p");num.className="question-number";num.textContent="QUESTION "+String(i+1).padStart(2,"0");target.append(num);
     const type=document.createElement("p");type.className="eyebrow";type.textContent=String(q.question_type).replaceAll("_"," ").toUpperCase()+" · "+Number(q.points||1)+" POINTS";target.append(type);
@@ -1080,6 +1081,7 @@
       switchView("grades");
     } catch (e) {
       state.examSubmissionInFlight = false;
+      state.submissionFailed = true;
       toast(`Submission failed: ${e.message}. Your attempt may remain in progress; retry submission when ready.`, "error");
       if (submitButton) {
         submitButton.disabled = false;
