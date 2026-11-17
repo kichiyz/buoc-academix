@@ -64,7 +64,7 @@ test("online examination startup remains server-authorized and does not expose t
   assert.match(start, /submission\.status !== "in_progress"/);
   assert.match(start, /Date\.parse\(submission\.started_at\)/);
   assert.match(app, /rpc\("submit_exam"/);
-  assert.match(app, /p_answers: state\.answers/);
+  assert.match(app, /p_answers: timedOut \? \{\} : state\.answers/);
   assert.match(app, /state\.startingExam \|\| state\.currentExam/);
 });
 
@@ -91,7 +91,7 @@ test("online examination timer uses the server deadline and submission cannot ru
   assert.match(app, /state\.examSubmissionInFlight\) return/);
   assert.match(app, /Retry submission/);
   assert.match(app, /state\.submissionFailed = true/);
-  assert.match(app, /i!==total-1&&!state\.submissionFailed/);
+  assert.match(app, /\$\("#submit-exam"\)\.classList\.remove\("hidden"\)/);
   assert.match(app, /state\.examDeadlineAt=null/);
 });
 

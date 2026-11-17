@@ -25,6 +25,7 @@ test("frontend submits answers only through the server-side grading RPC", async 
 
   expect(js).toContain('state.supabase.rpc("submit_exam"');
   expect(js).toContain("p_submission_id: state.currentExam.submissionId");
-  expect(js).toContain("p_answers: state.answers");
+  expect(js).toContain("p_answers: timedOut ? {} : state.answers");
+  expect(js).toContain('state.supabase.rpc("save_exam_progress"');
   expect(js).not.toMatch(/from\(["']questions["']\)[\s\S]{0,200}correct_answer/);
 });
