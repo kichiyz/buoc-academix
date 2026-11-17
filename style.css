@@ -2259,3 +2259,22 @@ input, select, textarea { max-width: 100%; min-width: 0; }
 .hybrid-signature-review{display:grid;gap:7px;margin-top:12px;padding:12px;border:1px dashed var(--line);border-radius:10px}
 .hybrid-signature-review span{font-size:.75rem;color:var(--muted)}
 .hybrid-signature-review img{max-width:260px;max-height:110px;object-fit:contain;background:#fff;padding:8px;border-radius:8px}
+
+
+/* Accessibility and rendering safeguards: retain the full motion design by default,
+   but honor system reduced-motion preferences across every animated component. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ambient { animation: none !important; }
+}
+
+/* Avoid layout overflow in long assessment and administration workspaces. */
+.exam-paper, .question-container, .hybrid-assessment-panel,
+.hybrid-card, .hybrid-scan-row, .hybrid-result-list article {
+  min-width: 0;
+}
