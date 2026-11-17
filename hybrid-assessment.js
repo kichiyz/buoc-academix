@@ -232,7 +232,10 @@
       const col=i<25?0:1,row=i%25;
       const left=col===0?70:455,top=214+row*32;
       const centers=col===0?[155,187,219,251]:[548,580,612,644];
-      return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b>'+centers.map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")+'</div>';
+      const choices=["multiple_choice","true_false"].includes(q.question_type)
+        ?centers.map((cx,k)=>'<span class="omr-choice" style="left:'+(cx-left-5)+'px"><i></i>'+["A","B","C","D"][k]+'</span>').join("")
+        :'<span class="omr-choice" style="left:82px">Manual grading</span>';
+      return '<div class="omr-row" style="left:'+left+'px;top:'+top+'px"><b>'+(i+1)+'.</b>'+choices+'</div>';
     }).join("");
     const w=window.open("","_blank");
     if(!w)return notify("Allow pop-ups to print the answer sheet.","error");
