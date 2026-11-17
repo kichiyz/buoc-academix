@@ -115,3 +115,10 @@ test("printed assessment, answer key, OMR sheet, and manual grading use actual q
   assert.ok(hybrid.includes("x.score>questionById.get(x.question_id)"));
   assert.ok(hybrid.includes("Manual grading:"));
 });
+
+test("printed assessment batch RPC resolves pgcrypto from the Supabase extensions schema", async () => {
+  const migration = await read("../supabase/migrations/20261117000011_phase9_pgcrypto_batch_fix.sql");
+  assert.match(migration, /CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions/i);
+  assert.match(migration, /ALTER FUNCTION public\.academix_create_printed_assessment_batch\(uuid, text\)/);
+  assert.match(migration, /SET search_path = public, extensions, pg_temp/i);
+});
