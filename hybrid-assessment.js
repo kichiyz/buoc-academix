@@ -49,7 +49,7 @@
         </div>
         <label>Printed instructor name <input id="hybrid-printed-instructor" autocomplete="off" placeholder="Enter the instructor name shown on the paper"></label>
         <label class="hybrid-check"><input id="hybrid-signature-confirm" type="checkbox"> I visually checked that the scanned paper bears the registered instructor signature.</label>
-        <label>Batch authorization code <input id="hybrid-auth-code" autocomplete="off" placeholder="Enter the one-time batch code"></label>
+        <label>Batch authorization code <input id="hybrid-auth-code" autocomplete="off" placeholder="Enter the reusable batch code"></label>
         <button class="btn btn-primary" id="hybrid-upload-scan" type="button" disabled>Upload and validate paper</button>
         <p class="muted">The system validates the authenticated instructor, assigned course, student enrollment, printed instructor name, private scan path, and batch code. Signature presence requires instructor visual confirmation.</p>
       </div>
@@ -133,10 +133,26 @@
     const batch=state.batches.find(x=>x.id===state.activeBatch);
     const isOmr=batch?.sheet_format==="omr";
     box.classList.remove("hidden");
-    box.innerHTML='<div class="hybrid-code-row"><div><span class="eyebrow">ONE-TIME PRINT AUTHORIZATION CODE</span><strong>'+esc(result.authorization_code||"Enter the saved code below")+'</strong><small>Batch '+esc(result.batch_id)+'</small></div><button class="btn btn-quiet" id="hybrid-copy-code" type="button">Copy code</button></div><button class="btn btn-primary" id="hybrid-print-sheet" type="button">'+(isOmr?'Print authorized OMR answer sheet':'Print authorized manual answer sheet')+'</button><p class="muted">The printed sheet includes the official Bicol University seal, assessment details, student fields, instructor identity, and batch authorization code. Once the uploaded paper is graded and approved, its score replaces any existing online attempt score and grade for this assessment.</p>';
-    $("#hybrid-copy-code",box).addEventListener("click",async()=>{const code=$("#hybrid-auth-code")?.value?.trim()||result.authorization_code||"";if(!code)return notify("Enter the saved authorization code first.","error");try{await navigator.clipboard.writeText(code);notify("Authorization code copied.","success");}catch{notify("Clipboard unavailable; copy the code manually.","error");}});
+    box.innerHTML='<div class="hybrid-code-row"><div><span class="eyebrow">REUSABLE BATCH AUTHORIZATION CODE</span><strong>'+esc(result.authorization_code||"Enter the saved code below")+'</strong><small>Batch '+esc(result.batch_id)+'</small></div><div class="hybrid-code-actions"><button class="btn btn-quiet" id="hybrid-copy-code" type="button">Copy code</button><button class="btn btn-quiet" id="hybrid-regenerate-code" type="button">Regenerate reusable code</button></div></div><button class="btn btn-primary" id="hybrid-print-sheet" type="button">'+(isOmr?'Print authorized OMR answer sheet':'Print authorized manual answer sheet')+'</button><p class="muted">The printed sheet includes the official Bicol University seal, assessment details, student fields, instructor identity, and batch authorization code. This reusable batch code can authorize scans for multiple assigned students. It remains valid until you regenerate it or deactivate the batch. Once a paper is graded and approved, its score replaces any existing online attempt score and grade for this assessment.</p>';
+    $("#hybrid-regenerate-code",box).addEventListener("click",regenerateBatchCode);
+     $("#hybrid-copy-code",box).addEventListener("click",async()=>{const code=$("#hybrid-auth-code")?.value?.trim()||result.authorization_code||"";if(!code)return notify("Enter the saved authorization code first.","error");try{await navigator.clipboard.writeText(code);notify("Authorization code copied.","success");}catch{notify("Clipboard unavailable; copy the code manually.","error");}});
     const printButton=$("#hybrid-print-sheet",box);
     printButton.addEventListener("click",isOmr?printAnswerSheet:printManualAnswerSheet);
+  }
+  async function regenerateBatchCode() {
+    if(!state.activeBatch)return notify("Choose an active batch first.","error");
+    if(!window.confirm("Regenerate this batch code? The current code will stop working. The new code will remain reusable for future student scans until it is regenerated again."))return;
+    const button=$("#hybrid-regenerate-code");if(button){button.disabled=true;button.textContent="Generating…";}
+    try{
+      const result=await rpc("academix_regenerate_printed_assessment_batch_code",{p_batch_id:state.activeBatch});
+      $("#hybrid-auth-code").value=result.authorization_code;
+      const batch=state.batches.find(x=>x.id===state.activeBatch);
+      if(batch&&result.authorization_code_hint)batch.authorization_code_hint=result.authorization_code_hint;
+      $("#hybrid-batch-status").textContent="New reusable code generated. Copy and store it securely; it will not be shown again after you leave this batch.";
+      showActiveBatch({batch_id:result.batch_id,authorization_code:result.authorization_code,instructor_name:batch?.instructor_name_snapshot||state.profile?.full_name});
+      notify("Reusable batch authorization code regenerated. The previous code is invalid.","success");
+    }catch(error){notify(error.message||"Could not regenerate the batch code.","error");}
+    finally{if(button){button.disabled=false;button.textContent="Regenerate reusable code";}}
   }
   async function loadBatchDetails() {
     if(!state.activeBatch)return;
