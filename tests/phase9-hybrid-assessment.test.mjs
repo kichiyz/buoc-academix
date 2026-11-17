@@ -122,3 +122,24 @@ test("printed assessment batch RPC resolves pgcrypto from the Supabase extension
   assert.match(migration, /ALTER FUNCTION public\.academix_create_printed_assessment_batch\(uuid, text\)/);
   assert.match(migration, /SET search_path = public, extensions, pg_temp/i);
 });
+
+test("authorized OMR and manual answer sheets use the BU seal and collision-safe print layouts", async () => {
+  const module = await read("../hybrid-assessment.js");
+  assert.match(module, /function printAnswerSheet\(\)/);
+  assert.match(module, /function printManualAnswerSheet\(\)/);
+  assert.match(module, /assets\/Bicol University Logo\.png/);
+  assert.match(module, /alt=\"Official Bicol University seal\"/);
+  assert.match(module, /overflow-wrap:anywhere/);
+  assert.match(module, /manual-question-heading/);
+  assert.match(module, /omr-row/);
+  assert.match(module, /printButton\.addEventListener\(\"click\",isOmr\?printAnswerSheet:printManualAnswerSheet\)/);
+});
+
+test("approved authorized paper grading replaces an existing online submission and gradebook score", async () => {
+  const migration = await read("../supabase/migrations/20261117000012_phase9_paper_grade_replaces_online_grade.sql");
+  assert.match(migration, /UPDATE public\.submissions[\s\S]*score=v_scan\.score/);
+  assert.match(migration, /UPDATE public\.grades[\s\S]*score=v_scan\.score/);
+  assert.match(migration, /replaced_existing_online_attempt/);
+  assert.doesNotMatch(migration, /already has an online or printed attempt/);
+  assert.match(migration, /Only the assigned instructor who graded this paper may approve it/);
+});
