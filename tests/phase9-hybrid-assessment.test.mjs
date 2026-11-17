@@ -89,6 +89,8 @@ test("online examination timer uses the server deadline and submission cannot ru
   assert.match(app, /state\.examDeadlineAt - Date\.now\(\)/);
   assert.match(app, /state\.examSubmissionInFlight\) return/);
   assert.match(app, /Retry submission/);
+  assert.match(app, /state\\.submissionFailed = true/);
+  assert.match(app, /i!==total-1&&!state\\.submissionFailed/);
   assert.match(app, /state\.examDeadlineAt=null/);
 });
 
