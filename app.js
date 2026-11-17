@@ -626,6 +626,39 @@
       switchView("exams");
     }catch(e){toast(e.message||"Could not publish assessment.","error");}
   }
+  function examProgressStorageKey(submissionId) {
+    return `academix-exam-progress:${state.user?.id || "unknown"}:${submissionId}`;
+  }
+  function readLocalExamProgress(submissionId) {
+    try { return JSON.parse(localStorage.getItem(examProgressStorageKey(submissionId)) || "null"); }
+    catch (_) { return null; }
+  }
+  function writeLocalExamProgress() {
+    const submissionId=state.currentExam?.submissionId;
+    if(!submissionId)return;
+    try { localStorage.setItem(examProgressStorageKey(submissionId),JSON.stringify({answers:state.answers,questionIndex:state.questionIndex,savedAt:Date.now()})); }
+    catch (error) { console.warn("Local exam recovery storage is unavailable:",error); }
+  }
+  function scheduleExamProgressSave() {
+    writeLocalExamProgress();clearTimeout(state.answerSaveTimer);
+    state.answerSaveTimer=setTimeout(()=>flushExamProgressSave().catch(error=>{
+      console.warn("Exam progress could not be synchronized yet:",error);
+      const status=$("#exam-save-status");if(status)status.textContent="Offline — answers are kept on this device and will retry.";
+    }),350);
+  }
+  async function flushExamProgressSave() {
+    clearTimeout(state.answerSaveTimer);state.answerSaveTimer=null;
+    const submissionId=state.currentExam?.submissionId;if(!submissionId||!state.supabase)return;
+    const snapshot=JSON.parse(JSON.stringify(state.answers||{}));
+    state.answerSaveChain=(state.answerSaveChain||Promise.resolve()).catch(()=>{}).then(async()=>{
+      if(!state.currentExam||state.currentExam.submissionId!==submissionId)return;
+      const {data,error}=await state.supabase.rpc("save_exam_progress",{p_submission_id:submissionId,p_answers:snapshot});
+      if(error)throw error;
+      const status=$("#exam-save-status");if(status)status.textContent="All answers saved";
+      return data;
+    });
+    return state.answerSaveChain;
+  }
   async function startExam(exam) {
     if (state.startingExam || state.currentExam) return;
     if (state.profile?.role !== "student") return toast("Only student accounts can take assessments.", "error");
@@ -647,7 +680,7 @@
 
       // Read the server timestamp immediately. Existing attempts retain their original deadline.
       const { data: submission, error: submissionError } = await state.supabase
-        .from("submissions").select("started_at,status").eq("id", submissionId).single();
+        .from("submissions").select("started_at,status,answers").eq("id", submissionId).single();
       if (submissionError) throw submissionError;
       if (submission.status !== "in_progress") throw new Error("This attempt is no longer in progress.");
 
@@ -659,7 +692,14 @@
       state.currentExam = { ...exam, submissionId, attemptNumber: attempt.attempt_number, attemptType: attempt.attempt_type };
       document.body.classList.add("exam-active");$("#exam-view").classList.add("exam-integrity-active");installIntegrityMonitoring();
       if(fullscreenRequest)Promise.resolve(fullscreenRequest).catch(()=>toast("Full-screen mode was blocked by your browser. The attempt will still be monitored.","error"));else toast("Your browser does not support full-screen mode. The attempt will still be monitored.","error");
-      state.currentQuestions = questions; state.answers = {}; state.questionIndex = 0;
+      state.currentQuestions = questions;
+      const serverAnswers=submission.answers&&typeof submission.answers==="object"?submission.answers:{};
+      const localProgress=readLocalExamProgress(submissionId);
+      const localAnswers=localProgress?.answers&&typeof localProgress.answers==="object"?localProgress.answers:{};
+      state.answers={...serverAnswers,...localAnswers};
+      const restoredIndex=Number(localProgress?.questionIndex);
+      state.questionIndex=Number.isInteger(restoredIndex)?Math.min(Math.max(0,restoredIndex),questions.length-1):0;
+      state.answerSaveChain=Promise.resolve();state.answerSaveTimer=null;
       state.examDeadlineAt = startedAtMs + durationSeconds * 1000;
       state.secondsLeft = Math.max(0, Math.ceil((state.examDeadlineAt - Date.now()) / 1000));
       $("#taking-title").textContent = exam.title;
@@ -987,13 +1027,13 @@
     $("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";
     const sequential=state.currentExam?.exam_mode==="sequential";$("#previous-question").disabled=i===0;
     $("#previous-question").classList.toggle("hidden",sequential);$("#question-navigator").parentElement.classList.toggle("hidden",sequential);
-    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1&&!state.submissionFailed);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
+    $("#next-question").disabled=sequential&&state.answers[q.id]===undefined;$("#next-question").classList.toggle("hidden",i===total-1);$("#submit-exam").classList.toggle("hidden",i!==total-1&&!state.submissionFailed);$("#submit-exam").disabled=Boolean(state.examSubmissionInFlight);$("#submit-exam").textContent=state.submissionFailed?"Retry submission":"Submit exam";
     const target=$("#question-container");target.replaceChildren();
     const num=document.createElement("p");num.className="question-number";num.textContent="QUESTION "+String(i+1).padStart(2,"0");target.append(num);
     const type=document.createElement("p");type.className="eyebrow";type.textContent=String(q.question_type).replaceAll("_"," ").toUpperCase()+" · "+Number(q.points||1)+" POINTS";target.append(type);
     const title=document.createElement("h2");title.className="question-title";title.textContent=q.prompt;target.append(title);
     if(q.image_url){const img=document.createElement("img");img.className="question-reference-image";img.src=q.image_url;img.alt="Reference image for question "+(i+1);img.loading="lazy";target.append(img);}
-    const setAnswer=value=>{if(value===undefined||value===null)delete state.answers[q.id];else state.answers[q.id]=value;$("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";$("#next-question").disabled=sequential&&state.answers[q.id]===undefined;renderQuestionNavigator();};
+    const setAnswer=value=>{if(value===undefined||value===null)delete state.answers[q.id];else state.answers[q.id]=value;$("#question-count-label").textContent=Object.keys(state.answers).length+" of "+total+" answered";$("#next-question").disabled=sequential&&state.answers[q.id]===undefined;renderQuestionNavigator();scheduleExamProgressSave();};
     if(["multiple_choice","true_false"].includes(q.question_type)){
       const list=document.createElement("div");list.className="answer-list";(q.options||[]).forEach(option=>{const label=document.createElement("label");label.className="answer-option";const input=document.createElement("input");input.type="radio";input.name="answer-"+q.id;input.value=option;input.checked=state.answers[q.id]===option;input.addEventListener("change",()=>setAnswer(option));const span=document.createElement("span");span.textContent=option;label.append(input,span);list.append(label);});target.append(list);
     }else if(["identification","short_answer"].includes(q.question_type)){
@@ -1019,7 +1059,7 @@
         button.addEventListener("click", () => {
           const index = Number(button.dataset.questionIndex);
           if (state.currentExam?.exam_mode === "sequential" || !Number.isInteger(index)) return;
-          state.questionIndex = index;
+          state.questionIndex = index;writeLocalExamProgress();
           renderQuestion();
         });
         button.dataset.questionIndex = String(i);
@@ -1073,12 +1113,15 @@
     clearInterval(state.timerId);
     state.timerId = null;
     try {
-      // Answers are graded by the trusted server-side RPC; the browser never receives the answer key.
+      // Flush the latest typed response before grading. At timeout the server uses the last saved snapshot.
+      if(!timedOut)await flushExamProgressSave();
       const { data: result, error } = await state.supabase.rpc("submit_exam", {
         p_submission_id: state.currentExam.submissionId,
-        p_answers: state.answers
+        p_answers: timedOut ? {} : state.answers
       });
       if (error) throw error;
+      const completedSubmissionId=state.currentExam.submissionId;
+      try{localStorage.removeItem(examProgressStorageKey(completedSubmissionId));}catch(_){}
       await stopIntegrityMonitoring();
       showOnly("#dashboard-view");
       const percentage = result && Number(result.max_score) > 0 ? (Number(result.score) / Number(result.max_score)) * 100 : null;
@@ -2211,6 +2254,8 @@
     $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
     $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
+    window.addEventListener("online",()=>{if(state.currentExam&&!state.examSubmissionInFlight)flushExamProgressSave().catch(error=>console.warn("Exam save retry failed:",error));});
+    window.addEventListener("pagehide",writeLocalExamProgress);
     $("#exit-exam").addEventListener("click", () => { toast("This assessment is in progress. Submit your answers before leaving; the timer continues and integrity events are recorded.", "error"); });
     state.supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
