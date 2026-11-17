@@ -119,3 +119,23 @@ Teachers can author multiple choice, true/false, identification, enumeration, sh
 During an active attempt, AcademiX requests browser full-screen mode, disables text selection outside answer inputs, and records tab visibility changes, window focus loss, and full-screen exits. Students are informed before starting. Teachers can review recorded events and essay responses for their assigned class.
 
 Browser monitoring is an integrity aid, not a guaranteed lockdown: browsers cannot prove intent, prevent a second device, or reliably detect every bypass. A recorded event must not be treated as proof of cheating without human review and the institution's due-process rules.
+
+
+### Phase 9 — hybrid printed assessment and grading
+
+The printed-assessment workflow is implemented by `hybrid-assessment.js` and the additive migration `supabase/migrations/20261117000010_phase9_hybrid_printed_assessments.sql`.
+
+- Teachers register a private signature specimen, create a batch for one of their published course assessments, and receive a one-time authorization code. Only the code hash is stored in PostgreSQL.
+- The generated dedicated OMR answer sheet supports up to 50 four-option questions. Upload a flat, upright JPG, PNG, or WEBP scan for provisional optical-mark recognition. Blank, multiple, and low-confidence marks remain flagged for instructor review. PDF scans and conventional question papers use manual per-question grading.
+- The registered instructor name must match the name on the scan, the one-time batch code must validate, and the instructor must attest that the signature was visually checked against the registered specimen. Signature-image similarity is not claimed as biometric authentication.
+- Every item score is checked against the question's configured point value in a protected RPC. Automatic scores remain provisional. Only the assigned, verified instructor who graded the paper can approve and publish the result.
+- Publishing creates the normal AcademiX submission and grade records, so approved printed scores appear in the existing student grade history. The database prevents a duplicate attempt for the same student and exam.
+- Students can view only their published printed-assessment results. Administrators receive aggregate counts, not paper contents or individual answers.
+
+#### Deployment and operational requirements
+
+1. Review and apply the Phase 9 hybrid printed-assessment migration in the intended Supabase project. The GitHub Pages frontend alone cannot create the database objects or storage bucket.
+2. Confirm the private `printed-assessments` Storage bucket and RLS policies are active.
+3. Verify teacher, student, and administrator access with separate authenticated accounts in a non-production test project before using real student papers.
+4. Test OMR with printed sheets scanned upright and uncropped. The current fixed-template reader does not deskew perspective-distorted scans and is not handwriting OCR; uncertain marks must be corrected by the instructor.
+5. Confirm existing online assessment and weighted-course-grade regression suites still pass.
