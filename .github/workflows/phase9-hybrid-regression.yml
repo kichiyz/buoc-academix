@@ -1,0 +1,43 @@
+name: Phase 9 Hybrid Assessment Regression Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "hybrid-assessment.js"
+      - "app.js"
+      - "index.html"
+      - "style.css"
+      - "supabase/migrations/**"
+      - "tests/phase9-hybrid-assessment.test.mjs"
+      - ".github/workflows/phase9-hybrid-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hybrid-assessment.js"
+      - "app.js"
+      - "index.html"
+      - "style.css"
+      - "supabase/migrations/**"
+      - "tests/phase9-hybrid-assessment.test.mjs"
+      - ".github/workflows/phase9-hybrid-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hybrid-assessment-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check hybrid frontend syntax
+        run: node --check hybrid-assessment.js
+      - name: Check main app syntax
+        run: node --check app.js
+      - name: Run hybrid assessment contract tests
+        run: node --test tests/phase9-hybrid-assessment.test.mjs
