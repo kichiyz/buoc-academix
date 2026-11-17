@@ -153,6 +153,8 @@ test("OMR and conventional print formats support true/false, multiple-choice opt
   assert.match(module, /Record your answer by shading the corresponding bubble on the OMR answer sheet/);
   assert.match(module, /q\.question_type==="true_false"\?\["True","False"\]/);
   assert.match(module, /manual-options/);
+  assert.match(module, /manual-tf-options/);
+  assert.match(module, /omr-booklet-tf-options/);
   assert.match(module, /Written response · manual scoring/);
   for (const type of ["identification", "enumeration", "short_answer", "essay"]) {
     assert.ok(module.includes(type), `Missing printed or manual-review support for ${type}`);
