@@ -53,3 +53,48 @@ test("OMR recognizer flags uncertain marks and maps bubbles to answer-key values
   assert.match(module, /Array\.isArray\(q\.options\)\?q\.options\[selected\]/);
   assert.match(module, /manual_question_paper/);
 });
+
+
+test("online examination startup remains server-authorized and does not expose the answer key", async () => {
+  const app = await read("../app.js");
+  const start = app.slice(app.indexOf("async function startExam("), app.indexOf("let workflowReturnFocus"));
+  assert.ok(start.indexOf('rpc("get_exam_questions"') < start.indexOf('rpc("start_exam_attempt"'),
+    "questions must load before an attempt starts so loading time is not deducted");
+  assert.match(start, /submission\.status !== "in_progress"/);
+  assert.match(start, /Date\.parse\(submission\.started_at\)/);
+  assert.match(app, /rpc\("submit_exam"/);
+  assert.match(app, /p_answers: state\.answers/);
+  assert.match(app, /state\.startingExam \|\| state\.currentExam/);
+});
+
+test("online examination preserves all existing question types and navigation modes", async () => {
+  const app = await read("../app.js");
+  const html = await read("../index.html");
+  const render = app.slice(app.indexOf("function renderQuestion()"), app.indexOf("let academicDirectory"));
+  for (const type of ["multiple_choice", "true_false", "identification", "short_answer", "enumeration", "essay"]) {
+    assert.ok(render.includes(type), `Missing online exam question type: ${type}`);
+  }
+  assert.match(render, /exam_mode === "sequential"/);
+  assert.match(render, /question-navigator/);
+  assert.match(html, /id="question-container"/);
+  assert.match(html, /id="previous-question"/);
+  assert.match(html, /id="next-question"/);
+  assert.match(html, /id="submit-exam"/);
+  assert.match(html, /id="exam-timer"/);
+});
+
+test("online examination timer uses the server deadline and submission cannot run twice", async () => {
+  const app = await read("../app.js");
+  assert.match(app, /state\.examDeadlineAt = startedAtMs \+ durationSeconds \* 1000/);
+  assert.match(app, /state\.examDeadlineAt - Date\.now\(\)/);
+  assert.match(app, /state\.examSubmissionInFlight\) return/);
+  assert.match(app, /Retry submission/);
+  assert.match(app, /state\.examDeadlineAt=null/);
+});
+
+test("motion remains enabled by default and respects reduced-motion preferences", async () => {
+  const css = await read("../style.css");
+  assert.match(css, /@keyframes academix-ambient-drift/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  assert.match(css, /prefers-reduced-motion:\s*no-preference/);
+});
