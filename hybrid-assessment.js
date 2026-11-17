@@ -342,7 +342,8 @@
   }
   async function mount({supabase,user,profile}) {
     if(!supabase||!user||!profile)return;
-    if(state.user?.id&&state.user.id!==user.id){state.batches=[];state.activeBatch=null;state.questions=[];state.students=[];state.scans=[];state.activeScan=null;}\n    state.client=supabase;state.user=user;state.profile=profile;
+    if(state.user?.id&&state.user.id!==user.id){state.batches=[];state.activeBatch=null;state.questions=[];state.students=[];state.scans=[];state.activeScan=null;}
+    state.client=supabase;state.user=user;state.profile=profile;
     if(profile.role==="teacher"){
       ensureTeacherUI();
       try{await Promise.all([loadSignatureStatus(),loadExams(),loadBatches()]);}
