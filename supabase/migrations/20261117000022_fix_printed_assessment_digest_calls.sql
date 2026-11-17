@@ -151,8 +151,8 @@ BEGIN
     RAISE EXCEPTION 'Printed assessment authorization code is invalid.' USING errcode='42501';
   END IF;
 
-  IF lower(regexp_replace(trim(coalesce(p_printed_instructor_name,'')),'\\s+',' ','g'))
-     <> lower(regexp_replace(trim(v_batch.instructor_name_snapshot),'\\s+',' ','g')) THEN
+  IF lower(regexp_replace(trim(coalesce(p_printed_instructor_name,'')),'[[:space:]]+',' ','g'))
+     <> lower(regexp_replace(trim(v_batch.instructor_name_snapshot),'[[:space:]]+',' ','g')) THEN
     RAISE EXCEPTION 'The instructor name on the scanned paper does not match the authorized instructor.' USING errcode='42501';
   END IF;
 
