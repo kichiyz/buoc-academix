@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const [app,html,css,migration]=await Promise.all([
   readFile("app.js","utf8"),readFile("index.html","utf8"),readFile("style.css","utf8"),
-  readFile("supabase/migrations/20261117000023_online_exam_progress_recovery.sql","utf8")
+  readFile("supabase/migrations/20261124000000_online_exam_progress_recovery.sql","utf8")
 ]);
 
 test("online exams autosave answers to Supabase and recover local progress on reload",()=>{
