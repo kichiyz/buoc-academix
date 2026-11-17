@@ -640,7 +640,7 @@
     catch (error) { console.warn("Local exam recovery storage is unavailable:",error); }
   }
   function scheduleExamProgressSave() {
-    writeLocalExamProgress();clearTimeout(state.answerSaveTimer);
+    writeLocalExamProgress();const status=$("#exam-save-status");if(status)status.textContent="Saving answers…";clearTimeout(state.answerSaveTimer);
     state.answerSaveTimer=setTimeout(()=>flushExamProgressSave().catch(error=>{
       console.warn("Exam progress could not be synchronized yet:",error);
       const status=$("#exam-save-status");if(status)status.textContent="Offline — answers are kept on this device and will retry.";
@@ -2252,8 +2252,8 @@
     $("#refresh-student-courses")?.addEventListener("click",loadStudentCourseOutcomes);
     $("#student-assessment-refresh")?.addEventListener("click",async()=>{await loadStudentAssessmentOverview();await loadGrades();});
     document.querySelectorAll("[data-student-assessment-tab]").forEach(button=>button.addEventListener("click",()=>setStudentAssessmentTab(button.dataset.studentAssessmentTab)));
-    $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--; renderQuestion(); } });
-    $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++; renderQuestion(); } });
+    $("#previous-question").addEventListener("click", () => { if (state.currentExam?.exam_mode!=="sequential" && state.questionIndex > 0) { state.questionIndex--;writeLocalExamProgress();renderQuestion(); } });
+    $("#next-question").addEventListener("click", () => { const q=state.currentQuestions[state.questionIndex];if(state.currentExam?.exam_mode==="sequential" && state.answers[q?.id]===undefined)return toast("Select an answer before continuing.","error");if (state.questionIndex < state.currentQuestions.length - 1) { state.questionIndex++;writeLocalExamProgress();renderQuestion(); } });
     $("#exam-form").addEventListener("submit", e => submitExam(e));
     window.addEventListener("online",()=>{if(state.currentExam&&!state.examSubmissionInFlight)flushExamProgressSave().catch(error=>console.warn("Exam save retry failed:",error));});
     window.addEventListener("pagehide",writeLocalExamProgress);
