@@ -101,6 +101,8 @@
       .eq("instructor_id",state.user.id).eq("active",true).order("created_at",{ascending:false});
     if(error)throw error;
     state.batches=data||[];
+    const batchSelect=$("#hybrid-batch-select");
+    if(batchSelect){batchSelect.innerHTML='<option value="">Choose an active batch</option>'+state.batches.map(b=>'<option value="'+esc(b.id)+'">'+esc(b.authorization_code_hint)+' · '+esc(b.sheet_format)+'</option>').join("");if(state.activeBatch)batchSelect.value=state.activeBatch;}
   }
   async function createBatch() {
     const examId=$("#hybrid-exam")?.value,format=$("#hybrid-format")?.value;
