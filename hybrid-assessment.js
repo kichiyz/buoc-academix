@@ -204,7 +204,7 @@
         const ranked=darkness.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
         const selected=ranked[0].v>=.25&&ranked[0].v-ranked[1].v>=.08?ranked[0].i:-1;
         const confidence=selected<0?0:Math.min(1,(ranked[0].v-ranked[1].v)*3);
-        if(selected>=0)answers[q.id]=["A","B","C","D"][selected];
+        if(selected>=0)answers[q.id]=Array.isArray(q.options)?q.options[selected]:["A","B","C","D"][selected];
         items.push({question_id:q.id,detected:selected<0?null:["A","B","C","D"][selected],confidence,mark_densities:darkness.map(x=>Number(x.toFixed(3)))});
       });
       const uncertain=items.filter(x=>!x.detected||x.confidence<.35).length;
