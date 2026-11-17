@@ -234,6 +234,7 @@ DECLARE v_scan public.printed_assessment_scans%rowtype; v_batch public.printed_a
 BEGIN
   SELECT * INTO v_scan FROM public.printed_assessment_scans WHERE id=p_scan_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Scanned assessment not found.' USING errcode='P0002'; END IF;
+  IF v_scan.status='published' THEN RAISE EXCEPTION 'Published grades cannot be reprocessed.' USING errcode='55000'; END IF;
   SELECT * INTO v_batch FROM public.printed_assessment_batches
     WHERE id=v_scan.batch_id AND instructor_id=auth.uid();
   IF NOT FOUND OR NOT public.is_verified() THEN RAISE EXCEPTION 'Assigned instructor authorization required.' USING errcode='42501'; END IF;
@@ -268,6 +269,7 @@ BEGIN
   IF jsonb_typeof(p_item_scores)<>'array' THEN RAISE EXCEPTION 'Per-question grading must be a JSON array.' USING errcode='22023'; END IF;
   SELECT * INTO v_scan FROM public.printed_assessment_scans WHERE id=p_scan_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Scanned assessment not found.' USING errcode='P0002'; END IF;
+  IF v_scan.status='published' THEN RAISE EXCEPTION 'Published grades cannot be edited. Use the official grade-correction process.' USING errcode='55000'; END IF;
   SELECT * INTO v_batch FROM public.printed_assessment_batches WHERE id=v_scan.batch_id AND instructor_id=auth.uid();
   IF NOT FOUND OR NOT public.is_verified() THEN RAISE EXCEPTION 'Assigned instructor authorization required.' USING errcode='42501'; END IF;
   FOR v_q IN SELECT id,points FROM public.questions WHERE exam_id=v_batch.exam_id LOOP
