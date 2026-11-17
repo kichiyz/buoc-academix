@@ -15,7 +15,7 @@ test("online exams autosave answers to Supabase and recover local progress on re
   assert.match(app,/window\.addEventListener\("pagehide",writeLocalExamProgress\)/);
   assert.match(app,/window\.addEventListener\("online"/);
   assert.match(migration,/CREATE OR REPLACE FUNCTION public\.save_exam_progress/);
-  assert.match(migration,/SET answers=coalesce\(answers,'\{\}'::jsonb\)\|\|p_answers/);
+  assert.match(migration,/SET answers=p_answers/);
 });
 
 test("expired attempts grade only durable saved answers and unanswered objective items receive zero",()=>{
