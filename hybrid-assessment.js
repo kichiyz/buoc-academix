@@ -103,6 +103,12 @@
   async function createBatch() {
     const examId=$("#hybrid-exam")?.value,format=$("#hybrid-format")?.value;
     if(!examId)return notify("Choose a published assessment first.","error");
+    if(format==="omr"){
+      const {data:questionSpecs,error:questionError}=await state.client.from("questions").select("question_type,options").eq("exam_id",examId);
+      if(questionError)return notify(questionError.message,"error");
+      if((questionSpecs||[]).length>50)return notify("OMR sheets support up to 50 questions. Choose the conventional question-paper format for longer assessments.","error");
+      if((questionSpecs||[]).some(q=>q.question_type==="multiple_choice"&&(!Array.isArray(q.options)||q.options.length>4)))return notify("This assessment has multiple-choice questions with more than four options. Use the conventional question-paper format for accurate manual grading.","error");
+    }
     const button=$("#hybrid-create-batch");button.disabled=true;
     try{
       const result=await rpc("academix_create_printed_assessment_batch",{p_exam_id:examId,p_sheet_format:format});
