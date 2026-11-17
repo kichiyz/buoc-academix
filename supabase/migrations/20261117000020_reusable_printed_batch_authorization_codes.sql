@@ -40,11 +40,11 @@ BEGIN
       USING errcode='42501';
   END IF;
 
-  v_code:=upper(encode(gen_random_bytes(16),'hex'));
+  v_code:=upper(encode(extensions.gen_random_bytes(16),'hex'));
   v_hint:=right(v_code,4);
 
   UPDATE public.printed_assessment_batches
-  SET authorization_code_hash=encode(digest(v_code,'sha256'),'hex'),
+  SET authorization_code_hash=encode(extensions.digest(v_code,'sha256'),'hex'),
       authorization_code_hint=v_hint
   WHERE id=p_batch_id;
 
