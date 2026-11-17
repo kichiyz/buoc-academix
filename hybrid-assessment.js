@@ -342,17 +342,20 @@
   }
   async function mount({supabase,user,profile}) {
     if(!supabase||!user||!profile)return;
-    state.client=supabase;state.user=user;state.profile=profile;
+    if(state.user?.id&&state.user.id!==user.id){state.batches=[];state.activeBatch=null;state.questions=[];state.students=[];state.scans=[];state.activeScan=null;}\n    state.client=supabase;state.user=user;state.profile=profile;
     if(profile.role==="teacher"){
       ensureTeacherUI();
       try{await Promise.all([loadSignatureStatus(),loadExams(),loadBatches()]);}
       catch(error){notify("Hybrid assessment setup: "+error.message,"error");}
-      const host=$("#hybrid-assessment-panel");if(!host||host.dataset.bound)return;host.dataset.bound="true";
-      $("#hybrid-save-signature",host).addEventListener("click",()=>uploadSignature().catch(e=>notify(e.message,"error")));
-      $("#hybrid-create-batch",host).addEventListener("click",createBatch);
-      $("#hybrid-upload-scan",host).addEventListener("click",uploadScan);
-      $("#hybrid-refresh",host).addEventListener("click",()=>loadScans().catch(e=>notify(e.message,"error")));
-      $("#hybrid-batch-select",host).addEventListener("change",async event=>{state.activeBatch=event.target.value;const batch=state.batches.find(x=>x.id===state.activeBatch);if(!batch)return;try{$("#hybrid-exam").value=batch.exam_id;$("#hybrid-auth-code").value="";$("#hybrid-printed-instructor").value=batch.instructor_name_snapshot;showActiveBatch({batch_id:batch.id,authorization_code:"",instructor_name:batch.instructor_name_snapshot});await loadBatchDetails();}catch(e){notify(e.message,"error");}});
+      const host=$("#hybrid-assessment-panel");if(!host)return;
+      if(!host.dataset.bound){
+        host.dataset.bound="true";
+        $("#hybrid-save-signature",host).addEventListener("click",()=>uploadSignature().catch(e=>notify(e.message,"error")));
+        $("#hybrid-create-batch",host).addEventListener("click",createBatch);
+        $("#hybrid-upload-scan",host).addEventListener("click",uploadScan);
+        $("#hybrid-refresh",host).addEventListener("click",()=>loadScans().catch(e=>notify(e.message,"error")));
+        $("#hybrid-batch-select",host).addEventListener("change",async event=>{state.activeBatch=event.target.value;const batch=state.batches.find(x=>x.id===state.activeBatch);if(!batch)return;try{$("#hybrid-exam").value=batch.exam_id;$("#hybrid-auth-code").value="";$("#hybrid-printed-instructor").value=batch.instructor_name_snapshot;showActiveBatch({batch_id:batch.id,authorization_code:"",instructor_name:batch.instructor_name_snapshot});await loadBatchDetails();}catch(e){notify(e.message,"error");}});
+      }
       if(state.batches.length){
         state.activeBatch=state.batches[0].id;
         await loadBatchDetails();
