@@ -78,8 +78,8 @@
     state.view = view;
     $$(".page-view").forEach(el => el.classList.toggle("hidden", el.id !== `view-${view}`));
     $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-    $("#page-heading").textContent = ({ "student-home": "Learning Home", "teacher-home": "Teaching Hub", developer: "Developer Center", exams: role === "student" ? "My Exams" : "Exam Library", generator: role === "admin" ? "Exam Sandbox" : "Quiz Studio", grades: role === "student" ? "My Grades" : "Results", account: "Account" })[view] || "AcademiX";
-    $("#role-label").textContent = ({ student: "STUDENT LEARNING WORKSPACE", teacher: "TEACHING & ASSESSMENT WORKSPACE", admin: "PLATFORM OPERATIONS / DEVELOPER" })[role] || "ACADEMIX WORKSPACE";
+    $("#page-heading").textContent = ({ "student-home": "Learning Home", "teacher-home": "Teaching Workspace", developer: "Developer Center", exams: role === "student" ? "My Assessments" : "Assessment Library", generator: role === "admin" ? "Draft Sandbox" : "Assessment Studio", grades: role === "student" ? "My Grades" : "Gradebook", evaluations: "Faculty Evaluation", account: "My Account" })[view] || "AcademiX";
+    $("#role-label").textContent = ({ student: "STUDENT WORKSPACE", teacher: "TEACHER WORKSPACE", admin: "DEVELOPER WORKSPACE" })[role] || "ACADEMIX WORKSPACE";
     $("#dashboard-view").classList.remove("role-student", "role-teacher", "role-admin");
     $("#dashboard-view").classList.add(role === "admin" ? "role-admin" : role === "teacher" ? "role-teacher" : "role-student");
     if (view === "exams") loadExams();
@@ -100,7 +100,7 @@
     document.body.classList.toggle("role-teacher", p.role === "teacher");
     document.body.classList.toggle("role-student", p.role === "student");
     $("#profile-name").textContent = p.full_name || u.email;
-    $("#profile-role").textContent = p.role;
+    $("#profile-role").textContent = ({student:"Student",teacher:"Teacher",admin:"Administrator"})[p.role] || "Account";
     $("#role-label").textContent = p.role === "admin" ? "PLATFORM OPERATIONS / DEVELOPER" : `${p.role.toUpperCase()} WORKSPACE`;
     $("#avatar").textContent = initials(p.full_name || u.email);
     $("#account-avatar").textContent = initials(p.full_name || u.email);
@@ -120,7 +120,7 @@
     $$(".student-only").forEach(el => el.classList.toggle("hidden", p.role !== "student"));
     const roleNotice = $("#teacher-role-notice");
     if (roleNotice) roleNotice.classList.toggle("hidden", p.role !== "student" || Boolean(p.verified_at));
-    const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Exams";
+    const examNavLabel = $("#exam-nav-label"); if (examNavLabel) examNavLabel.lastChild.textContent = " My Assessments";
   }
   async function loadProfile() {
     const { data, error } = await state.supabase.from("profiles").select("id,full_name,role,bu_id,verified_at,campus_id,college_id,program_id,year_level,block_code").eq("id", state.user.id).single();
@@ -208,6 +208,16 @@
       if(examError)throw examError;
       const offerings=offeringsData||[],exams=examData||[];
       const offeringMap=new Map(offerings.map(o=>[o.id,o]));
+      // Fetch all visible question counts in one request instead of issuing one
+      // network round-trip per published assessment (N+1 query pattern).
+      const questionCounts=new Map();
+      const examIds=exams.map(exam=>exam.id);
+      if(examIds.length){
+        const {data:questionRows,error:questionError}=await state.supabase
+          .from("questions").select("exam_id").in("exam_id",examIds);
+        if(questionError)throw questionError;
+        (questionRows||[]).forEach(row=>questionCounts.set(row.exam_id,(questionCounts.get(row.exam_id)||0)+1));
+      }
       const selectSpecs=[
         ["course","Course / class","id",o=>teacherAssessmentContext(o)],
         ["campus","Campus","campus_id",o=>o.academic_campuses?.campus_name||"Campus not set"],
@@ -273,11 +283,8 @@
         if(!courseworkRows.length)addEmpty(courseworkTarget,"No published quizzes, long tests, or other coursework match these filters.");
         [...examRows,...courseworkRows].forEach(exam=>{
           const offering=offeringMap.get(exam.course_offering_id);
-          const countRow=state.supabase.from("questions").select("id",{count:"exact",head:true}).eq("exam_id",exam.id);
-          countRow.then(({count,error})=>{
-            const card=createCard(exam,offering,error?null:count);
-            (["midterm","final"].includes(exam.assessment_category)?examTarget:courseworkTarget).append(card);
-          }).catch(()=>{const card=createCard(exam,offering,null);(["midterm","final"].includes(exam.assessment_category)?examTarget:courseworkTarget).append(card);});
+          const card=createCard(exam,offering,questionCounts.get(exam.id)||0);
+          (["midterm","final"].includes(exam.assessment_category)?examTarget:courseworkTarget).append(card);
         });
         if(legacy.length&&unscopedTarget){
           const heading=document.createElement("p");heading.className="notice";heading.textContent=legacy.length+" published assessment(s) are missing a matching course offering. They are separated here and cannot be reliably filtered by campus, college, or year until their class assignment is corrected.";
